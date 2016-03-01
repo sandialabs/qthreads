@@ -8,13 +8,13 @@
 #include<qthread/logging.h>
 
 void test_setup(void** state){
-  qtperf_set_instrument_workers(1);
+  //qtperf_set_instrument_workers(1);
   qthread_initialize();
   assert_true(qtperf_check_invariants());
 }
 
 void test_teardown(void** state){
-  qtperf_free_data();
+  //qtperf_free_data();
   assert_true(qtperf_check_invariants());
 }
 

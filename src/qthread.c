@@ -2,6 +2,7 @@
 # include "config.h"
 #endif
 
+
 /******************************************************/
 /* The API                                            */
 /******************************************************/
@@ -93,6 +94,7 @@
 # include "maestro_sched.h"
 # include "rcrtool/qt_rcrtool.h"
 
+
 void resetEnergy(int64_t i);
 
 extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
@@ -110,6 +112,12 @@ extern int                   powerOff;
 # warning QTHREAD_MUTEX_INCREMENT not defined. It probably should be.
 # define QTHREAD_MUTEX_INCREMENT 1
 #endif
+
+#ifdef QTHREAD_PERFORMANCE
+#define WKR_DBG 1
+#include "qthread/performance.h"
+#include "qthread/logging.h"
+#endif //ifdef QTHREAD_PERFORMANCE
 
 /* Shared Globals */
 qlib_t qlib      = NULL;
@@ -879,7 +887,7 @@ int API_FUNC qthread_initialize(void)
     qthread_worker_id_t   nworkerspershep = 0;
     size_t                hw_par          = 0;
     extern unsigned int QTHREAD_LOCKING_STRIPES;
-
+    qtlog(1,"qthread_initialize");
     print_info = qt_internal_get_env_num("INFO", 0, 1);
 
     QTHREAD_FASTLOCK_SETUP();
@@ -1069,7 +1077,7 @@ int API_FUNC qthread_initialize(void)
     qlib->agg_f    = qthread_default_agg_f;
 /* initialize the shepherd structures */
     for (i = 0; i < nshepherds; i++) {
-        qthread_debug(SHEPHERD_DETAILS, "setting up shepherd %i (%p)\n", i, &qlib->shepherds[i]);
+        qthread_debug(SHEPHERD_DETAILS, "setting up shepherd %lu (%p)\n", i, &qlib->shepherds[i]);
         qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t)i;
         QTHREAD_CASLOCK_INIT(qlib->shepherds[i].active, 1);
         qlib->shepherds[i].ready = qt_threadqueue_new();
@@ -1145,6 +1153,13 @@ int API_FUNC qthread_initialize(void)
     qlib->shepherds[0].workers[0].worker_id = 0;
     qlib->shepherds[0].workers[0].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
                                                                     &qlib->max_unique_id_lock, 1);
+#ifdef QTHREAD_PERFORMANCE
+    if(qtperf_should_instrument_workers){
+      QTPERF_ASSERT(qtperf_workers_group != NULL);
+      qlib->shepherds[0].workers[0].performance_data = qtperf_create_perfdata(qtperf_workers_group);
+      QTPERF_ASSERT(qlib->shepherds[0].workers[0].performance_data != NULL);
+    }
+#endif
     qthread_makecontext(&(qlib->master_context), qlib->master_stack,
                         qlib->master_stack_size,
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -1184,6 +1199,7 @@ int API_FUNC qthread_initialize(void)
 # endif /* ifdef QTHREAD_RCRTOOL */
 
 /* spawn the shepherds */
+    qtlogargs(WKR_DBG, "nshepherds = %i, nworkerspershep = %i", nshepherds, nworkerspershep);
     for (i = 0; i < nshepherds; ++i) {
         qthread_worker_id_t j;
         qthread_debug(SHEPHERD_DETAILS,
@@ -1202,6 +1218,21 @@ int API_FUNC qthread_initialize(void)
                                                                  sizeof(qthread_t *));
             qlib->shepherds[i].workers[j].stealbuffer = calloc(STEAL_BUFFER_LENGTH,
                                                                sizeof(qthread_t *));
+# ifdef QTHREAD_PERFORMANCE
+            QTPERF_ASSERT(((qtperf_should_instrument_workers != 0 &&  (qtperf_workers_group != NULL)) ||
+                           (qtperf_should_instrument_workers == 0 && (qtperf_workers_group == NULL))));
+            // only add perfdata struct if we're watching, and if it
+            // hasn't been done (which should be the case for all but
+            // the master thread)
+            if(qtperf_should_instrument_workers && qlib->shepherds[i].workers[j].performance_data == NULL){
+              QTPERF_ASSERT(qtperf_workers_group != NULL);
+              qlib->shepherds[i].workers[j].performance_data = qtperf_create_perfdata(qtperf_workers_group);
+              QTPERF_ASSERT(qlib->shepherds[i].workers[j].performance_data != NULL);
+              QTPERF_WORKER_ENTER_STATE(qlib->shepherds[i].workers[j].performance_data, WKR_INIT);
+              qtlogargs(WKR_DBG, "created performance data for worker %i, shepherd %lu\n", j, i);
+            }
+# endif /* ifdef QTHREAD_PERFORMANCE */
+
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
@@ -1235,17 +1266,6 @@ int API_FUNC qthread_initialize(void)
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
-# ifdef QTHREAD_PERFORMANCE
-            QTPERF_ASSERT("both should be either zero or non-zero" &&
-                          (qtperf_should_instrument_workers ^ (qtperf_workers_group && 1)));
-            if(qtperf_should_instrument_workers){
-              QTPERF_ASSERT(qtperf_workers_group != NULL);
-              qlib->shepherds[i].workers[j].performance_data = qtperf_create_perfdata(qtperf_workers_group);
-              QTPERF_ASSERT(qlib->shepherds[i].workers[i].performance_data != NULL);
-                                                                                      
-              qthread_debug(PERF_DETAILS, "created performance data for worker %i, shepherd %i\n", j, i);
-            }
-# endif /* ifdef QTHREAD_PERFORMANCE */
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
                                     qthread_master, &qlib->shepherds[i].workers[j])) != 0) {
                 print_error("qthread_init: pthread_create() failed (%d): %s\n", r, strerror(errno));
@@ -2401,12 +2421,14 @@ void INTERNAL qthread_exec(qthread_t    *t,
         VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
         VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
 #endif
+        QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
 #ifdef HAVE_NATIVE_MAKECONTEXT
         qassert(swapcontext(t->rdata->return_context, &t->rdata->context), 0);
 #else
         qassert(qt_swapctxt(t->rdata->return_context, &t->rdata->context), 0);
 #endif
         RLIMIT_TO_NORMAL(t);
+        QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
     } else {
         assert(t->thread_state == QTHREAD_STATE_NEW);
         t->thread_state = QTHREAD_STATE_RUNNING;
@@ -2449,33 +2471,37 @@ void API_FUNC qthread_yield_(uint32_t flags)
             t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
         } else if (QTHREAD_YIELD_DIRECT & flags) {
 #ifdef QTHREAD_USE_SPAWNCACHE
-            qt_threadqueue_private_t *pq = qt_spawncache_get();
-            if (pq->on_deck) {
-                qthread_t *nt = qt_threadqueue_private_dequeue(pq);
-                assert(nt);
-                if (((nt->flags & QTHREAD_SIMPLE) != 0) || (nt->thread_state != QTHREAD_STATE_NEW)) {
-                    qt_spawncache_spawn(nt, t->rdata->shepherd_ptr->ready);
-                    goto basic_yield;
-                }
-                /* Initialize nt's rdata */
-                alloc_rdata(t->rdata->shepherd_ptr, nt);
-                nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
-                nt->rdata->blockedon.thread = t;
-                qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
-                nt->rdata->return_context = t->rdata->return_context;
-                RLIMIT_TO_TASK(t);
-                /* SWAP! */
-                qthread_debug(SHEPHERD_DETAILS,
-                        "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
+                {
+                    qt_threadqueue_private_t *pq = qt_spawncache_get();
+                    if (pq->on_deck) {
+                        qthread_t *nt = qt_threadqueue_private_dequeue(pq);
+                        assert(nt);
+                        if (((nt->flags & QTHREAD_SIMPLE) != 0) || (nt->thread_state != QTHREAD_STATE_NEW)) {
+                            qt_spawncache_spawn(nt, t->rdata->shepherd_ptr->ready);
+                            goto basic_yield;
+                        }
+                        /* Initialize nt's rdata */
+                        alloc_rdata(t->rdata->shepherd_ptr, nt);
+                        nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
+                        nt->rdata->blockedon.thread = t;
+                        qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
+                        nt->rdata->return_context = t->rdata->return_context;
+                        RLIMIT_TO_TASK(t);
+                        /* SWAP! */
+                        qthread_debug(SHEPHERD_DETAILS,
+                                "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
+                        QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
 #ifdef HAVE_NATIVE_MAKECONTEXT
                 qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
 #else
                 qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
 #endif
-                qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
-                RLIMIT_TO_NORMAL(t);
-                return;
-            }
+                        qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
+                        RLIMIT_TO_NORMAL(t);
+                        QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
+                        return;
+                    }
+                }
 #endif
         } else if (QTHREAD_YIELD_FAR & flags) {
 #ifdef QTHREAD_USE_SPAWNCACHE
@@ -3040,6 +3066,7 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
     assert((t->flags & QTHREAD_SIMPLE) == 0);
     RLIMIT_TO_NORMAL(t);
+    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
     /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
@@ -3053,12 +3080,15 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
     qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
 #endif
     RLIMIT_TO_TASK(t);
+    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
 }                      /*}}} */
 
 void INTERNAL qthread_back_to_master2(qthread_t *t)
 {                      /*{{{ */
     assert((t->flags & QTHREAD_SIMPLE) == 0);
     RLIMIT_TO_NORMAL(t);
+    qtlog(WKR_DBG, "qthread_back_to_master2 called!!!");
+    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
     /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
