@@ -51,7 +51,7 @@ static int reset_qtperf(void** state){
 #define DBG_GRP 0
 #endif
 static void test_create_group(void** state){
-  group1 = qtperf_create_state_group(NumStates1, state1_names);
+  group1 = qtperf_create_state_group(NumStates1, "group 1", state1_names);
   assert_true(group1 != NULL);
   assert_true(qtperf_check_invariants());
 }
@@ -63,11 +63,11 @@ static void test_create_perfdata(void**state) {
   qtperfdata_t* data1 = NULL;
   qtperfdata_t* data2 = NULL;
   qtperfdata_t* data3 = NULL;
-  group1 = qtperf_create_state_group(NumStates1, state1_names);
+  group1 = qtperf_create_state_group(NumStates1, "group 1", state1_names);
   assert_true(group1 != NULL);
-  group2 = qtperf_create_state_group(NumStates2, state2_names);
+  group2 = qtperf_create_state_group(NumStates2, "group 2", state2_names);
   assert_true(group2 != NULL);
-  group3 = qtperf_create_state_group(NumStates3, NULL);
+  group3 = qtperf_create_state_group(NumStates3, NULL, NULL);
   assert_true(group3 != NULL);
   data1 = qtperf_create_perfdata(group1);
   assert_true(data1 != NULL);
@@ -122,7 +122,7 @@ void checked_transition(qtperfdata_t* data, qtperfid_t newstate){
 static void test_state_transitions(void** state){
   qtperfdata_t* data = NULL;
   size_t i=0;
-  group1 = qtperf_create_state_group(NumStates1, state1_names);
+  group1 = qtperf_create_state_group(NumStates1, "group 1", state1_names);
   assert_true(group1 != NULL);
   data = qtperf_create_perfdata(group1);
   assert_true(data != NULL);
@@ -166,9 +166,9 @@ static void test_fake_concurrent(void** state){
   qtstategroup_t* group[3];
   qtperfid_t numstates[3];
   size_t i=0;
-  group[0]=qtperf_create_state_group(NumStates1, state1_names);
-  group[1]=qtperf_create_state_group(NumStates2, state2_names);
-  group[2]=qtperf_create_state_group(NumStates3, state3_names);
+  group[0]=qtperf_create_state_group(NumStates1, "group 1", state1_names);
+  group[1]=qtperf_create_state_group(NumStates2, "group 2", state2_names);
+  group[2]=qtperf_create_state_group(NumStates3, "group 3", state3_names);
   numstates[0] = NumStates1;
   numstates[1] = NumStates2;
   numstates[2] = NumStates3;
