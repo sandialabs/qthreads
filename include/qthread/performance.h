@@ -54,12 +54,12 @@ typedef enum {
   WKR_NUM_STATES
 } worker_state_t;
 
-extern bool _collect_workers;
-extern qtstategroup_t* _workers_group;
+extern bool qtperf_should_instrument_workers;
+extern qtstategroup_t* qtperf_workers_group;
 
 //--------------- QTHREAD INSTRUMENTATION ---------------------------- 
-extern bool _collect_qthreads;
-extern qtstategroup_t* _qthreads_group;
+extern bool qtperf_should_instrument_qthreads;
+extern qtstategroup_t* qtperf_qthreads_group;
 
 
 //---------------- PERFORMANCE API ----------------------------------- 
@@ -85,6 +85,8 @@ qtperf_iterator_t* qtperf_iter_end(void);
 #include<string.h>
 #include<cmocka.h>
 #include<ctype.h>
+#define QTPERF_ASSERT(...) assert_true(__VA_ARGS__)
+
 bool qtp_validate_names(const char** names, size_t count);
 bool qtp_validate_state_group(qtstategroup_t*);
 bool qtp_validate_perfdata(qtperfdata_t*);
@@ -95,6 +97,13 @@ bool qtp_validate_group_list(void);
 // time, as long as another call into qtperf is not running
 // concurrently.
 bool qtperf_check_invariants(void);
-#endif
+
+#else // ifdef QTPERF_TESTING
+
+// define away unless QTPERF_TESTING is defined, otherwise it's an
+// alias for cmocka's assert_true
+#define QTPERF_ASSERT(...)
+
+#endif // ifdef QTPERF_TESTING
 
 #endif
