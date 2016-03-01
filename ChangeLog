@@ -1,3 +1,12 @@
+2015-03-01	Noah Evans <nevans@sandia.gov>
+
+	* test/issues,
+	test/issues/issue3.c,
+	test/issues/issue11.c,
+	test/issues/Makefile.am: Add issues test directory to allow tests to be created from
+	the issues on github. Populate it with a Makefile.am and the two
+	outstanding issues with test code.
+
 2013-09-03  Dylan Stark <dstark@sandia.gov>
 
 	* NEWS: Updates NEWS.

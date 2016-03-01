@@ -3,7 +3,7 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-SUBDIRS = basics features stress utils
+SUBDIRS = basics features stress utils issues
 if COMPILE_MULTINODE
 SUBDIRS += multinode
 endif
@@ -22,7 +22,10 @@ multinodetests:
 stresstests:
 	$(MAKE) -C stress buildtests
 
-tests: basictests featuretests stresstests multinodetests
+issuetests:
+	$(MAKE) -C stress buildtests
+
+tests: basictests featuretests stresstests multinodetests issuetests
 
 buildtests: tests
 
@@ -33,7 +36,7 @@ benchmarks:
 
 buildall: buildtests buildextra
 
-.PHONY: buildall tests buildtests benchmarks buildextra basictests featuretests stresstests
+.PHONY: buildall tests buildtests benchmarks buildextra basictests featuretests stresstests issuetests
 
 noinst_HEADERS = argparsing.h
 

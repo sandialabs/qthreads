@@ -1186,6 +1186,7 @@ AC_CONFIG_FILES([Makefile
                  test/features/Makefile
                  test/multinode/Makefile
                  test/stress/Makefile
+                 test/issues/Makefile
                  test/benchmarks/Makefile
                  test/benchmarks/mantevo/Makefile
                  test/benchmarks/mantevo/hpccg/Makefile

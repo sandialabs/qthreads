@@ -39,6 +39,9 @@ stresstests: core
 multinodetests: core
 	$(MAKE) -C test multinodetests
 
+issuetests: core
+	$(MAKE) -C test issuetests
+
 buildtests: tests
 
 tests:
