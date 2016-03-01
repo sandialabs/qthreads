@@ -62,7 +62,7 @@ extern bool qtperf_should_instrument_qthreads;
 extern qtstategroup_t* qtperf_qthreads_group;
 
 
-//---------------- PERFORMANCE API ----------------------------------- 
+//---------------- PERFORMANCE API -----------------------------------
 void qtperf_set_instrument_workers(bool);
 void qtperf_set_instrument_qthreads(bool);
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_names);
@@ -105,5 +105,26 @@ bool qtperf_check_invariants(void);
 #define QTPERF_ASSERT(...)
 
 #endif // ifdef QTPERF_TESTING
+
+
+// Convenience macros to limit the prevalence of ifndef/endif blocks
+// in the main code
+#ifdef QTHREAD_PERFORMANCE
+#define QTPERF_ENTER_STATE(...) qtperf_enter_state(__VA_ARGS__)
+#define QTPERF_WORKER_ENTER_STATE(pdata,state) do{      \
+    if(qtperf_should_instrument_workers){\
+      QTPERF_ASSERT(pdata != NULL);\
+      qtperf_enter_state(pdata, state);\
+    } } while(0)
+#define QTPERF_QTHREAD_ENTER_STATE(pdata,state) do{                     \
+    if(qtperf_should_instrument_qthreads){                                     \
+        QTPERF_ASSERT(pdata != NULL);\
+        qtperf_enter_state(pdata, state);\
+    }} while(0)
+
+#else
+# define QTPERF_ENTER_STATE(...)
+#endif // ifdef QTHREAD_PERFORMANCE
+
 
 #endif
