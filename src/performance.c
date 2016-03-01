@@ -7,8 +7,6 @@
 
 #ifdef QTHREAD_PERFORMANCE
 
-qtperf_perf_list_t* _counters=NULL;
-qtperf_perf_list_t** _next_counter = NULL;
 qtperf_group_list_t* _groups=NULL;
 qtperf_group_list_t** _next_group=NULL;
 size_t _num_groups=0;
@@ -19,27 +17,37 @@ bool qtperf_should_instrument_qthreads = 0;
 qtstategroup_t* qtperf_workers_group = NULL;
 qtstategroup_t* qtperf_qthreads_group = NULL;
   
-
+bool incr_counter(qtperf_iterator_t**);
+bool incr_group(qtperf_iterator_t**);
 void qtperf_free_state_group_internals(qtstategroup_t*);
 void qtperf_free_group_list(void);
 void qtperf_free_perfdata_internals(qtperfdata_t*);
-void qtperf_free_perf_list(void);
+void qtperf_free_perf_list(qtstategroup_t*,qtperf_perf_list_t*);
 
 
-qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_names) {
+qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* name, const char** state_names) {
   qtperf_group_list_t* current = NULL;
   if(_next_group == NULL){
     _next_group = &_groups;
   }
   *_next_group = malloc(sizeof(qtperf_group_list_t));
+  qtlogargs(PERFDBG, "create group %p", *_next_group);
   current = *_next_group;
   _next_group = &current->next;
   current->next = NULL;
   current->group.num_states = num_states;
+  if(name != NULL){
+    current->group.name = strdup(name);
+  } else {
+    current->group.name = strdup("Unnamed group");
+  }
   current->group.state_names = NULL;
+  current->group.num_counters = 0;
+  current->group.next_counter = NULL;
+  current->group.counters = NULL;
   if(state_names != NULL){
     size_t i=0; 
-    current->group.state_names = malloc(sizeof(char*)*num_states);
+    current->group.state_names = calloc(num_states,sizeof(char*));
     for(i=0; i<num_states; i++){
       current->group.state_names[i] = strdup(state_names[i]);
     }
@@ -50,6 +58,8 @@ qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_
 
 /* INTERNAL - free allocated memory from a stategroup structure */
 void qtperf_free_state_group_internals(qtstategroup_t* group) {
+  free(group->name);
+  qtperf_free_perf_list(group,group->counters);
   if(group->state_names != NULL){
     size_t i=0;
     for(i=0; i<group->num_states; i++){
@@ -57,39 +67,46 @@ void qtperf_free_state_group_internals(qtstategroup_t* group) {
     }
     bzero(group->state_names, sizeof(char*)*group->num_states);
     free(group->state_names);
+    group->name = NULL;
     group->state_names = NULL;
+    group->counters = NULL;
+    group->next_counter = NULL;
+    QTPERF_ASSERT(group->num_counters == 0);
   }
 }
 /* Free the entire list of state groups */
 void qtperf_free_group_list(){
   qtperf_group_list_t* next=NULL;
+  qtlogargs(PERFDBG, "num_groups = %lu", _num_groups);
   while(_groups != NULL){
     next = _groups->next;
     qtperf_free_state_group_internals(&_groups->group);
     _groups->next = NULL;
+    qtlogargs(PERFDBG, "free group %p", _groups);
     free(_groups);
     _groups = next;
     _num_groups--;
   }
+  QTPERF_ASSERT(_num_groups == 0);
 }
 
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   qtperf_perf_list_t* current=NULL;
-  if(_next_counter == NULL){
-    _next_counter = &_counters;
+  if(state_group->next_counter == NULL){
+    state_group->next_counter = &state_group->counters;
   }
-  *_next_counter = malloc(sizeof(qtperf_perf_list_t));
-  current = *_next_counter;
+  *state_group->next_counter = malloc(sizeof(qtperf_perf_list_t));
+  current = *state_group->next_counter;
   bzero(current, sizeof(qtperf_perf_list_t));
-  _next_counter = &current->next;
+  state_group->next_counter = &current->next;
   current->next = NULL;
-  current->performance_data.perf_counters = malloc(sizeof(qtperfcounter_t)*state_group->num_states);
+  current->performance_data.perf_counters = calloc(state_group->num_states,sizeof(qtperfcounter_t));
   bzero(current->performance_data.perf_counters, sizeof(qtperfcounter_t)*state_group->num_states);
   current->performance_data.current_state=QTPERF_INVALID_STATE;
   current->performance_data.time_entered=0;
   current->performance_data.state_group = state_group;
   current->performance_data.num_states = state_group->num_states;
-  _num_counters++;
+  state_group->num_counters++;
   return &current->performance_data;
 }
 
@@ -99,16 +116,17 @@ void qtperf_free_perfdata_internals(qtperfdata_t* perfdata) {
   perfdata->state_group = NULL;
 }
 
-void qtperf_free_perf_list(){
+void qtperf_free_perf_list(qtstategroup_t* group, qtperf_perf_list_t* counters){
   qtperf_perf_list_t* next = NULL;
-  while(_counters != NULL){
-    next = _counters->next;
-    qtperf_free_perfdata_internals(&_counters->performance_data);
-    _counters->next = NULL;
-    free(_counters);
-    _counters = next;
-    _num_counters--;
+  while(counters != NULL){
+    next = counters->next;
+    qtperf_free_perfdata_internals(&counters->performance_data);
+    counters->next = NULL;
+    free(counters);
+    counters = next;
+    group->num_counters--;
   }
+  group->next_counter = &group->counters;
 }
 
 qttimestamp_t qtperf_now(){
@@ -128,10 +146,7 @@ void qtperf_stop() {
 }
 
 void qtperf_free_data(){
-  qtperf_free_perf_list();
   qtperf_free_group_list();
-  _counters = NULL;
-  _next_counter = NULL;
   _groups = NULL;
   _next_group = NULL;
   _collecting = 0;
@@ -150,7 +165,7 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
 
 void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
-  qtlogargs(1, "data %p", data);
+  //qtlogargs(1, "data %p", data);
   if(state >= data->state_group->num_states) {
     qtlogargs(LOGERR,"State number %lu is out of bounds!", state);
     return;
@@ -163,7 +178,12 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
 }
 
 void qtperf_iter_begin(qtperf_iterator_t**iter){
-  (*iter)->current = _counters;
+  (*iter)->current_group = _groups;
+  if((*iter)->current_group){
+    (*iter)->current = _groups->group.counters;
+  } else {
+    (*iter)->current = NULL;
+  }
 }
 
 qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter){
@@ -173,13 +193,25 @@ qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter){
   return &iter->current->performance_data;
 }
 
-qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter){
-  qtperfdata_t* data = qtperf_iter_deref(*iter);
+bool incr_counter(qtperf_iterator_t** iter){
   if(*iter != qtperf_iter_end()){
     (*iter)->current = (*iter)->current->next;
-    if((*iter)->current == NULL){
-      *iter = qtperf_iter_end();
-    }
+  }
+  return (*iter)->current != NULL;
+}
+
+bool incr_group(qtperf_iterator_t** iter){
+  if(*iter != qtperf_iter_end() && (*iter)->current_group != NULL){
+    (*iter)->current_group = (*iter)->current_group->next;
+  }
+  return (*iter)->current_group != NULL;
+}
+
+qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter){
+  qtperfdata_t* data = qtperf_iter_deref(*iter);
+  if(!incr_counter(iter) || incr_group(iter)){
+    (*iter) = qtperf_iter_end();
+    return NULL;
   }
   return data;
 }
@@ -211,7 +243,7 @@ void qtperf_set_instrument_workers(bool yes_no){
 
   // initialize the state group for worker data collection
   if(yes_no && qtperf_workers_group == NULL){
-    qtperf_workers_group = qtperf_create_state_group(WKR_NUM_STATES, worker_state_names);
+    qtperf_workers_group = qtperf_create_state_group(WKR_NUM_STATES, "Workers Internal", worker_state_names);
   }
   QTPERF_ASSERT((qtperf_should_instrument_workers && (qtperf_workers_group != NULL)) ||
                 (!qtperf_should_instrument_workers && (qtperf_workers_group == NULL)));
@@ -229,7 +261,7 @@ void qtperf_set_instrument_qthreads(bool yes_no) {
   qtperf_should_instrument_qthreads = yes_no;
 
   if(yes_no && qtperf_qthreads_group == NULL){
-    qtperf_qthreads_group = qtperf_create_state_group(QTH_NUM_STATES, qthread_state_names);
+    qtperf_qthreads_group = qtperf_create_state_group(QTH_NUM_STATES, "Qthreads Internal", qthread_state_names);
   }
   QTPERF_ASSERT((qtperf_should_instrument_qthreads && (qtperf_qthreads_group != NULL)) ||
                 (!qtperf_should_instrument_qthreads && (qtperf_qthreads_group == NULL)));
@@ -244,7 +276,6 @@ void qtperf_set_instrument_qthreads(bool yes_no) {
 bool qtp_validate_names(const char** names, size_t count){
   size_t i=0;
   bool valid = 1;
-
   for(i=0; names != NULL && i<count; i++){
     size_t len=0;
     bool printable=1;
@@ -254,19 +285,7 @@ bool qtp_validate_names(const char** names, size_t count){
     valid &= printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0';
     assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0');
   }
-
   assert_true(names == NULL || valid);
-  
-  return valid;
-}
-
-bool qtp_validate_state_group(qtstategroup_t* group){
-  bool valid = group->num_states > 0;
-  bool valid_names = 1;
-  valid_names = qtp_validate_names((const char**)group->state_names, group->num_states);
-  assert_true(group->num_states > 0);
-  valid = valid && ((group->state_names == NULL) || valid_names);
-  assert_true((group->state_names == NULL) || valid_names);
   return valid;
 }
 
@@ -275,8 +294,7 @@ bool qtp_validate_perfdata(qtperfdata_t* data){
   assert_true(data != NULL);
   assert_true(data->state_group != NULL);
   valid = data != NULL && data->state_group != NULL;
-  valid = qtp_validate_state_group(data->state_group);
-  valid = valid && (data->num_states > 0);
+  valid = (data->num_states > 0);
   assert_true(data->num_states > 0);
   valid = valid && data->perf_counters != NULL;
   assert_true(data->perf_counters != NULL);
@@ -287,32 +305,42 @@ bool qtp_validate_perfdata(qtperfdata_t* data){
   return valid;
 }
 
-bool qtp_validate_perf_list(void){
-  qtperf_perf_list_t* current = _counters;
+bool qtp_validate_perf_list(qtperf_perf_list_t* counters,
+                            qtperf_perf_list_t** next_counter,
+                            size_t num_counters){
+  qtperf_perf_list_t* current = counters;
   bool valid=1;
   size_t found_counters=0;
   if(current == NULL){
-    assert_true(_next_counter == &_counters || _next_counter == NULL);
-    valid = valid && (_next_counter == &_counters || _next_counter == NULL);
+    assert_true(next_counter == &counters || next_counter == NULL);
+    valid = valid && (next_counter == &counters || next_counter == NULL);
   }
   while(current != NULL) {
     found_counters++;
     valid = valid && qtp_validate_perfdata(&current->performance_data);
     if(current->next == NULL){
-      assert_true(_next_counter == &current->next);
-      valid = valid && _next_counter == &current->next;
+      assert_true(next_counter == &current->next);
+      valid = valid && next_counter == &current->next;
     }
     current = current->next;
   }
-  assert_true(found_counters == _num_counters);
-  valid = valid && (found_counters == _num_counters);
+  assert_true(found_counters == num_counters);
+  valid = valid && (found_counters == num_counters);
   return valid;
 }
-//qtperf_perf_list_t* _counters=NULL;
-//qtperf_perf_list_t** _next_counter = NULL;
-//qtperf_group_list_t* _groups=NULL;
-//qtperf_group_list_t** _next_group=NULL;
-//bool _collecting=0;
+
+bool qtp_validate_state_group(qtstategroup_t* group){
+  bool valid = group->num_states > 0;
+  bool valid_names = 0;
+  bool valid_counters = 0;
+  valid_names = qtp_validate_names((const char**)group->state_names, group->num_states);
+  valid_counters = qtp_validate_perf_list(group->counters, group->next_counter, group->num_counters);
+  assert_true(valid_counters);
+  assert_true(group->num_states > 0);
+  valid = valid && ((group->state_names == NULL) || valid_names);
+  assert_true((group->state_names == NULL) || valid_names);
+  return valid;
+}
 
 bool qtp_validate_group_list(void){
   qtperf_group_list_t* current = _groups;
@@ -338,7 +366,7 @@ bool qtp_validate_group_list(void){
 
 bool qtperf_check_invariants(void) {
   assert_true(_collecting == 0 || _collecting == 1);
-  return (_collecting == 0 || _collecting == 1) && qtp_validate_perf_list() && qtp_validate_group_list();
+  return (_collecting == 0 || _collecting == 1) && qtp_validate_group_list();
 }
 
 #endif
