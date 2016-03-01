@@ -12,6 +12,11 @@ qtperf_perf_list_t** _next_counter = NULL;
 qtperf_group_list_t* _groups=NULL;
 qtperf_group_list_t** _next_group=NULL;
 bool _collecting=0;
+bool qtperf_should_instrument_workers = 0;
+bool qtperf_should_instrument_qthreads = 0;
+qtstategroup_t* qtperf_workers_group = NULL;
+qtstategroup_t* qtperf_qthreads_group = NULL;
+  
 
 void qtperf_free_state_group_internals(qtstategroup_t*);
 void qtperf_free_group_list(void);
@@ -186,31 +191,47 @@ static const char* worker_state_names[]={
   "WKR_QTHREAD_ACTIVE",
   "WKR_SHEPHERD",
   "WKR_IDLE",
-  "WKR_BLOCKED",
-  "WKR_NUM_STATES"
+  "WKR_BLOCKED"
 };
-
-bool _collect_workers=0;
-qtstategroup_t* _worker_group=NULL;
-bool _collect_qthreads=0;
-qtstategroup_t* _qthreads_group=NULL;
 
 // need to set a flag that's visible to other files that can be used
 // to control whether samples are recorded for worker state
 // transitions. For now I'll see if I can use an inline function
 // definition from performance.h
 void qtperf_set_instrument_workers(bool yes_no){
-  _collect_workers = yes_no;
+  qtperf_should_instrument_workers = yes_no;
   // TODO: add code to instrument existing workers. As it stands, this
   // only affects workers spawned *after* this call, which means that
   // you have to call this function before qthread_initialize();
 
   // initialize the state group for worker data collection
-  if(yes_no && _worker_group == NULL){
-    _worker_group = qtperf_create_state_group(WKR_NUM_STATES, worker_state_names);
+  if(yes_no && qtperf_workers_group == NULL){
+    qtperf_workers_group = qtperf_create_state_group(WKR_NUM_STATES, worker_state_names);
   }
+  QTPERF_ASSERT((qtperf_should_instrument_workers && (qtperf_workers_group != NULL)) ||
+                (!qtperf_should_instrument_workers && (qtperf_workers_group == NULL)));
 }
 
+
+/* This section is for instrumentation of qthreads */
+typedef enum{
+  QTH_NUM_STATES
+} qthread_state_t;
+static const char* qthread_state_names[] = {
+};
+
+void qtperf_set_instrument_qthreads(bool yes_no) {
+  qtperf_should_instrument_qthreads = yes_no;
+
+  if(yes_no && qtperf_qthreads_group == NULL){
+    qtperf_qthreads_group = qtperf_create_state_group(QTH_NUM_STATES, qthread_state_names);
+  }
+  QTPERF_ASSERT((qtperf_should_instrument_qthreads && (qtperf_qthreads_group != NULL)) ||
+                (!qtperf_should_instrument_qthreads && (qtperf_qthreads_group == NULL)));
+}
+
+
+/* Testing related functionality */
 
 #ifdef QTPERF_TESTING
 

@@ -1234,6 +1234,17 @@ int API_FUNC qthread_initialize(void)
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
+# ifdef QTHREAD_PERFORMANCE
+            QTPERF_ASSERT("both should be either zero or non-zero" &&
+                          (qtperf_should_instrument_workers ^ (qtperf_workers_group && 1)));
+            if(qtperf_should_instrument_workers){
+              QTPERF_ASSERT(qtperf_workers_group != NULL);
+              qlib->shepherds[i].workers[j].performance_data = qtperf_create_perfdata(qtperf_workers_group);
+              QTPERF_ASSERT(qlib->shepherds[i].workers[i].performance_data != NULL);
+                                                                                      
+              qthread_debug(PERF_DETAILS, "created performance data for worker %i, shepherd %i\n", j, i);
+            }
+# endif /* ifdef QTHREAD_PERFORMANCE */
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
                                     qthread_master, &qlib->shepherds[i].workers[j])) != 0) {
                 print_error("qthread_init: pthread_create() failed (%d): %s\n", r, strerror(errno));
@@ -1242,7 +1253,11 @@ int API_FUNC qthread_initialize(void)
             qthread_debug(SHEPHERD_DETAILS, "spawned shep %i worker %i\n", (int)i, (int)j);
         }
     }
-
+    
+#ifdef QTHREAD_PERFORMANCE
+    QTPERF_ASSERT(qtperf_check_invariants());
+#endif /* ifdef QTHREAD_PERFORMANCE */
+    
     qthread_debug(CORE_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);
 
