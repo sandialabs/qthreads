@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## enable testing, disable perf debug output 
-CFLAGS='-DQTHREAD_PERFORMANCE -DQTPERF_TESTING' ./configure --enable-debugging --disable-lazy-threadids  --enable-picky
+CFLAGS='-DQTHREAD_PERFORMANCE -DQTPERF_TESTING' LDFLAGS=-L/home/erik/packages/lib LIBS=-lcmocka ./configure --enable-debugging --disable-lazy-threadids  --enable-picky
 
 ## Enable testing AND perfdbg output
 #CFLAGS='-DQTHREAD_PERFORMANCE -DQTPERF_TESTING -DPERFDBG=1' ./configure --enable-debugging --disable-lazy-threadids  --enable-picky
