@@ -4,23 +4,45 @@
 #include<setjmp.h>
 #include<string.h>
 #include<cmocka.h>
+#include<qthread/qthread.h>
 #include<qthread/performance.h>
 #include<qthread/logging.h>
 
-void test_setup(void** state){
-  //qtperf_set_instrument_workers(1);
+aligned_t spin(){
+  size_t i=0;
+  aligned_t result=2;
+  for(i=0; i<1000000; i++){
+    result = result * result + i;
+  }
+  return result;
+}
+
+size_t num_threads=100;
+void test_spinners(void** state){
+  size_t i=0;
+  aligned_t ret=0;
+  qtperf_set_instrument_workers(0);
+  qtperf_start();
   qthread_initialize();
+  for(i=0; i<num_threads; i++){
+    qthread_fork(spin, NULL,&ret);
+  }
+  for(i=0; i<num_threads; i++){
+    qthread_readFE(NULL, &ret);
+  }
+  qtperf_stop();
+  qtperf_print_results();
   assert_true(qtperf_check_invariants());
 }
 
 void test_teardown(void** state){
-  //qtperf_free_data();
+  qtperf_free_data();
   assert_true(qtperf_check_invariants());
 }
 
 int main(int argc, char** argv){
   const struct CMUnitTest test[] ={
-    cmocka_unit_test(test_setup),
+    cmocka_unit_test(test_spinners),
     cmocka_unit_test(test_teardown)
   };
   return cmocka_run_group_tests(test,NULL,NULL);

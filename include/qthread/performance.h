@@ -69,8 +69,6 @@ extern qtstategroup_t* qtperf_qthreads_group;
 
 
 //---------------- PERFORMANCE API -----------------------------------
-void qtperf_set_instrument_workers(bool);
-void qtperf_set_instrument_qthreads(bool);
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* group_name, const char** state_names);
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
 qttimestamp_t qtperf_now(void);
@@ -83,6 +81,11 @@ void qtperf_iter_begin(qtperf_iterator_t** iter);
 qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter);
 qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter);
 qtperf_iterator_t* qtperf_iter_end(void);
+void qtperf_set_instrument_workers(bool);
+void qtperf_set_instrument_qthreads(bool);
+void qtperf_print_results(void);
+void qtperf_print_group(qtstategroup_t* group);
+void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time);
 
 #ifdef QTPERF_TESTING
 #include<stdarg.h>
