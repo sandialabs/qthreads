@@ -500,7 +500,7 @@ static void *qthread_master(void *arg)
     assert(localpriorityqueue);
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     assert(threadqueue);
-
+    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_IDLE);
     while (!done) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_start(idle);
@@ -781,6 +781,7 @@ qt_run:
             }
         }
     }
+    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_destroy(idle);

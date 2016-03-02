@@ -1,5 +1,6 @@
 #include<qthread/performance.h>
 #include<qthread/logging.h>
+#include<qthread/qthread.h>
 #include<string.h>
 #include<strings.h>
 #include<stdlib.h>
@@ -138,14 +139,43 @@ qttimestamp_t qtperf_now(){
 }
 
 void qtperf_start(){
+  qtperfcounter_t now = qtperf_now();
+  qtperf_iterator_t iter_box;
+  qtperf_iterator_t* iter=&iter_box;
+  qtperfdata_t* data = NULL;
   _collecting = 1;
+  // Now I need to resume the counters, but pretend that any elapsed
+  // time did not actually happen (set time_entered to now)
+  // TODO XXX This needs to be locked! RACE CONDITION
+  qtperf_iter_begin(&iter);
+  for(data = qtperf_iter_next(&iter); data != NULL; data = qtperf_iter_next(&iter)){
+    if(data->current_state != QTPERF_INVALID_STATE){
+      data->time_entered = now;
+    }
+  }
 }
 
 void qtperf_stop() {
+  qtperfcounter_t now = qtperf_now();
+  qtperf_iterator_t iter_box;
+  qtperf_iterator_t* iter=&iter_box;
+  qtperfdata_t* data = NULL;
   _collecting = 0;
+  // Now I need to record the time spent in the current state for all
+  // active records
+  // TODO XXX This needs to be locked! RACE CONDITION
+  qtperf_iter_begin(&iter);
+  for(data = qtperf_iter_next(&iter); data != NULL; data = qtperf_iter_next(&iter)){
+    if(data->current_state != QTPERF_INVALID_STATE){
+      data->perf_counters[data->current_state] += now - data->time_entered;
+      data->time_entered = now;
+    }
+  }
 }
 
 void qtperf_free_data(){
+  // Stop all threads, otherwise we'll have a crash
+  qthread_finalize();
   qtperf_free_group_list();
   _groups = NULL;
   _next_group = NULL;
@@ -163,6 +193,8 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
   return group->state_names[state];
 }
 
+// This function will still change states even if _collecting is
+// false, but the timing data will not be recorded.
 void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
   //qtlogargs(1, "data %p", data);
@@ -170,10 +202,12 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     qtlogargs(LOGERR,"State number %lu is out of bounds!", state);
     return;
   }
-  if(data->current_state != QTPERF_INVALID_STATE) {
+  if(_collecting && data->current_state != QTPERF_INVALID_STATE) {
     data->perf_counters[data->current_state] += now - data->time_entered;
   }
-  data->time_entered= now;
+  if(_collecting){
+    data->time_entered= now;
+  }
   data->current_state = state;
 }
 
@@ -194,7 +228,7 @@ qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter){
 }
 
 bool incr_counter(qtperf_iterator_t** iter){
-  if(*iter != qtperf_iter_end()){
+  if(*iter != qtperf_iter_end() && (*iter)->current != NULL){
     (*iter)->current = (*iter)->current->next;
   }
   return (*iter)->current != NULL;
@@ -203,13 +237,16 @@ bool incr_counter(qtperf_iterator_t** iter){
 bool incr_group(qtperf_iterator_t** iter){
   if(*iter != qtperf_iter_end() && (*iter)->current_group != NULL){
     (*iter)->current_group = (*iter)->current_group->next;
+    if((*iter)->current_group != NULL){
+      (*iter)->current = (*iter)->current_group->group.counters;
+    }
   }
   return (*iter)->current_group != NULL;
 }
 
 qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter){
   qtperfdata_t* data = qtperf_iter_deref(*iter);
-  if(!incr_counter(iter) || incr_group(iter)){
+  if(!incr_counter(iter) && !incr_group(iter)){
     (*iter) = qtperf_iter_end();
     return NULL;
   }
@@ -268,6 +305,45 @@ void qtperf_set_instrument_qthreads(bool yes_no) {
 }
 
 
+/* PRINTING RESULTS */
+
+void qtperf_print_results(){
+  qtperf_group_list_t* current = NULL;
+  for(current = _groups; current != NULL; current = current->next){
+    qtperf_print_group(&current->group);
+  }
+}
+
+#ifndef PERF_SHOW_STATES_WITH_ZERO_TIME
+#define PERF_SHOW_STATES_WITH_ZERO_TIME 1
+#endif
+
+void qtperf_print_group(qtstategroup_t* group){
+  qtperf_perf_list_t* current = NULL;
+  size_t i=0;
+  printf("%s (%lu instances, %lu total states)\n", group->name, group->num_counters, group->num_states);
+  for(current = group->counters,i=0; current != NULL; current = current->next,i++){
+    printf("  Instance %lu:\n", i);
+    qtperf_print_perfdata(&current->performance_data, PERF_SHOW_STATES_WITH_ZERO_TIME);
+  }
+  printf("------------------------------------------------\n");
+}
+
+void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_zeros){
+  size_t i=0;
+  const char** names = (const char**)perfdata->state_group->state_names;
+  qtperfcounter_t* data = perfdata->perf_counters;
+  for(i=0; i<perfdata->state_group->num_states; i++){
+    if(show_zeros || (data[i] != 0)){
+      if(names != NULL){
+        printf("    %s: %llu\n", names[i], data[i]);
+      }else{
+        printf("    state %lu: %llu\n", i, data[i]);
+      }
+    }
+  }
+}
+
 /* Testing related functionality */
 
 #ifdef QTPERF_TESTING
@@ -300,6 +376,7 @@ bool qtp_validate_perfdata(qtperfdata_t* data){
   assert_true(data->perf_counters != NULL);
   valid = valid && ((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
                     || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
+  qtlogargs(1,"data->current_state=%lu, data->time_entered=%lu", data->current_state, data->time_entered);
   assert_true((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
               || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
   return valid;

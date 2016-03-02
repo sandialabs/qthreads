@@ -80,6 +80,7 @@ static void test_create_perfdata(void**state) {
   assert_true(qtperf_check_invariants() && "after cleanup");
 }
 
+
 size_t spin(size_t amount){
   size_t i=0;
   size_t r=2;
@@ -195,17 +196,94 @@ static void test_fake_concurrent(void** state){
   assert_true(qtperf_check_invariants());
 }
 
-static void test_check_invariants(void** state) {
+#ifndef DBG_ITER
+#define DBG_ITER 0
+#endif
+static void test_iterator(void** state){
+  qtperfdata_t* threads[NumThreads];
+  qtstategroup_t* group[3];
+  qtperfid_t numstates[3];
+  qtperf_iterator_t iterator;
+  qtperf_iterator_t* iter=&iterator;
+  qtperfdata_t* iterdata = NULL;
+  size_t i=0;
+  group[0]=qtperf_create_state_group(NumStates1, "group 1", state1_names);
+  group[1]=qtperf_create_state_group(NumStates2, "group 2", state2_names);
+  group[2]=qtperf_create_state_group(NumStates3, "group 3", state3_names);
+  numstates[0] = NumStates1;
+  numstates[1] = NumStates2;
+  numstates[2] = NumStates3;
+  assert_true(group[0] != NULL && group[1] != NULL && group[2] != NULL);
+  qtperf_start();
+  for(i=0; i<NumThreads; i++){
+    threads[i] = qtperf_create_perfdata(group[i%3]);
+  }
+  for(i=0; i<NumThreads*20; i++){
+    checked_transition(threads[i%NumThreads], qtperf_now()%numstates[i%3]);
+  }
+  qtperf_stop();
+  qtperf_iter_begin(&iter);
+  assert_true(iter != NULL);
+  assert_true(qtperf_iter_deref(iter) != NULL);
+  i=0;
+  for(iterdata = qtperf_iter_next(&iter);
+      iterdata != NULL;
+      iterdata = qtperf_iter_next(&iter)){
+    qtlogargs(DBG_ITER, "iter step %lu = %p", i, (void*)iter);
+    i++;
+  }
+  assert_true(iter == NULL);
+  qtlogargs(DBG_ITER, "i=%lu, NumThreads=%lu", i, NumThreads-1);
+  assert_true(i == NumThreads-1);
+  assert_true(qtperf_check_invariants());
+  qtperf_free_data();
   assert_true(qtperf_check_invariants());
 }
 
+static void test_print(void** state){
+  qtperfdata_t* threads[5];
+  qtstategroup_t* group[3];
+  qtperfid_t numstates[3];
+  size_t i=0;
+  group[0]=qtperf_create_state_group(NumStates1, "group 1", state1_names);
+  group[1]=qtperf_create_state_group(NumStates2, "group 2", state2_names);
+  group[2]=qtperf_create_state_group(NumStates3, "group 3", state3_names);
+  numstates[0] = NumStates1;
+  numstates[1] = NumStates2;
+  numstates[2] = NumStates3;
+  assert_true(group[0] != NULL && group[1] != NULL && group[2] != NULL);
+  qtperf_start();
+  for(i=0; i<5; i++){
+    threads[i] = qtperf_create_perfdata(group[i%3]);
+  }
+  for(i=0; i<5*20; i++){
+    checked_transition(threads[i%5], qtperf_now()%numstates[i%3]);
+    spin(500);
+  }
+  for(i=0; i<5; i++){
+    qtperfcounter_t total_time=0;
+    size_t j=0;
+    for(j=0; j<numstates[i%3]; j++){
+      total_time += threads[i]->perf_counters[j];
+    }
+    assert_true(total_time > 0);
+  }
+  qtperf_stop();
+  qtperf_print_results();
+  assert_true(qtperf_check_invariants());
+  qtperf_free_data();
+  assert_true(qtperf_check_invariants());
+}
+
+
 int main(int argc, char** argv){
   const struct CMUnitTest test[] ={
-    cmocka_unit_test(test_check_invariants),
     cmocka_unit_test_teardown(test_create_group,reset_qtperf),
     cmocka_unit_test_teardown(test_state_transitions,reset_qtperf),
     cmocka_unit_test_teardown(test_create_perfdata,reset_qtperf),
-    cmocka_unit_test_teardown(test_fake_concurrent,reset_qtperf)
+    cmocka_unit_test_teardown(test_fake_concurrent,reset_qtperf),
+    cmocka_unit_test_teardown(test_iterator,reset_qtperf),
+    cmocka_unit_test_teardown(test_print,reset_qtperf)
   };
   return cmocka_run_group_tests(test,NULL,NULL);
 }
