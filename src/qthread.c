@@ -3078,7 +3078,7 @@ void INTERNAL qthread_back_to_master2(qthread_t *t)
 {                      /*{{{ */
     assert((t->flags & QTHREAD_SIMPLE) == 0);
     RLIMIT_TO_NORMAL(t);
-    qtlog(WKR_DBG, "qthread_back_to_master2 called!!!");
+    //qtlog(WKR_DBG, "qthread_back_to_master2 called!!!");
     QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
     /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND

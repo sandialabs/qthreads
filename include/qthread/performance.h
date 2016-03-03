@@ -1,6 +1,7 @@
 #ifndef QT_PERFORMANCE_H
 #define QT_PERFORMANCE_H
 #include<stddef.h>
+#include<stdint.h>
 
 #ifndef PERFDBG
 #  define PERFDBG 0
@@ -36,7 +37,7 @@ typedef struct qtperfdata_s {
   qtperfcounter_t* perf_counters;
   qtperfid_t current_state;
   qttimestamp_t time_entered;
-  unsigned long busy;// 1 if somebody is using this structure, else 0
+  volatile uint32_t busy;// 1 if somebody is using this structure, else 0
 } qtperfdata_t;
 
 /* a linked list of performance trackers. */
