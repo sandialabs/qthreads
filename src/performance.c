@@ -24,10 +24,16 @@ void qtperf_free_state_group_internals(qtstategroup_t*);
 void qtperf_free_group_list(void);
 void qtperf_free_perfdata_internals(qtperfdata_t*);
 void qtperf_free_perf_list(qtstategroup_t*,qtperf_perf_list_t*);
-inline void spin_lock(volatile uint32_t* busy);
+static inline void spin_lock(volatile uint32_t* busy);
 
-inline void spin_lock(volatile uint32_t* busy){
-  while(qthread_cas32(busy, 0, 1) != 0);
+static inline void spin_lock(volatile uint32_t* busy){
+  register bool stopped = 0;
+  while(qthread_cas32(busy, 0, 1) != 0){
+    stopped = 1;
+  }
+  if(stopped){
+    qtlog(1, "Stopped in spinlock");
+  }
 }
 
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* name, const char** state_names) {
@@ -148,7 +154,7 @@ void qtperf_start(){
   qtperf_iterator_t iter_box;
   qtperf_iterator_t* iter=&iter_box;
   qtperfdata_t* data = NULL;
-  uint32_t* last_busy=NULL;
+  volatile uint32_t* last_busy=NULL;
   _collecting = 1;
   // Now I need to resume the counters, but pretend that any elapsed
   // time did not actually happen (set time_entered to now)
@@ -173,7 +179,7 @@ void qtperf_stop() {
   qtperf_iterator_t iter_box;
   qtperf_iterator_t* iter=&iter_box;
   qtperfdata_t* data = NULL;
-  uint32_t* last_busy=NULL;
+  volatile uint32_t* last_busy=NULL;
   _collecting = 0;
   // Now I need to record the time spent in the current state for all
   // active records
@@ -401,7 +407,7 @@ bool qtp_validate_perfdata(qtperfdata_t* data){
   assert_true(data->perf_counters != NULL);
   valid = valid && ((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
                     || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
-  qtlogargs(1,"data->current_state=%lu, data->time_entered=%lu", data->current_state, data->time_entered);
+  qtlogargs(PERFDBG,"data->current_state=%lu, data->time_entered=%lu", data->current_state, data->time_entered);
   assert_true((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
               || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
   return valid;
