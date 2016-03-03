@@ -32,7 +32,7 @@ static inline void spin_lock(volatile uint32_t* busy){
     stopped = 1;
   }
   if(stopped){
-    qtlog(1, "Stopped in spinlock");
+    qtlog(LOGWARN, "Stopped in spinlock");
   }
 }
 
@@ -155,6 +155,9 @@ void qtperf_start(){
   qtperf_iterator_t* iter=&iter_box;
   qtperfdata_t* data = NULL;
   volatile uint32_t* last_busy=NULL;
+  if(_collecting == 1){
+    return; // already collecting
+  }
   _collecting = 1;
   // Now I need to resume the counters, but pretend that any elapsed
   // time did not actually happen (set time_entered to now)
@@ -180,6 +183,9 @@ void qtperf_stop() {
   qtperf_iterator_t* iter=&iter_box;
   qtperfdata_t* data = NULL;
   volatile uint32_t* last_busy=NULL;
+  if(_collecting == 0){
+    return; // already stopped
+  }
   _collecting = 0;
   // Now I need to record the time spent in the current state for all
   // active records
@@ -202,8 +208,9 @@ void qtperf_stop() {
 }
 
 void qtperf_free_data(){
-  // Stop all threads, otherwise we'll have a crash
-  qthread_finalize();
+  // Stop all workers, otherwise we could have a crash
+  qtperf_set_instrument_workers(0);
+  qtperf_set_instrument_qthreads(0);
   qtperf_free_group_list();
   _groups = NULL;
   _next_group = NULL;
@@ -313,8 +320,9 @@ void qtperf_set_instrument_workers(bool yes_no){
   if(yes_no && qtperf_workers_group == NULL){
     qtperf_workers_group = qtperf_create_state_group(WKR_NUM_STATES, "Workers Internal", worker_state_names);
   }
-  QTPERF_ASSERT((qtperf_should_instrument_workers && (qtperf_workers_group != NULL)) ||
-                (!qtperf_should_instrument_workers && (qtperf_workers_group == NULL)));
+  if(qtperf_should_instrument_workers){
+    QTPERF_ASSERT(qtperf_should_instrument_workers && (qtperf_workers_group != NULL));
+  }
 }
 
 
@@ -331,8 +339,9 @@ void qtperf_set_instrument_qthreads(bool yes_no) {
   if(yes_no && qtperf_qthreads_group == NULL){
     qtperf_qthreads_group = qtperf_create_state_group(QTH_NUM_STATES, "Qthreads Internal", qthread_state_names);
   }
-  QTPERF_ASSERT((qtperf_should_instrument_qthreads && (qtperf_qthreads_group != NULL)) ||
-                (!qtperf_should_instrument_qthreads && (qtperf_qthreads_group == NULL)));
+  if(qtperf_should_instrument_qthreads){
+    QTPERF_ASSERT(qtperf_should_instrument_qthreads && (qtperf_qthreads_group != NULL));
+  }
 }
 
 
