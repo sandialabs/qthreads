@@ -24,7 +24,11 @@ void qtperf_free_state_group_internals(qtstategroup_t*);
 void qtperf_free_group_list(void);
 void qtperf_free_perfdata_internals(qtperfdata_t*);
 void qtperf_free_perf_list(qtstategroup_t*,qtperf_perf_list_t*);
+inline void spin_lock(volatile uint32_t* busy);
 
+inline void spin_lock(volatile uint32_t* busy){
+  while(qthread_cas32(busy, 0, 1) != 0);
+}
 
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* name, const char** state_names) {
   qtperf_group_list_t* current = NULL;
@@ -120,6 +124,7 @@ void qtperf_free_perfdata_internals(qtperfdata_t* perfdata) {
 void qtperf_free_perf_list(qtstategroup_t* group, qtperf_perf_list_t* counters){
   qtperf_perf_list_t* next = NULL;
   while(counters != NULL){
+    spin_lock(&counters->performance_data.busy);
     next = counters->next;
     qtperf_free_perfdata_internals(&counters->performance_data);
     counters->next = NULL;
@@ -143,15 +148,23 @@ void qtperf_start(){
   qtperf_iterator_t iter_box;
   qtperf_iterator_t* iter=&iter_box;
   qtperfdata_t* data = NULL;
+  uint32_t* last_busy=NULL;
   _collecting = 1;
   // Now I need to resume the counters, but pretend that any elapsed
   // time did not actually happen (set time_entered to now)
   // TODO XXX This needs to be locked! RACE CONDITION
   qtperf_iter_begin(&iter);
   for(data = qtperf_iter_next(&iter); data != NULL; data = qtperf_iter_next(&iter)){
+    if(last_busy != NULL)
+      *last_busy=0; // release previous 
+    last_busy=&data->busy;
+    spin_lock(&data->busy);
     if(data->current_state != QTPERF_INVALID_STATE){
       data->time_entered = now;
     }
+  }
+  if(last_busy != NULL){
+    *last_busy = 0;// release last 
   }
 }
 
@@ -160,16 +173,25 @@ void qtperf_stop() {
   qtperf_iterator_t iter_box;
   qtperf_iterator_t* iter=&iter_box;
   qtperfdata_t* data = NULL;
+  uint32_t* last_busy=NULL;
   _collecting = 0;
   // Now I need to record the time spent in the current state for all
   // active records
   // TODO XXX This needs to be locked! RACE CONDITION
   qtperf_iter_begin(&iter);
   for(data = qtperf_iter_next(&iter); data != NULL; data = qtperf_iter_next(&iter)){
+    if(last_busy != NULL){
+      *last_busy = 0; // release previous
+    }
+    last_busy = &data->busy;
+    spin_lock(&data->busy);
     if(data->current_state != QTPERF_INVALID_STATE){
       data->perf_counters[data->current_state] += now - data->time_entered;
       data->time_entered = now;
     }
+  }
+  if(last_busy != NULL){
+    *last_busy = 0; // release last
   }
 }
 
@@ -197,9 +219,11 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
 // false, but the timing data will not be recorded.
 void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
+  spin_lock(&data->busy);
   //qtlogargs(1, "data %p", data);
   if(state >= data->state_group->num_states) {
     qtlogargs(LOGERR,"State number %lu is out of bounds!", state);
+    data->busy = 0;
     return;
   }
   if(_collecting && data->current_state != QTPERF_INVALID_STATE) {
@@ -209,6 +233,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     data->time_entered= now;
   }
   data->current_state = state;
+  data->busy = 0;
 }
 
 void qtperf_iter_begin(qtperf_iterator_t**iter){
