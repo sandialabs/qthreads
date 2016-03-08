@@ -274,48 +274,6 @@ static void test_print(void** state){
   qtperf_free_data();
   assert_true(qtperf_check_invariants());
 }
-// Test the spin_lock function to make sure it prevents simultaneous
-// edits to a data structure.
-static inline void spin_lock(volatile uint32_t* busy);
-
-static inline void spin_lock(volatile uint32_t* busy){
-  register bool stopped = 0;
-  while(qthread_cas32(busy, 0, 1) != 0){
-    stopped = 1;
-  }
-  if(stopped){
-    qtlog(LOGWARN, "Stopped in spinlock");
-  }
-}
-void struct_edit(int* strct, volatile uint32_t* busy){
-  int start =0;
-  size_t i=0;
-  for(i=0; i<100; i++){
-    spin_lock(busy);
-    start = *strct;
-    for(i=0; i<1000000; i++){
-      *strct = *strct+1;
-    }
-    assert_true(*strct == start+1000000);
-    *busy = 0;
-  }
-}
-
-static void test_spinlock(void** state) {
-  volatile uint32_t busy=0;
-  aligned_t ret=0;
-  size_t i=0;
-  qtperf_start();
-  qthread_initialize();
-  for(i=0; i<10; i++){
-    qthread_fork(struct_edit, NULL, &ret);
-  }
-  for(i=0; i<10; i++){
-    qthread_readFE(NULL,&ret);
-  }
-  qtperf_stop();
-  assert_true(qtperf_check_invariants());
-}
 
 int main(int argc, char** argv){
   const struct CMUnitTest test[] ={

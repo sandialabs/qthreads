@@ -347,6 +347,24 @@ void qtperf_set_instrument_qthreads(bool yes_no) {
 
 /* PRINTING RESULTS */
 
+qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group){
+  qtperf_perf_list_t* current = NULL;
+  qtperfcounter_t total=0;
+  for(current = group->counters; current != NULL; current = current->next){
+    total += qtperf_total_time(&current->performance_data);
+  }
+  return total;
+}
+
+qtperfcounter_t qtperf_total_time(qtperfdata_t* data){
+  size_t i=0;
+  qtperfcounter_t result=0;
+  for(i=0; i<data->num_states; i++){
+    result += data->perf_counters[i];
+  }
+  return result;
+}
+
 void qtperf_print_results(){
   qtperf_group_list_t* current = NULL;
   for(current = _groups; current != NULL; current = current->next){
@@ -361,9 +379,9 @@ void qtperf_print_results(){
 void qtperf_print_group(qtstategroup_t* group){
   qtperf_perf_list_t* current = NULL;
   size_t i=0;
-  printf("%s (%lu instances, %lu total states)\n", group->name, group->num_counters, group->num_states);
+  printf("%s (%lu instances, %lu total states, total time=%llu)\n", group->name, group->num_counters, group->num_states, qtperf_total_group_time(group));
   for(current = group->counters,i=0; current != NULL; current = current->next,i++){
-    printf("  Instance %lu:\n", i);
+    printf("  Instance %lu, total time %llu:\n", i, qtperf_total_time(&current->performance_data));
     qtperf_print_perfdata(&current->performance_data, PERF_SHOW_STATES_WITH_ZERO_TIME);
   }
   printf("------------------------------------------------\n");

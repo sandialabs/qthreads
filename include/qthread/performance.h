@@ -88,6 +88,8 @@ void qtperf_set_instrument_qthreads(bool);
 void qtperf_print_results(void);
 void qtperf_print_group(qtstategroup_t* group);
 void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time);
+qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group);
+qtperfcounter_t qtperf_total_time(qtperfdata_t* data);
 
 #ifdef QTPERF_TESTING
 #include<stdarg.h>

@@ -42,45 +42,90 @@ void test_spinners(void** state){
 // edits to a data structure. this function is copied from
 // performance.c in order to test it as written. It's lame, but
 // simple.
-static inline void spin_lock(volatile uint32_t* busy);
+static inline int spin_lock(volatile uint32_t* busy);
 
-static inline void spin_lock(volatile uint32_t* busy){
-  register bool stopped = 0;
+static inline int spin_lock(volatile uint32_t* busy){
+  int ret=0;
   while(qthread_cas32(busy, 0, 1) != 0){
-    stopped = 1;
+    ret=1;
   }
-  if(stopped){
-    qtlog(LOGWARN, "Stopped in spinlock");
-  }
+  return ret;
 }
-void struct_edit(int* strct, volatile uint32_t* busy){
+
+typedef enum {
+  SPIN_WORKING,
+  SPIN_WAITING,
+  SPIN_NUM_STATES
+} spinstate_t;
+
+const char* spin_names[] = {
+  "SPIN_WORKING",
+  "SPIN_WAITING",
+  "SPIN_NUM_STATES"
+};
+volatile uint32_t busy=0;
+int strct=0;
+aligned_t bit=0;
+#define SPIN 1
+aligned_t struct_edit(void*data){
   int start =0;
   size_t i=0;
+  aligned_t ret=0;
+  int interruptions=0;
+  qtperfdata_t* mydata = (qtperfdata_t*)data;
+  qtperf_enter_state(mydata, SPIN_WORKING);
   for(i=0; i<100; i++){
-    spin_lock(busy);
-    start = *strct;
-    for(i=0; i<1000000; i++){
-      *strct = *strct+1;
+    size_t j=0;
+    qtperf_enter_state(mydata, SPIN_WAITING);
+    interruptions += spin_lock(&busy);
+    qtperf_enter_state(mydata, SPIN_WORKING);
+
+    start = strct;
+    for(j=0; j<10000000; j++){
+      strct = strct+1;
     }
-    assert_true(*strct == start+1000000);
-    *busy = 0;
+    assert_true(strct == start+10000000);
+    start = strct;
+    busy = 0;
   }
+  qtlogargs(SPIN, "%d interruptions", interruptions);
+  ret = strct;
+  return ret;
 }
 
+typedef enum {
+  RUNNING,
+  DONE,
+  TOTAL_NUM_STATES
+} total_t;
+const char* total_names[]={
+  "RUNNING",
+  "DONE"
+};
+
 static void test_spinlock(void** state) {
-  volatile uint32_t busy=0;
   aligned_t ret=0;
   size_t i=0;
+  qtstategroup_t* spingroup=NULL;
+  qtstategroup_t* totalgroup=NULL;
+  qtperfdata_t* totaldata=NULL;
   qtperf_start();
   qthread_initialize();
-  for(i=0; i<10; i++){
-    qthread_fork(struct_edit, NULL, &ret);
+  spingroup=qtperf_create_state_group(SPIN_NUM_STATES, "Spin Testing", spin_names);
+  totalgroup=qtperf_create_state_group(SPIN_NUM_STATES, "Total Time", total_names);
+  totaldata=qtperf_create_perfdata(totalgroup);
+  qtperf_enter_state(totaldata,RUNNING);
+  for(i=0; i<100; i++){
+    qtperfdata_t* spindata = qtperf_create_perfdata(spingroup);
+    qthread_fork(struct_edit, (void*)spindata, &ret);
   }
-  for(i=0; i<10; i++){
+  for(i=0; i<100; i++){
     qthread_readFE(NULL,&ret);
   }
+  qtperf_enter_state(totaldata,DONE);
   qtperf_stop();
   assert_true(qtperf_check_invariants());
+  qtperf_print_results();
 }
 
 void test_teardown(void** state){

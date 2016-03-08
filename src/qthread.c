@@ -887,7 +887,7 @@ int API_FUNC qthread_initialize(void)
     qthread_worker_id_t   nworkerspershep = 0;
     size_t                hw_par          = 0;
     extern unsigned int QTHREAD_LOCKING_STRIPES;
-    qtlog(1,"qthread_initialize");
+    //qtlog(1,"qthread_initialize");
     print_info = qt_internal_get_env_num("INFO", 0, 1);
 
     QTHREAD_FASTLOCK_SETUP();
