@@ -606,7 +606,7 @@ got_m:
             assert(e.sf == 0);         /* no waiters */
             UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, 0);
         }
-    } else { /* already empty, so just release the lock */
+    } else { /* already full, so just release the lock */
         assert(e.pf == 0);
         UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, e.sf);
     }
