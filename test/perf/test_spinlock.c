@@ -59,7 +59,7 @@ aligned_t struct_edit(void*data){
     start = strct;
     busy = 0;
   }
-  qtperf_enter_state(mydata, SPIN_COMPLETE);
+  qtperf_enter_state(mydata, QTPERF_INVALID_STATE);
   qtlogargs(SPIN, "%d interruptions", interruptions);
   ret = strct;
   return ret;
