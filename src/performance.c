@@ -161,7 +161,6 @@ void qtperf_start(){
   _collecting = 1;
   // Now I need to resume the counters, but pretend that any elapsed
   // time did not actually happen (set time_entered to now)
-  // TODO XXX This needs to be locked! RACE CONDITION
   qtperf_iter_begin(&iter);
   for(data = qtperf_iter_next(&iter); data != NULL; data = qtperf_iter_next(&iter)){
     if(last_busy != NULL)
@@ -189,7 +188,6 @@ void qtperf_stop() {
   _collecting = 0;
   // Now I need to record the time spent in the current state for all
   // active records
-  // TODO XXX This needs to be locked! RACE CONDITION
   qtperf_iter_begin(&iter);
   for(data = qtperf_iter_next(&iter); data != NULL; data = qtperf_iter_next(&iter)){
     if(last_busy != NULL){
@@ -245,14 +243,12 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     return;
   }
   if(_collecting && data->current_state != QTPERF_INVALID_STATE) {
-    if(data->time_entered < 5){
-      qtlog(LOGERR, "Warning: entering state with zero time_entered value");
+    if(data->time_entered < now/2){
+      qtlogargs(LOGERR, "Warning: entering state with invalid time_entered value %lu", data->time_entered);
     }
     data->perf_counters[data->current_state] += now - data->time_entered;
   }
-  if(_collecting){
-    data->time_entered= now;
-  }
+  data->time_entered= now;
   data->current_state = state;
   data->busy = 0;
 }
