@@ -246,7 +246,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   }
   if(_collecting && data->current_state != QTPERF_INVALID_STATE) {
     if(data->time_entered < 5){
-      qtlog(LOGWARN, "Warning: entering state with zero time_entered value");
+      qtlog(LOGERR, "Warning: entering state with zero time_entered value");
     }
     data->perf_counters[data->current_state] += now - data->time_entered;
   }
