@@ -237,7 +237,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
   spin_lock(&data->busy);
   //qtlogargs(1, "data %p", data);
-  if(state >= data->state_group->num_states) {
+  if(state != QTPERF_INVALID_STATE && state >= data->state_group->num_states) {
     qtlogargs(LOGERR,"State number %lu is out of bounds!", state);
     data->busy = 0;
     return;
@@ -248,7 +248,11 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     }
     data->perf_counters[data->current_state] += now - data->time_entered;
   }
-  data->time_entered= now;
+  if(state != QTPERF_INVALID_STATE){
+    data->time_entered= now;
+  } else {
+    data->time_entered = 0;
+  }
   data->current_state = state;
   data->busy = 0;
 }

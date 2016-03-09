@@ -27,7 +27,7 @@ aligned_t spin(void* d){
   for(i=0; i<1000000; i++){
     result = result * result + i;
   }
-  qtperf_enter_state(data, SS_DONE);
+  qtperf_enter_state(data, QTPERF_INVALID_STATE);
   return result;
 }
 
@@ -56,7 +56,7 @@ void test_startstop(void** state){
       qtperf_start();
   }
   qtperf_stop();
-  //qtperf_print_results();
+  qtperf_print_results();
   now = qtperf_now();
   total_time = qtperf_total_group_time(group);
   if(total_time >= now/2){
