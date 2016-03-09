@@ -197,7 +197,12 @@ void qtperf_stop() {
     }
     last_busy = &data->busy;
     spin_lock(&data->busy);
-    if(data->current_state != QTPERF_INVALID_STATE){
+    // need the time_entered check because the thread may have entered
+    // its first valid state between when _collecting was zeroed and
+    // this check. In that case, the thread would be in a valid state
+    // but the time_entered would not be set, and therefore we should
+    // have a zero elapsed time for the state.
+    if(data->current_state != QTPERF_INVALID_STATE && data->time_entered != 0){
       data->perf_counters[data->current_state] += now - data->time_entered;
       data->time_entered = now;
     }
@@ -240,6 +245,9 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     return;
   }
   if(_collecting && data->current_state != QTPERF_INVALID_STATE) {
+    if(data->time_entered < 5){
+      qtlog(LOGWARN, "Warning: entering state with zero time_entered value");
+    }
     data->perf_counters[data->current_state] += now - data->time_entered;
   }
   if(_collecting){
