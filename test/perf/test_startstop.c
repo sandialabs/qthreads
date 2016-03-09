@@ -23,15 +23,15 @@ aligned_t spin(void* d){
   size_t i=0;
   qtperfdata_t* data = (qtperfdata_t*)d;
   aligned_t result=2;
-  qtperf_enter_state(d, SS_RUNNING);
+  qtperf_enter_state(data, SS_RUNNING);
   for(i=0; i<1000000; i++){
     result = result * result + i;
   }
-  qtperf_enter_state(d, SS_DONE);
+  qtperf_enter_state(data, SS_DONE);
   return result;
 }
 
-#define TEST 0
+#define TEST 1
 size_t num_threads=50;
 void test_startstop(void** state){
   size_t i=0;
@@ -53,6 +53,7 @@ void test_startstop(void** state){
     if(i%4==0)
       qtperf_start();
   }
+  qtlogargs(TEST, "Current timestamp: %lu", qtperf_now());
   qtperf_stop();
   qtlog(TEST, "Printing results...");
   qtperf_print_results();
