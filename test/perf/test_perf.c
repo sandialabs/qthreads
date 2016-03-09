@@ -87,14 +87,14 @@ size_t spin(size_t amount){
   for(i=0; i<amount; i++){
     size_t j=0;
     for(j=0; j<100; j++){
-      r = r * r;
+      r = r * r+1;
     }
   }
   return r;
 }
 
 #ifndef DBG_STATES
-#define DBG_STATES 0
+#define DBG_STATES 1
 #endif
 void checked_transition(qtperfdata_t* data, qtperfid_t newstate){
   qtperfid_t last_state = data->current_state;
@@ -123,6 +123,7 @@ void checked_transition(qtperfdata_t* data, qtperfid_t newstate){
 static void test_state_transitions(void** state){
   qtperfdata_t* data = NULL;
   size_t i=0;
+  size_t spinval=0;
   group1 = qtperf_create_state_group(NumStates1, "group 1", state1_names);
   assert_true(group1 != NULL);
   data = qtperf_create_perfdata(group1);
@@ -135,23 +136,24 @@ static void test_state_transitions(void** state){
   for(i=0; i<1000; i++){
     if(i%2 == 0){
       checked_transition(data, S2);
-      spin(1000);
+      spinval+=spin(1000);
       assert_true(data->current_state == S2);
     }
     if(i%2 == 1){
       checked_transition(data, S3);
-      spin(500);
+      spinval+=spin(500);
       assert_true(data->current_state == S3);
     }
     checked_transition(data, S4);
     assert_true(data->current_state == S4);
-    spin(1000);
+    spinval+=spin(1000);
   }
   qtlogargs(DBG_STATES, "time[S1] = %llu", data->perf_counters[S1]);
   qtlogargs(DBG_STATES, "time[S2] = %llu", data->perf_counters[S2]);
   qtlogargs(DBG_STATES, "time[S3] = %llu", data->perf_counters[S3]);
   qtlogargs(DBG_STATES, "time[S4] = %llu", data->perf_counters[S4]);
-
+  printf("print number to avoid optimizing out spin function: %lu\n", spinval);
+  
   assert_true(data->perf_counters[S2] > data->perf_counters[S3]);
   assert_true(data->perf_counters[S3] > data->perf_counters[S1]);
   assert_true(data->perf_counters[S4] > data->perf_counters[S3]);
