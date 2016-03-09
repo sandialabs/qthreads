@@ -38,6 +38,8 @@ void test_startstop(void** state){
   aligned_t ret=0;
   qtstategroup_t* group=NULL;
   qtperfdata_t* data=NULL;
+  qtperfcounter_t total_time=0;
+  qttimestamp_t now=0;
   qtperf_set_instrument_workers(1);
   group = qtperf_create_state_group(SS_NUM_STATES, "start stop counter", names);
   qtperf_start();
@@ -53,11 +55,14 @@ void test_startstop(void** state){
     if(i%4==0)
       qtperf_start();
   }
-  qtlogargs(TEST, "Current timestamp: %lu", qtperf_now());
   qtperf_stop();
-  qtlog(TEST, "Printing results...");
-  qtperf_print_results();
-  qtlog(TEST, "done printing results");
+  //qtperf_print_results();
+  now = qtperf_now();
+  total_time = qtperf_total_group_time(group);
+  if(total_time >= now/2){
+    qtlogargs(LOGERR, "Invalid total time: %llu", total_time);
+  }
+  assert_true(total_time < now/2);
   assert_true(qtperf_check_invariants());
   qtperf_free_data();
   assert_true(qtperf_check_invariants());
