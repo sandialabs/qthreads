@@ -20,7 +20,6 @@ TESTS = \
 		qthread_migrate_to \
 		qthread_disable_shepherd \
 		qtimer \
-		queue \
 		qthread_fork_precond \
 		qalloc \
 		arbitrary_blocking_operation \
