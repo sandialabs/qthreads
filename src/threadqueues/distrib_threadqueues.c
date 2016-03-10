@@ -62,6 +62,7 @@ static QINLINE void free_tqnode(qt_threadqueue_node_t* t){
 } 
 
 extern qt_mpool generic_qthread_pool;
+
 static QINLINE qthread_t* alloc_qthread() {
   return (qthread_t*) qt_mpool_alloc(generic_qthread_pool);
 }
@@ -87,18 +88,18 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q){
     qthread_t *t;
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
     while (q->head != q->tail) {
-        qt_threadqueue_node_t *node = q->tail;
-        if (node != NULL) {
-            q->tail = node->prev;
-            if (q->tail == NULL) {
-                q->head = NULL;
-            } else {
-                q->tail->next = NULL;
-            }
-            t = node->value;
-            free_tqnode(node);
-            free_qthread(t);
+      qt_threadqueue_node_t *node = q->tail;
+      if (node != NULL) {
+        q->tail = node->prev;
+        if (q->tail == NULL) {
+            q->head = NULL;
+        } else {
+            q->tail->next = NULL;
         }
+        t = node->value;
+        free_tqnode(node);
+        free_qthread(t);
+      }
     }
     assert(q->head == NULL);
     assert(q->tail == NULL);
@@ -171,7 +172,10 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *q)
   // If there is no work or we can't get the lock, fail
   if (q->qlength == 0) return NULL;
   if (!QTHREAD_TRYLOCK_TRY(&q->qlock)) return NULL;
-  if (q->qlength == 0) return NULL;
+  if (q->qlength == 0){
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+    return NULL;
+  }
   
   node = (qt_threadqueue_node_t *)q->tail;
   q->tail = node->prev;
@@ -189,7 +193,10 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *q)
   // If there is no work or we can't get the lock, fail
   if (q->qlength == 0) return NULL;
   if (!QTHREAD_TRYLOCK_TRY(&q->qlock)) return NULL;
-  if (q->qlength == 0) return NULL;
+  if (q->qlength == 0){
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+    return NULL;
+  }
   
   q->head = node->next;
   if(q->head) q->head->prev = NULL;
@@ -260,11 +267,8 @@ void INTERNAL qthread_steal_disable(){
 }     
 
 qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * curr_shep){
-  if (curr_shep) {
-    return curr_shep->shepherd_id;
-  } else {
-    return (qthread_shepherd_id_t)0;
-  }
+  if (curr_shep) return curr_shep->shepherd_id;
+  return 0;
 }
 
 size_t INTERNAL qt_threadqueue_policy(const enum threadqueue_policy policy){
