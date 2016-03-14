@@ -87,9 +87,9 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
     q->tail              = NULL;
     q->qlength           = 0;
     q->numwaiters        = 0;
-    steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 2, 0);
+    steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
+    spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 16, 0);
     max_backoff = qt_internal_get_env_num("MAX_BACKOFF", 23, 0);
-    spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 13, 0);
     QTHREAD_TRYLOCK_INIT(q->qlock);
     pthread_cond_init(&q->cond, NULL);
     pthread_mutex_init(&q->cond_mut, NULL);
