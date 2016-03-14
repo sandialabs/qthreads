@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 /* Public Headers */
 #include "qthread/qthread.h"
@@ -28,18 +29,26 @@
 #include "qt_expect.h"
 #include "qt_subsystems.h"
 
+/* Cutoff variables */
+int max_backoff; 
+int spinloop_backoff;
+int steal_ratio;
+
 /* Data Structures */
 struct _qt_threadqueue_node {
-    struct _qt_threadqueue_node *next;
-    struct _qt_threadqueue_node *prev;
-    qthread_t                   *value;
+  struct _qt_threadqueue_node *next;
+  struct _qt_threadqueue_node *prev;
+  qthread_t                   *value;
 };
 
 struct _qt_threadqueue {
-    qt_threadqueue_node_t *head;
-    qt_threadqueue_node_t *tail;
-    long                   qlength;
-    QTHREAD_TRYLOCK_TYPE qlock;
+  qt_threadqueue_node_t *head;
+  qt_threadqueue_node_t *tail;
+  long                 qlength;
+  long                 numwaiters;
+  pthread_cond_t      cond;
+  pthread_mutex_t     cond_mut;
+  QTHREAD_TRYLOCK_TYPE qlock;
 };
 
 /* Memory Management and Initialization/Shutdown */
@@ -71,19 +80,26 @@ static QINLINE void free_qthread(qthread_t* t){
 }
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){   
-    qt_threadqueue_t *q = alloc_threadqueue();
-
-    if (q != NULL) {
-        q->head              = NULL;
-        q->tail              = NULL;
-        q->qlength           = 0;
-        QTHREAD_TRYLOCK_INIT(q->qlock);
-    }
-
-    return q;
+  qt_threadqueue_t *q = alloc_threadqueue();
+  
+  if (q != NULL) {
+    q->head              = NULL;
+    q->tail              = NULL;
+    q->qlength           = 0;
+    q->numwaiters        = 0;
+    steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 2, 0);
+    max_backoff = qt_internal_get_env_num("MAX_BACKOFF", 23, 0);
+    spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 13, 0);
+    QTHREAD_TRYLOCK_INIT(q->qlock);
+    pthread_cond_init(&q->cond, NULL);
+    pthread_mutex_init(&q->cond_mut, NULL);
+  }
+  return q;
 } 
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q){   
+  pthread_cond_destroy(&q->cond);
+  pthread_mutex_destroy(&q->cond_mut);
   if (q->head != q->tail) {
     qthread_t *t;
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
@@ -131,25 +147,26 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q){
 /* Threadqueue operations 
  * We have 4 basic queue operations, enqueue and dequeue for head and tail */
 void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict q,
-                                         qthread_t *restrict        t){ 
+                                          qthread_t *restrict        t){ 
   qt_threadqueue_node_t *node = alloc_tqnode();
-  node->value     = t;
+  node->value = t;
   node->next = NULL;
 
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
   node->prev = q->tail;
   q->tail    = node;
   if (q->head == NULL) {
-      q->head = node;
+    q->head = node;
   } else {
-      node->prev->next = node;
+    node->prev->next = node;
   }
   q->qlength++;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+  if (q->numwaiters > 0) pthread_cond_broadcast (&q->cond);
 } 
 
 void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict q,
-                                             qthread_t *restrict        t){   
+                                          qthread_t *restrict        t){   
   qt_threadqueue_node_t *node = alloc_tqnode();
   node->value     = t;
   node->prev = NULL;
@@ -164,6 +181,7 @@ void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict q,
   }
   q->qlength++;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+  if (q->numwaiters > 0) pthread_cond_broadcast (&q->cond);
 } 
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *q){                                     
@@ -184,7 +202,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *q)
   q->qlength--;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
-  return (node);
+  return node;
 }                                   
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *q){                                     
@@ -198,13 +216,14 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *q)
     return NULL;
   }
   
+  node = (qt_threadqueue_node_t *)q->head;
   q->head = node->next;
   if(q->head) q->head->prev = NULL;
   if(q->tail == node) q->tail = NULL;
   q->qlength--;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
-  return (node);
+  return node;
 }                                   
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -250,10 +269,44 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             uint_fast8_t              active){   
   qt_threadqueue_node_t *node = NULL;
   qthread_t* t;
+  int numwaits = 0;
+  qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
 
+  // Simple exponential backoff that switches to cond_wait spinloop_backoff waits
   while(!node){
     node = qt_threadqueue_dequeue_tail(q);
-    sched_yield();
+
+    // If we've done QT_STEAL_RATIO waits on local queue, try to steal 
+    if(!node && steal_ratio > 0 && numwaits % steal_ratio == 0) {
+      for(int i=0; i < qlib->nshepherds; i++){
+        qt_threadqueue_t *victim_queue = qlib->shepherds[my_shepherd->sorted_sheplist[i]].ready;
+        node = qt_threadqueue_dequeue_head(victim_queue);
+        if (node){
+          t = node->value;
+          free_tqnode(node);
+          return t;
+        }
+      }
+    }
+   
+    if(numwaits < spinloop_backoff){
+      for(int i=0; i<1<<numwaits; i++){
+        SPINLOCK_BODY();
+      }
+    } else {
+      struct timespec t; 
+      struct timeval n; 
+      gettimeofday(&n, NULL); 
+      t.tv_nsec = (n.tv_usec * 1000) + (1 << (numwaits > max_backoff ? max_backoff : numwaits)); 
+      t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); 
+      t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); 
+      pthread_mutex_lock(&q->cond_mut);
+      qthread_incr(&q->numwaiters, 1);
+      pthread_cond_timedwait(&q->cond, &q->cond_mut, &t);
+      qthread_incr(&q->numwaiters, -1);
+      pthread_mutex_unlock(&q->cond_mut);
+    }
+    numwaits++;
   }
   t = node->value;
   free_tqnode(node);
@@ -272,10 +325,10 @@ qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * c
 }
 
 size_t INTERNAL qt_threadqueue_policy(const enum threadqueue_policy policy){
-    switch (policy) {
-        default:
-            return THREADQUEUE_POLICY_UNSUPPORTED;
-    }
+  switch (policy) {
+    default:
+      return THREADQUEUE_POLICY_UNSUPPORTED;
+  }
 }
 
 /* vim:set expandtab: */
