@@ -384,6 +384,13 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #if defined(QTHREAD_USE_ROSE_EXTENSIONS) && defined(QTHREAD_OMP_AFFINITY)
     rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
 #endif
+#ifdef QTHREAD_PERFORMANCE
+    rdata->performance_data = NULL;
+    if(qtperf_should_instrument_qthreads){
+      QTPERF_ASSERT(qtperf_qthreads_group != NULL);
+      rdata->performance_data = qtperf_create_perfdata(qtperf_qthreads_group);
+    }
+#endif
 } /*}}}*/
 
 #ifdef QTHREAD_RCRTOOL
@@ -666,6 +673,7 @@ qt_run:
                                       t->target_shepherd);
                         t->thread_state        = QTHREAD_STATE_RUNNING;
                         t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
+                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
                         assert(t->rdata->shepherd_ptr->ready != NULL);
                         qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
                         break;
@@ -676,6 +684,7 @@ qt_run:
 
                     case QTHREAD_STATE_YIELDED_NEAR: /* reschedule it */
                         t->thread_state = QTHREAD_STATE_RUNNING;
+                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
                         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i yielded near; rescheduling\n",
                                       my_id, t->thread_id);
@@ -696,6 +705,7 @@ qt_run:
                         break;
                     case QTHREAD_STATE_YIELDED: /* reschedule it */
                         t->thread_state = QTHREAD_STATE_RUNNING;
+                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
                         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i yielded; rescheduling\n",
                                       my_id, t->thread_id);
@@ -725,6 +735,7 @@ qt_run:
 
                     case QTHREAD_STATE_PARENT_YIELD:
                         t->thread_state = QTHREAD_STATE_PARENT_BLOCKED;
+                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_PARENT_BLOCKED);
                         break;
 
                     case QTHREAD_STATE_PARENT_BLOCKED:
@@ -739,6 +750,7 @@ qt_run:
                             qthread_thread_free(t);
                             t               = parent;
                             t->thread_state = t->prev_thread_state;
+                            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, t->pref_thread_state);
                             goto qt_run;
                         }
 #else
@@ -748,6 +760,7 @@ qt_run:
 #endif              /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
                     case QTHREAD_STATE_SYSCALL:
                         t->thread_state = QTHREAD_STATE_RUNNING;
+                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
                         qthread_debug(THREAD_DETAILS | IO_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i made a syscall\n",
                                       my_id, t->thread_id);
@@ -1136,6 +1149,13 @@ int API_FUNC qthread_initialize(void)
 
     qlib->mccoy_thread->rdata = MALLOC(sizeof(struct qthread_runtime_data_s));
 
+#ifdef QTHREAD_PERFORMANCE
+    if(qtperf_should_instrument_qthreads){
+      QTPERF_ASSERT(qtperf_qthreads_group != NULL);
+      qlib->mccoy_thread->rdata->performance_data = qtperf_create_perfdata(qtperf_qthreads_group);
+    }
+#endif 
+    QTPERF_QTHREAD_ENTER_STATE(qlib->mccoy_thread->rdata->performance_data, QTHREAD_STATE_YIELDED);
     assert(qlib->mccoy_thread->rdata != NULL);
     qlib->mccoy_thread->rdata->shepherd_ptr   = &(qlib->shepherds[0]);
     qlib->mccoy_thread->rdata->stack          = NULL;
@@ -1525,6 +1545,7 @@ void API_FUNC qthread_finalize(void)
     worker = qthread_internal_getworker();
     if (worker && (worker->packed_worker_id != 0)) {           /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED; /* Otherwise, put back */
+        QTPERF_QTHREAD_ENTER_STATE(worker->current->rdata->performance_data, QTHREAD_STATE_YIELDED);
         //      qt_threadqueue_enqueue(shep0->ready, worker->current);
         return; // AKP 11/2/11 I think that is if statement catches the case that exit is called within a
         // parallel region so a random stream reaches here.  we return rather than requeue because we just
@@ -1555,6 +1576,7 @@ void API_FUNC qthread_finalize(void)
             t = qthread_thread_new(NULL, NULL, 0, NULL, NULL, 0);
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
+            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_TERM_SHEP);
             t->thread_id    = QTHREAD_NON_TASK_ID;
             t->flags        = QTHREAD_UNSTEALABLE;
             qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
@@ -2235,6 +2257,7 @@ static void qthread_wrapper(void *ptr)
         /* This means that I've direct-swapped, and need to clean up a little. */
         qthread_t *prev_t = t->rdata->blockedon.thread;
         t->thread_state = QTHREAD_STATE_RUNNING;
+        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                       "thread %i yielded; rescheduling\n", t->thread_id);
         assert(prev_t->rdata);
@@ -2321,6 +2344,7 @@ static void qthread_wrapper(void *ptr)
     }
 
     t->thread_state = QTHREAD_STATE_TERMINATED;
+    QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_TERMINATED);
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     if ((t->parent != NULL) && (t->ret == NULL)) {
@@ -2342,6 +2366,7 @@ static void qthread_wrapper(void *ptr)
         if (newval == tcount_finished_state) {
             while(parent->thread_state != QTHREAD_STATE_PARENT_BLOCKED) SPINLOCK_BODY();
             t->thread_state = QTHREAD_STATE_PARENT_UNBLOCKED;
+            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_PARENT_UNBLOCKED);
         }
     }
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
@@ -2399,7 +2424,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
                           "t(%p), c(%p): type is QTHREAD_THREAD_NEW!\n",
                           t, c);
             t->thread_state = QTHREAD_STATE_RUNNING;
-
+            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
             qthread_makecontext(&t->rdata->context,
                                 t->rdata->stack, qlib->qthread_stack_size,
                                 (void (*)(void))qthread_wrapper, t, c);
@@ -2433,6 +2458,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
     } else {
         assert(t->thread_state == QTHREAD_STATE_NEW);
         t->thread_state = QTHREAD_STATE_RUNNING;
+        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
         unsigned int high = (((uintptr_t)t) >> 32) & 0xffffffff;
         unsigned int low  = ((uintptr_t)t) & 0xffffffff;
@@ -2459,18 +2485,12 @@ void API_FUNC qthread_yield_(uint32_t flags)
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
-
-        /* set steal condition */
-        if (QTHREAD_YIELD_STEALABLE & flags) {
-            t->flags &= ~QTHREAD_UNSTEALABLE;
-        } else if (QTHREAD_YIELD_UNSTEALABLE & flags) {
-            t->flags |= QTHREAD_UNSTEALABLE;
-        }
-
-        /* Set yield condition */
-        if (QTHREAD_YIELD_NEAR & flags) {
-            t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
-        } else if (QTHREAD_YIELD_DIRECT & flags) {
+        switch (k) {
+            case 1: // Yield-near
+                t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_YIELDED_NEAR);
+                break;
+            case 2: // direct-yield
 #ifdef QTHREAD_USE_SPAWNCACHE
                 {
                     qt_threadqueue_private_t *pq = qt_spawncache_get();
@@ -2484,6 +2504,7 @@ void API_FUNC qthread_yield_(uint32_t flags)
                         /* Initialize nt's rdata */
                         alloc_rdata(t->rdata->shepherd_ptr, nt);
                         nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
+                        QTPERF_QTHREAD_ENTER_STATE(nt->rdata->performance_data, QTHREAD_STATE_YIELDED);
                         nt->rdata->blockedon.thread = t;
                         qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
                         nt->rdata->return_context = t->rdata->return_context;
@@ -2508,7 +2529,9 @@ void API_FUNC qthread_yield_(uint32_t flags)
 #ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
 #endif
-            t->thread_state = QTHREAD_STATE_YIELDED;
+                t->thread_state = QTHREAD_STATE_YIELDED;
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_YIELDED);
+                break;
         }
 
         qthread_back_to_master(t);
@@ -2673,6 +2696,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
     }
     if (QTHREAD_UNLIKELY(npreconds != 0)) {
         t->thread_state = QTHREAD_STATE_NASCENT; // special non-executable state
+        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NASCENT);
         t->preconds     = preconds;
         qthread_debug(THREAD_BEHAVIOR, "npreconds=%u, preconds[0]=%u\n", (unsigned int)npreconds, (unsigned int)(uintptr_t)((aligned_t **)preconds)[0]);
         assert(((aligned_t **)preconds)[0] == (aligned_t *)(uintptr_t)npreconds);
@@ -3129,6 +3153,7 @@ int API_FUNC qthread_migrate_to(const qthread_shepherd_id_t shepherd)
                       me->thread_id, me->rdata->shepherd_ptr->shepherd_id, shepherd);
         me->target_shepherd = shepherd;
         me->thread_state    = QTHREAD_STATE_MIGRATING;
+        QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_MIGRATING);
         me->flags          |= QTHREAD_UNSTEALABLE;
         qthread_back_to_master(me);
 
@@ -3322,6 +3347,7 @@ void qthread_parent_yield_state(void)
     assert(t);
     t->prev_thread_state = t->thread_state;
     t->thread_state      = QTHREAD_STATE_PARENT_YIELD;
+    QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_PARENT_YIELD);
     qthread_back_to_master(t);
 } /*}}}*/
 
