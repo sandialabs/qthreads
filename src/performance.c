@@ -1,6 +1,7 @@
 #include<qthread/performance.h>
 #include<qthread/logging.h>
 #include<qthread/qthread.h>
+#include"qt_threadstate.h"
 #include<string.h>
 #include<strings.h>
 #include<stdlib.h>
@@ -17,7 +18,10 @@ bool qtperf_should_instrument_workers = 0;
 bool qtperf_should_instrument_qthreads = 0;
 qtstategroup_t* qtperf_workers_group = NULL;
 qtstategroup_t* qtperf_qthreads_group = NULL;
-  
+
+volatile uint32_t _group_busy=0;
+volatile uint32_t _perf_busy=0;
+
 bool incr_counter(qtperf_iterator_t**);
 bool incr_group(qtperf_iterator_t**);
 void qtperf_free_state_group_internals(qtstategroup_t*);
@@ -38,6 +42,7 @@ static inline void spin_lock(volatile uint32_t* busy){
 
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* name, const char** state_names) {
   qtperf_group_list_t* current = NULL;
+  spin_lock(&_group_busy);
   if(_next_group == NULL){
     _next_group = &_groups;
   }
@@ -64,6 +69,7 @@ qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* name, c
     }
   }
   _num_groups++;
+  _group_busy=0;
   return &current->group;
 }
 
@@ -103,10 +109,12 @@ void qtperf_free_group_list(){
 
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   qtperf_perf_list_t* current=NULL;
+  spin_lock(&_perf_busy);
   if(state_group->next_counter == NULL){
     state_group->next_counter = &state_group->counters;
   }
   *state_group->next_counter = malloc(sizeof(qtperf_perf_list_t));
+  QTPERF_ASSERT(*state_group->next_counter != NULL && "out of memory?!");
   current = *state_group->next_counter;
   bzero(current, sizeof(qtperf_perf_list_t));
   state_group->next_counter = &current->next;
@@ -118,6 +126,7 @@ qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   current->performance_data.state_group = state_group;
   current->performance_data.num_states = state_group->num_states;
   state_group->num_counters++;
+  _perf_busy = 0;
   return &current->performance_data;
 }
 
@@ -335,17 +344,32 @@ void qtperf_set_instrument_workers(bool yes_no){
 
 
 /* This section is for instrumentation of qthreads */
-typedef enum{
- QTH_NUM_STATES
-} qthread_state_t;
-static const char* qthread_state_names[] = {
+static const char* qthread_state_names[] ={
+    "QTHREAD_STATE_NASCENT",              /* awaiting preconds */
+    "QTHREAD_STATE_NEW",                  /* first ready-to-run state */
+    "QTHREAD_STATE_RUNNING",              /* ready-to-run */
+    "QTHREAD_STATE_YIELDED",              /* reschedule, otherwise ready-to-run */
+    "QTHREAD_STATE_YIELDED_NEAR",         /* reschedule, otherwise ready-to-run */
+    "QTHREAD_STATE_QUEUE",                /* insert me into a qthread_queue_t */
+    "QTHREAD_STATE_FEB_BLOCKED",          /* waiting for feb */
+    "QTHREAD_STATE_PARENT_YIELD",         /* parent is moving into QTHREAD_STATE_PARENT_BLOCKED */
+    "QTHREAD_STATE_PARENT_BLOCKED",       /* waiting for child to take this execution */
+    "QTHREAD_STATE_PARENT_UNBLOCKED",     /* child is picking up parent execution */
+    "QTHREAD_STATE_ASSASSINATED",         /* thread destroyed via signal; needs cleanup */
+    "QTHREAD_STATE_TERMINATED",           /* thread function returned */
+    "QTHREAD_STATE_MIGRATING",            /* thread needs to be moved, otherwise ready-to-run */
+    "QTHREAD_STATE_SYSCALL",              /* thread performing external blocking operation */
+    "QTHREAD_STATE_ILLEGAL",              /* illegal state */
+    "QTHREAD_STATE_TERM_SHEP"             /* special flag to terminate the shepherd */
 };
 
 void qtperf_set_instrument_qthreads(bool yes_no) {
+  QTPERF_ASSERT(QTHREAD_STATE_NUM_STATES == 16
+                && "threadstate_t has changed, check to make sure all states are represented in qthread_state_names in performance.c" );// make sure we're still current with our names array.
   qtperf_should_instrument_qthreads = yes_no;
 
   if(yes_no && qtperf_qthreads_group == NULL){
-    qtperf_qthreads_group = qtperf_create_state_group(QTH_NUM_STATES, "Qthreads Internal", qthread_state_names);
+    qtperf_qthreads_group = qtperf_create_state_group(QTHREAD_STATE_NUM_STATES, "Qthreads Internal", qthread_state_names);
   }
   if(qtperf_should_instrument_qthreads){
     QTPERF_ASSERT(qtperf_should_instrument_qthreads && (qtperf_qthreads_group != NULL));
