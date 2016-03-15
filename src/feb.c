@@ -175,7 +175,7 @@ static inline void qt_feb_schedule(qthread_t          *waiter,
 {
     qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): setting waiter to 'RUNNING'\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id);
     waiter->thread_state = QTHREAD_STATE_RUNNING;
-    qtperf_enter_state(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
+    QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
     if ((waiter->flags & QTHREAD_UNSTEALABLE) && (waiter->rdata->shepherd_ptr != shep)) {
         qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): enqueueing waiter in target_shep's ready queue (%p:%i)\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id, waiter->rdata->shepherd_ptr, waiter->rdata->shepherd_ptr->shepherd_id);
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
@@ -1450,7 +1450,7 @@ got_m:
         m->FEQ    = X;
         qthread_debug(FEB_DETAILS, "back to parent\n");
         me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
-        qtperf_enter_state(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
+        QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         /* so that the shepherd will unlock it */
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -1653,7 +1653,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
             X->next         = m->FFQ;
             m->FFQ          = X;
             t->thread_state = QTHREAD_STATE_NASCENT;
-            qtperf_enter_state(t->rdata->performance_data, QTHREAD_STATE_NASCENT);
+            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NASCENT);
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             return 1;
         }
@@ -1664,7 +1664,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
     t->thread_state = QTHREAD_STATE_NEW;
 #ifdef QTHREAD_PERFORMANCE
     if(t->rdata){
-      qtperf_enter_state(t->rdata->performance_data, QTHREAD_STATE_NEW);
+      QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NEW);
     }
 #endif
     qt_free(t->preconds);
