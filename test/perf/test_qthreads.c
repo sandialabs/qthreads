@@ -64,7 +64,7 @@ static void test_feblock(void** state) {
   qtperf_start();
   qtperf_set_instrument_qthreads(1);
   qthread_initialize();
-  qthread_writeF(&available, &ret);
+  qthread_fill(&available);
   qthread_empty(&ret);
   spingroup=qtperf_create_state_group(FEB_NUM_STATES, "Spin Testing", feb_names);
   totalgroup=qtperf_create_state_group(TOTAL_NUM_STATES, "Total Time", total_names);
@@ -80,7 +80,8 @@ static void test_feblock(void** state) {
   qtperf_enter_state(totaldata,DONE);
   qtperf_stop();
   assert_true(qtperf_check_invariants());
-  qtperf_print_results();
+  qtperf_print_delimited(qtperf_qthreads_group, ",", 1, "= ");
+  qtperf_print_delimited(spingroup, ",", 1, "+ ");
   qtperf_free_data();
   assert_true(qtperf_check_invariants());
 }
