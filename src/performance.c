@@ -404,6 +404,44 @@ void qtperf_print_results(){
   }
 }
 
+/// qtperf_print_delimited prints the data for a state group as a
+/// table, one row per instance of the state group, with columns
+/// separated by the string given in sep. The first column is the
+/// instance number, then each subsequent column gives the time spent
+/// in the corresponding state starting with zero and going up from
+/// there. You can use this function to get data that's easy to import
+/// into a spreadsheet (e.g CSV). Provide a row_prefix if you want to
+/// be able to print multiple tables at a time and use grep to
+/// separate them in the output. row_prefix can be NULL.
+void qtperf_print_delimited(qtstategroup_t* group, const char* sep, bool print_headers, const char* row_prefix){
+  qtperf_perf_list_t* current = NULL;
+  size_t column=0;
+  size_t i=0;
+  const char* pfx="";
+  if(row_prefix != NULL)
+    pfx=row_prefix;
+  if(print_headers && group->state_names != NULL){
+    printf("%sIndex%s", pfx, sep);
+    for(column=0; column<group->num_states; column++){
+      if(column+1 < group->num_states){
+        printf("%s%s", group->state_names[column], sep);
+      } else{
+        printf("%s\n", group->state_names[column]);
+      } 
+    }
+  }
+  for(current = group->counters, i=0; current != NULL; current = current->next, i++){
+    printf("%s%u%s", pfx,i, sep);
+    for(column=0; column < group->num_states; column++){
+      if(column+1 < group->num_states){
+        printf("%llu%s",  current->performance_data.perf_counters[column], sep);
+      }else{
+        printf("%llu\n",  current->performance_data.perf_counters[column]);
+      }
+    }
+  }
+}
+
 #ifndef PERF_SHOW_STATES_WITH_ZERO_TIME
 #define PERF_SHOW_STATES_WITH_ZERO_TIME 1
 #endif
