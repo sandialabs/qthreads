@@ -27,6 +27,13 @@ typedef struct qtperf_group_list_s {
   qtstategroup_t group;
   struct qtperf_group_list_s* next;
 } qtperf_group_list_t;
+
+typedef struct qtperf_piggyback_list_s {
+  struct qtperfdata_s* target_data;
+  qtperfid_t target_state;
+  struct qtperf_piggyback_list_s* next;
+} qtperf_piggyback_list_t;
+
 /**
    This is the main performance data structure where timing data is
    stored. Data is indexed by (unit,stategroup) tuples.
@@ -35,6 +42,7 @@ typedef struct qtperfdata_s {
   qtstategroup_t* state_group;
   size_t num_states;
   qtperfcounter_t* perf_counters;
+  qtperf_piggyback_list_t** piggybacks;
   qtperfid_t current_state;
   qttimestamp_t time_entered;
   volatile uint32_t busy;// 1 if somebody is using this structure, else 0
@@ -86,10 +94,23 @@ qtperf_iterator_t* qtperf_iter_end(void);
 void qtperf_set_instrument_workers(bool);
 void qtperf_set_instrument_qthreads(bool);
 void qtperf_print_results(void);
-void qtperf_print_group(qtstategroup_t* group);
-void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time);
 qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group);
 qtperfcounter_t qtperf_total_time(qtperfdata_t* data);
+void qtperf_print_group(qtstategroup_t* group);
+void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time);
+
+// When the trigger_state is entered for source_data, also enter the
+// piggyback_state for piggyback_data. WARNING: There is a recursive
+// call in qtperf_enter_state that will invoke itself as many times as
+// there are entries in the piggyback states list. Do not make this
+// list long or you will use up your stack space (qthreads have very
+// limited stack allocations). The typical case should have zero
+// piggybacks, and at most one or two should be present. Use more with
+// caution!
+void qtperf_piggyback_state(qtperfdata_t* source_data, qtperfid_t trigger_state,
+                            qtperfdata_t* piggyback_data, qtperfid_t piggyback_state);
+// return the data counters for the current thread
+qtperfdata_t* qtperf_get_qthread_data(void);
 
 #ifdef QTPERF_TESTING
 #include<stdarg.h>
