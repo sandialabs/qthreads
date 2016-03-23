@@ -94,6 +94,7 @@ qtperf_iterator_t* qtperf_iter_end(void);
 void qtperf_set_instrument_workers(bool);
 void qtperf_set_instrument_qthreads(bool);
 void qtperf_print_results(void);
+void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print_headers,const char* row_prefix);
 qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group);
 qtperfcounter_t qtperf_total_time(qtperfdata_t* data);
 void qtperf_print_group(qtstategroup_t* group);
@@ -123,6 +124,8 @@ qtperfdata_t* qtperf_get_qthread_data(void);
 
 bool qtp_validate_names(const char** names, size_t count);
 bool qtp_validate_state_group(qtstategroup_t*);
+bool qtp_validate_piggyback_list(qtperf_piggyback_list_t*);
+bool qtp_validate_piggybacks(qtperf_piggyback_list_t**, size_t);
 bool qtp_validate_perfdata(qtperfdata_t*);
 bool qtp_validate_perf_list(qtperf_perf_list_t* list, qtperf_perf_list_t** next, size_t expected_items);
 bool qtp_validate_group_list(void);
