@@ -493,7 +493,7 @@ void qtperf_print_delimited(qtstategroup_t* group, const char* sep, bool print_h
     }
   }
   for(current = group->counters, i=0; current != NULL; current = current->next, i++){
-    printf("%s%u%s", pfx,i, sep);
+    printf("%s%lu%s", pfx,i, sep);
     for(column=0; column < group->num_states; column++){
       if(column+1 < group->num_states){
         printf("%llu%s",  current->performance_data.perf_counters[column], sep);
