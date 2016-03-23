@@ -2477,7 +2477,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
 /**
  * Yield calling qthread.
  */
-void API_FUNC qthread_yield_(uint32_t flags)
+void API_FUNC qthread_yield_(int k)
 {                      /*{{{ */
     assert(qthread_library_initialized);
     qthread_t *t = qthread_internal_self();
@@ -2525,7 +2525,7 @@ void API_FUNC qthread_yield_(uint32_t flags)
                     }
                 }
 #endif
-        } else if (QTHREAD_YIELD_FAR & flags) {
+        case 0:
 #ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
 #endif

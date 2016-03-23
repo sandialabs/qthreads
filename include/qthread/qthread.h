@@ -198,7 +198,7 @@ void qthread_enable_worker(qthread_worker_id_t worker);
  * they block. */
 #define qthread_yield()      do { COMPILER_FENCE; qthread_yield_(QTHREAD_YIELD_FAR); } while (0)
 #define qthread_yield_near() do { COMPILER_FENCE; qthread_yield_(QTHREAD_YIELD_NEAR); } while (0)
-void qthread_yield_(uint32_t);
+void qthread_yield_(int);
 
 /* this function flushes the spawncache */
 void qthread_flushsc(void);
