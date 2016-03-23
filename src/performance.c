@@ -2,6 +2,8 @@
 #include<qthread/logging.h>
 #include<qthread/qthread.h>
 #include"qt_threadstate.h"
+#include"qt_qthread_mgmt.h"
+#include"qt_qthread_struct.h"
 #include<string.h>
 #include<strings.h>
 #include<stdlib.h>
@@ -121,6 +123,7 @@ qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   current->next = NULL;
   current->performance_data.perf_counters = calloc(state_group->num_states,sizeof(qtperfcounter_t));
   bzero(current->performance_data.perf_counters, sizeof(qtperfcounter_t)*state_group->num_states);
+  current->performance_data.piggybacks = NULL;
   current->performance_data.current_state=QTPERF_INVALID_STATE;
   current->performance_data.time_entered=0;
   current->performance_data.state_group = state_group;
@@ -263,6 +266,14 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     data->time_entered = 0;
   }
   data->current_state = state;
+  if(data->piggybacks != NULL && data->piggybacks[data->current_state] != NULL){
+    qtperf_piggyback_list_t* current = data->piggybacks[data->current_state];
+    for(; current != NULL; current = current->next){
+      // WARNING! recursive call, make sure the length of this chain
+      // is very short.
+      qtperf_enter_state(current->target_data, current->target_state);
+    }
+  }
   data->busy = 0;
 }
 
@@ -377,6 +388,12 @@ void qtperf_set_instrument_qthreads(bool yes_no) {
 }
 
 
+void qtperf_print_results(){
+  qtperf_group_list_t* current = NULL;
+  for(current = _groups; current != NULL; current = current->next){
+    qtperf_print_group(&current->group);
+  }
+}
 /* PRINTING RESULTS */
 
 qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group){
@@ -397,11 +414,30 @@ qtperfcounter_t qtperf_total_time(qtperfdata_t* data){
   return result;
 }
 
-void qtperf_print_results(){
-  qtperf_group_list_t* current = NULL;
-  for(current = _groups; current != NULL; current = current->next){
-    qtperf_print_group(&current->group);
+void qtperf_piggyback_state(qtperfdata_t* source_data, qtperfid_t trigger_state,
+                            qtperfdata_t* piggyback_data, qtperfid_t piggyback_state){
+  qtperf_piggyback_list_t* next = NULL;
+  QTPERF_ASSERT(source_data != NULL);
+  spin_lock(&source_data->busy);
+  if(source_data->piggybacks==NULL){
+    source_data->piggybacks = calloc(source_data->num_states, sizeof(qtperfdata_t*));
+    memset(source_data->piggybacks, 0, sizeof(qtperfdata_t*) * source_data->num_states);
   }
+  next = malloc(sizeof(qtperf_piggyback_list_t));
+  next->next = source_data->piggybacks[trigger_state];
+  next->target_data = piggyback_data;
+  next->target_state = piggyback_state;
+  source_data->piggybacks[trigger_state] = next;
+  source_data->busy = 0;
+}
+
+qtperfdata_t* qtperf_get_qthread_data(void){
+  qthread_t* me = qthread_internal_self();
+  if(me->rdata->performance_data == NULL){
+    qtlog(LOGWARN, "qtperf_get_qthread_data() called, but qtperf_set_instrument_qthreads() has not been called");
+    return NULL;
+  }
+  return me->rdata->performance_data;
 }
 
 /// qtperf_print_delimited prints the data for a state group as a
@@ -499,10 +535,35 @@ bool qtp_validate_names(const char** names, size_t count){
     for(len=0; names[i][len] != '\0' && len < MAX_NAME_LENGTH; len++){
       printable = printable && isprint(names[i][len]);
     }
-    valid &= printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0';
+    valid = valid && printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0';
     assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0');
   }
   assert_true(names == NULL || valid);
+  return valid;
+}
+
+bool qtp_validate_piggyback_list(qtperf_piggyback_list_t* list){
+  bool valid = 1;
+  qtperf_piggyback_list_t* current = list;
+  while(current != NULL) {
+    assert_true(valid = valid && (current->target_data != NULL));
+    assert_true(valid = valid && (current->target_state < current->target_data->num_states));
+    current = current->next;
+  }
+  assert_true(current == NULL);
+  return valid && current == NULL;
+}
+
+bool qtp_validate_piggybacks(qtperf_piggyback_list_t** piggybacks, size_t num_states){
+  size_t counter=0;
+  bool valid = 1;
+  if(piggybacks == NULL){
+    return valid;
+  }
+  for(counter=0; counter < num_states; counter++){
+    valid = valid && qtp_validate_piggyback_list(piggybacks[counter]);
+    assert_true(valid && "Piggyback list is valid");
+  }
   return valid;
 }
 
@@ -515,6 +576,7 @@ bool qtp_validate_perfdata(qtperfdata_t* data){
   assert_true(data->num_states > 0);
   valid = valid && data->perf_counters != NULL;
   assert_true(data->perf_counters != NULL);
+  valid = valid && qtp_validate_piggybacks(data->piggybacks, data->num_states);
   valid = valid && ((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
                     || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
   qtlogargs(PERFDBG,"data->current_state=%lu, data->time_entered=%lu", data->current_state, data->time_entered);
