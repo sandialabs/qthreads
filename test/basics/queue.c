@@ -101,7 +101,7 @@ int main(int   argc,
     assert(qthread_readstate(NODE_BUSYNESS) == 1);
 
     iprintf("6/6 Test passed!\n");
-
+    free(retvals);
     return EXIT_SUCCESS;
 }
 
