@@ -289,24 +289,26 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
       }
     }
    
-    if(numwaits < spinloop_backoff){
-      for(int i=0; i<1<<numwaits; i++){
-        SPINLOCK_BODY();
+    if(!node){
+      if(numwaits < spinloop_backoff){
+        for(int i=0; i<1<<numwaits; i++){
+          SPINLOCK_BODY();
+        }
+      } else {
+        struct timespec t; 
+        struct timeval n; 
+        gettimeofday(&n, NULL); 
+        t.tv_nsec = (n.tv_usec * 1000) + (1 << (numwaits > max_backoff ? max_backoff : numwaits)); 
+        t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); 
+        t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); 
+        pthread_mutex_lock(&q->cond_mut);
+        qthread_incr(&q->numwaiters, 1);
+        pthread_cond_timedwait(&q->cond, &q->cond_mut, &t);
+        qthread_incr(&q->numwaiters, -1);
+        pthread_mutex_unlock(&q->cond_mut);
       }
-    } else {
-      struct timespec t; 
-      struct timeval n; 
-      gettimeofday(&n, NULL); 
-      t.tv_nsec = (n.tv_usec * 1000) + (1 << (numwaits > max_backoff ? max_backoff : numwaits)); 
-      t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); 
-      t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); 
-      pthread_mutex_lock(&q->cond_mut);
-      qthread_incr(&q->numwaiters, 1);
-      pthread_cond_timedwait(&q->cond, &q->cond_mut, &t);
-      qthread_incr(&q->numwaiters, -1);
-      pthread_mutex_unlock(&q->cond_mut);
-    }
     numwaits++;
+    }
   }
   t = node->value;
   free_tqnode(node);
@@ -320,8 +322,19 @@ void INTERNAL qthread_steal_disable(){
 }     
 
 qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * curr_shep){
-  if (curr_shep) return curr_shep->shepherd_id;
-  return 0;
+  qthread_shepherd_id_t dest_shep_id = 0;
+  if (curr_shep) {
+      dest_shep_id               = curr_shep->sched_shepherd++;
+      curr_shep->sched_shepherd *= (qlib->nshepherds > (dest_shep_id + 1));
+  } else {
+      dest_shep_id = 
+          (qthread_shepherd_id_t)qthread_internal_incr_mod(
+              &qlib->sched_shepherd,
+              qlib->nshepherds,
+              &qlib->sched_shepherd_lock);
+  }
+
+  return dest_shep_id;
 }
 
 size_t INTERNAL qt_threadqueue_policy(const enum threadqueue_policy policy){
