@@ -18,7 +18,7 @@ all: ${TARGETS}
 	gcc -o $*.test test_$*.o $(LDFLAGS)
 
 check: all
-	for tst in ${TARGETS}; do QT_NUM_SHEPHERDS=9 valgrind -q --leak-check=full "./$$tst" > /dev/null; done
+	for tst in ${TARGETS}; do echo "start $${tst}"; QT_NUM_SHEPHERDS=9 valgrind -q --leak-check=full "./$$tst" > /dev/null; echo "finish $${tst}"; done
 
 %.o: %.c
 	gcc -c -o $*.o $(CFLAGS) $*.c

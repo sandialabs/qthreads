@@ -119,8 +119,9 @@ typedef struct qtperfdata_s {
   /// Array of performance counters, indexed by state id. These
   /// represent the total time spent in each state.
   qtperfcounter_t* perf_counters;
-  /// A list of all piggyback relationships - when a piggybacked state
-  /// is entered, all of its piggybackers will be entered as well
+  /// An array of lists of piggyback relationships - when a
+  /// piggybacked state is entered, all of its piggybackers will be
+  /// entered as well
   qtperf_piggyback_list_t** piggybacks;
   /// The current state (last state entered)
   qtperfid_t current_state;
@@ -129,6 +130,15 @@ typedef struct qtperfdata_s {
   /// A spin lock gate to ensure exclusive access for updates
   volatile uint32_t busy;// 1 if somebody is using this structure, else 0
 } qtperfdata_t;
+
+/** qtperfdata_counter_t records the actual timing information. This
+    is split off from qtperfdata_t in order to support aggregates.
+ */
+typedef struct qtperf__s{
+  qtperfdata_t * target_data;
+  qtperfid_t current_state;
+  qttimestamp_t time_entered;
+} qtperf_aggregate_t;
 
 /** qtperf_perf_list_t is a linked list of performance trackers. This
  * is used internally by the library and should not be accessed by
@@ -307,6 +317,14 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id);
  * @see qtperf_stop
  */
 void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
+
+
+/** qtperf_enter_state_from does the same thing as qtperf_enter_state,
+    except that you can explicitly set the state you're coming
+    from. This is used by the aggregate collection system so that
+    transitions can be recorded for state groups that share perfdata.
+ */
+void qtperf_enter_state_from(qtperfdata_t* data, qtperfid_t from_state_id, qtperfid_t to_state_id);
 
 /** @brief Get an iterator for inspecting performance data
  *
