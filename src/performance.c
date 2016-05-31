@@ -243,9 +243,13 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
   return group->state_names[state];
 }
 
+void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
+  qtperf_enter_state_from(data, data->current_state, state);
+}
+
 // This function will still change states even if _collecting is
 // false, but the timing data will not be recorded.
-void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
+void qtperf_enter_state_from(qtperfdata_t* data, qtperfit_t from_state, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
   spin_lock(&data->busy);
   //qtlogargs(1, "data %p", data);
@@ -254,11 +258,11 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
     data->busy = 0;
     return;
   }
-  if(_collecting && data->current_state != QTPERF_INVALID_STATE) {
+  if(_collecting && from_state != QTPERF_INVALID_STATE) {
     if(data->time_entered < now/2){
       qtlogargs(LOGERR, "Warning: entering state with invalid time_entered value %lu", data->time_entered);
     }
-    data->perf_counters[data->current_state] += now - data->time_entered;
+    data->perf_counters[from_state] += now - data->time_entered;
   }
   if(state != QTPERF_INVALID_STATE){
     data->time_entered= now;
