@@ -101,21 +101,21 @@ void checked_transition(qtperfdata_t* data, qtperfid_t newstate){
   qttimestamp_t entered = data->time_entered;
   qtperfcounter_t before = 0;//
   if(data->current_state != QTPERF_INVALID_STATE){
-    before = data->perf_counters[data->current_state];
+    before = data->counters->data[data->current_state];
   }
   qtperf_enter_state(data, newstate);
   assert_true(data->current_state == newstate);
   if(last_state != QTPERF_INVALID_STATE){
-    bool valid_timing = data->perf_counters[last_state] == (data->time_entered - entered) + before;
+    bool valid_timing = data->counters->data[last_state] == (data->time_entered - entered) + before;
     if(!valid_timing){
       qtlog(LOGERR, "Invalid timing update");
       qtlogargs(LOGERR, "\tstates: %lu -> %lu", last_state, data->current_state);
       qtlogargs(LOGERR, "\tentered: %lu", entered);
       qtlogargs(LOGERR, "\tleft: %lu", data->time_entered);
       qtlogargs(LOGERR, "\tcounter before: %llu", before);
-      qtlogargs(LOGERR, "\tcounter after: %llu", data->perf_counters[last_state]);
+      qtlogargs(LOGERR, "\tcounter after: %llu", data->counters->data[last_state]);
       qtlogargs(LOGERR, "\texpected difference: %lu", data->time_entered-entered);
-      qtlogargs(LOGERR, "\tactual difference: %llu", data->perf_counters[last_state]-before);
+      qtlogargs(LOGERR, "\tactual difference: %llu", data->counters->data[last_state]-before);
     }
     assert_true(valid_timing);
   }
@@ -148,15 +148,15 @@ static void test_state_transitions(void** state){
     assert_true(data->current_state == S4);
     spinval+=spin(1000);
   }
-  qtlogargs(DBG_STATES, "time[S1] = %llu", data->perf_counters[S1]);
-  qtlogargs(DBG_STATES, "time[S2] = %llu", data->perf_counters[S2]);
-  qtlogargs(DBG_STATES, "time[S3] = %llu", data->perf_counters[S3]);
-  qtlogargs(DBG_STATES, "time[S4] = %llu", data->perf_counters[S4]);
+  qtlogargs(DBG_STATES, "time[S1] = %llu", data->counters->data[S1]);
+  qtlogargs(DBG_STATES, "time[S2] = %llu", data->counters->data[S2]);
+  qtlogargs(DBG_STATES, "time[S3] = %llu", data->counters->data[S3]);
+  qtlogargs(DBG_STATES, "time[S4] = %llu", data->counters->data[S4]);
   printf("print number to avoid optimizing out spin function: %lu\n", spinval);
   
-  assert_true(data->perf_counters[S2] > data->perf_counters[S3]);
-  assert_true(data->perf_counters[S3] > data->perf_counters[S1]);
-  assert_true(data->perf_counters[S4] > data->perf_counters[S3]);
+  assert_true(data->counters->data[S2] > data->counters->data[S3]);
+  assert_true(data->counters->data[S3] > data->counters->data[S1]);
+  assert_true(data->counters->data[S4] > data->counters->data[S3]);
   qtperf_enter_state(data, S5);
   qtperf_stop();
   qtperf_free_data();
@@ -188,7 +188,7 @@ static void test_fake_concurrent(void** state){
     qtperfcounter_t total_time=0;
     size_t j=0;
     for(j=0; j<numstates[i%3]; j++){
-      total_time += threads[i]->perf_counters[j];
+      total_time += threads[i]->counters->data[j];
     }
     assert_true(total_time > 0);
   }
@@ -266,7 +266,7 @@ static void test_print(void** state){
     qtperfcounter_t total_time=0;
     size_t j=0;
     for(j=0; j<numstates[i%3]; j++){
-      total_time += threads[i]->perf_counters[j];
+      total_time += threads[i]->counters->data[j];
     }
     assert_true(total_time > 0);
   }
