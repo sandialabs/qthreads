@@ -30,3 +30,6 @@ GTAGS
 *.log
 *~
 activate.sh
+*.trs
+*.log
+*.test
