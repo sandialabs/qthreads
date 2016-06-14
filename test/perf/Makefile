@@ -4,8 +4,9 @@ QTH_INC=$(QTHREADS)/include
 QTH_LIB=$(QTHREADS)/src/.libs
 
 CFLAGS_OPT=-I$(QTH_INC) -O3 -Wall -pedantic -DPERFDBG=1 -DQTPERF_TESTING -DQTHREAD_PERFORMANCE -DQTHREAD_NONLAZY_THREADIDS=1 -g $(shell pkg-config --cflags cmocka)
+CFLAGS_DBG=-I$(QTH_INC) -Wall -pedantic -DPERFDBG=1 -DQTPERF_TESTING -DQTHREAD_PERFORMANCE -DQTHREAD_NONLAZY_THREADIDS=1 -g $(shell pkg-config --cflags cmocka)
 CFLAGS_NOPERF=-I$(QTH_INC) -DQTHREAD_NONLAZY_THREADIDS=1 -g 
-CFLAGS=${CFLAGS_OPT}
+CFLAGS=${CFLAGS_DBG}
 
 LDFLAGS=-L$(QTH_LIB) -lqthread $(shell pkg-config --libs cmocka)
 TESTS=$(shell ls test_*.c)

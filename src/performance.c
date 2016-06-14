@@ -131,6 +131,7 @@ qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* state_group, qtp
   current->performance_data.current_state=QTPERF_INVALID_STATE;
   current->performance_data.time_entered=0;
   current->performance_data.piggybacks = NULL;
+  state_group->num_counters++;
   if(aggregate != NULL) {
     current->performance_data.counters = aggregate;
     spin_lock(&current->performance_data.counters->busy);
@@ -146,7 +147,6 @@ qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* state_group, qtp
     ctr->state_group = state_group;
     ctr->num_states = state_group->num_states;
     ctr->num_contributors = 1;
-    state_group->num_counters++;
     current->performance_data.counters = ctr;
     ctr->busy = 0;
   }
