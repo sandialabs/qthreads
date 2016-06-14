@@ -25,3 +25,6 @@ cscope.out
 .dirstamp
 *~
 activate.sh
+*.trs
+*.log
+*.test
