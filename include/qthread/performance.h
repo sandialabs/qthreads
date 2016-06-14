@@ -103,12 +103,14 @@ typedef struct qtperf_piggyback_list_s {
   struct qtperf_piggyback_list_s* next;
 } qtperf_piggyback_list_t;
 
-/** qtperfdata_t is the main data structure where timing data is
- * stored. This represents the instantiation of a state group. Each
- * call to qtperf_enter_state will reference one of these structures,
- * and data will be collected in the perf_counters member.
-*/
-typedef struct qtperfdata_s {
+/** qtperfdata_counter_t records the actual timing information. This
+    is split off from qtperfdata_t in order to support aggregates. In
+    the non-aggregate case, there will be exactly one of these for
+    each qtperfdata_t.
+ */
+typedef struct qtperfctr_s {
+  // 1 unless it's an aggregate target.
+  size_t num_contributors; 
   /// A reference to the qtstategroup_t that defines the states for
   /// this counter.
   qtstategroup_t* state_group;
@@ -116,29 +118,34 @@ typedef struct qtperfdata_s {
   /// speed up state entry by avoiding a dereference of the state
   /// group pointer.
   size_t num_states;
-  /// Array of performance counters, indexed by state id. These
   /// represent the total time spent in each state.
-  qtperfcounter_t* perf_counters;
+  qtperfcounter_t* data;
+  /// A spin lock gate to ensure exclusive access for updates
+  volatile uint32_t busy;// 1 if somebody is using this structure, else 0
+} qtperfctr_t;
+
+/** qtperfdata_t holds the current state data for each thread. Every
+    thread has to be able to track it's own current state, along with
+    the time that state was entered and the list of piggybacks for
+    that thread. If the thread is storing its results in an aggregated
+    counter, the counter pointer will be shared between all of the
+    sharing threads.
+ */
+typedef struct qtperfdata_s{
+  qtperfid_t current_state;
+  qttimestamp_t time_entered;
+  // This is set to true if this struct is the owner of the
+  // qtperfctr_t pointer it holds (for safe deallocation)
+  bool ctr_owner;
+  // only used if num_contributors > 1
+  volatile uint32_t busy; 
+  /// the actual timing data. May be shared if it's aggregated
+  qtperfctr_t* counters;
   /// An array of lists of piggyback relationships - when a
   /// piggybacked state is entered, all of its piggybackers will be
   /// entered as well
   qtperf_piggyback_list_t** piggybacks;
-  /// The current state (last state entered)
-  qtperfid_t current_state;
-  /// The timestamp when the currents state was entered
-  qttimestamp_t time_entered;
-  /// A spin lock gate to ensure exclusive access for updates
-  volatile uint32_t busy;// 1 if somebody is using this structure, else 0
 } qtperfdata_t;
-
-/** qtperfdata_counter_t records the actual timing information. This
-    is split off from qtperfdata_t in order to support aggregates.
- */
-typedef struct qtperf__s{
-  qtperfdata_t * target_data;
-  qtperfid_t current_state;
-  qttimestamp_t time_entered;
-} qtperf_aggregate_t;
 
 /** qtperf_perf_list_t is a linked list of performance trackers. This
  * is used internally by the library and should not be accessed by
@@ -230,6 +237,25 @@ qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* group_n
  * @see qtperf_create_state_group
  */ 
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
+
+/** @brief Create performance data to track state transitions in an
+ * aggregated group.
+ *
+ * This function creates a new performance data structure and
+ * associates it with the given group. If aggregate is non-NULL, it is
+ * assumed to be a pointer to a valid qtperfctr_t struct that is to be
+ * used as the logging target for this perfdata struct. If it is NULL,
+ * a new perfctr_t will be allocated and assigned to this struct. If
+ * you want to then add more threads to the aggregation group, simply
+ * specify the counters member of the qtperfdata_t* returned by this
+ * function to the aggregate argument of future calls of this
+ * function.
+ *
+ * @param state_group A pointer to the state group that this counter should implement.
+ * @param aggregate A pointer to a qtperfctr_t struct that is shared between multiple loggers
+ * @see qtperf_create_state_group
+ */ 
+qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* state_group, qtperfctr_t* aggregate);
 
 /** @brief Return the current time
  * 
@@ -601,6 +627,8 @@ bool qtp_validate_state_group(qtstategroup_t*);
 bool qtp_validate_piggyback_list(qtperf_piggyback_list_t*);
 /// Internal - verify that the piggyback lists are all well-formed
 bool qtp_validate_piggybacks(qtperf_piggyback_list_t**, size_t);
+/// Internal - verify that the perfctr struct is well-formed
+bool qtp_validate_perfctr(qtperfctr_t* ctr);
 /// Internal - verify that the perfdata struct is well-formed
 bool qtp_validate_perfdata(qtperfdata_t*);
 /// Internal - ensure qtperf_perf_list_t is well-formed

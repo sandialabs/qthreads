@@ -84,7 +84,7 @@ void qtperf_free_state_group_internals(qtstategroup_t* group) {
     for(i=0; i<group->num_states; i++){
       free(group->state_names[i]);
     }
-    bzero(group->state_names, sizeof(char*)*group->num_states);
+    memset(group->state_names, 0, sizeof(char*)*group->num_states);
     free(group->state_names);
     group->name = NULL;
     group->state_names = NULL;
@@ -109,7 +109,14 @@ void qtperf_free_group_list(){
   QTPERF_ASSERT(_num_groups == 0);
 }
 
-qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
+/** Create a qtperfdata_t struct that points to the given aggregate
+    counter data. If the counter provided is null, a new one will be
+    created for this struct. You can then use the returned qtperfctr_t
+    (inside the returned qtperdata_t) in future calls to this function
+    and all additional threads will log their data to the first
+    qtperfctr_t.
+ */
+qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* state_group, qtperfctr_t* aggregate){
   qtperf_perf_list_t* current=NULL;
   spin_lock(&_perf_busy);
   if(state_group->next_counter == NULL){
@@ -118,25 +125,44 @@ qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   *state_group->next_counter = malloc(sizeof(qtperf_perf_list_t));
   QTPERF_ASSERT(*state_group->next_counter != NULL && "out of memory?!");
   current = *state_group->next_counter;
-  bzero(current, sizeof(qtperf_perf_list_t));
+  memset(current, 0, sizeof(qtperf_perf_list_t));
   state_group->next_counter = &current->next;
   current->next = NULL;
-  current->performance_data.perf_counters = calloc(state_group->num_states,sizeof(qtperfcounter_t));
-  bzero(current->performance_data.perf_counters, sizeof(qtperfcounter_t)*state_group->num_states);
-  current->performance_data.piggybacks = NULL;
   current->performance_data.current_state=QTPERF_INVALID_STATE;
   current->performance_data.time_entered=0;
-  current->performance_data.state_group = state_group;
-  current->performance_data.num_states = state_group->num_states;
-  state_group->num_counters++;
+  current->performance_data.piggybacks = NULL;
+  if(aggregate != NULL) {
+    current->performance_data.counters = aggregate;
+    spin_lock(&current->performance_data.counters->busy);
+    current->performance_data.counters->num_contributors++;
+    current->performance_data.counters->busy = 0;
+  } else {
+    qtperfctr_t* ctr = malloc(sizeof(qtperfctr_t));
+    memset(ctr, 0, sizeof(qtperfctr_t));
+    ctr->data = calloc(state_group->num_states,sizeof(qtperfcounter_t));
+    memset(ctr->data, 0, sizeof(qtperfcounter_t)*state_group->num_states);
+    ctr->busy = 1;
+    current->performance_data.ctr_owner = 1;
+    ctr->state_group = state_group;
+    ctr->num_states = state_group->num_states;
+    ctr->num_contributors = 1;
+    state_group->num_counters++;
+    current->performance_data.counters = ctr;
+    ctr->busy = 0;
+  }
   _perf_busy = 0;
   return &current->performance_data;
 }
 
+qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
+  return qtperf_create_aggregated_perfdata(state_group, NULL);
+}
+
 void qtperf_free_perfdata_internals(qtperfdata_t* perfdata) {
+  // don't spin lock here, it will deadlock from qtperf_free_perf_list
   if(perfdata->piggybacks != NULL) {
     size_t index=0;
-    for(index=0; index < perfdata->num_states; index++){
+    for(index=0; index < perfdata->counters->num_states; index++){
       qtperf_piggyback_list_t* list = perfdata->piggybacks[index];
       while(list != NULL){
         qtperf_piggyback_list_t* next = list->next;
@@ -147,9 +173,15 @@ void qtperf_free_perfdata_internals(qtperfdata_t* perfdata) {
     free(perfdata->piggybacks);
     perfdata->piggybacks=NULL;
   }
-  free(perfdata->perf_counters);
-  perfdata->perf_counters = NULL;
-  perfdata->state_group = NULL;
+  spin_lock(&perfdata->counters->busy);
+  perfdata->counters->num_contributors--;
+  if(perfdata->counters->num_contributors < 1){
+    free(perfdata->counters->data);
+    free(perfdata->counters);
+  } else {
+    perfdata->counters->busy = 0;
+  }
+  perfdata->counters = NULL;
 }
 
 void qtperf_free_perf_list(qtstategroup_t* group, qtperf_perf_list_t* counters){
@@ -226,8 +258,10 @@ void qtperf_stop() {
     // but the time_entered would not be set, and therefore we should
     // have a zero elapsed time for the state.
     if(data->current_state != QTPERF_INVALID_STATE && data->time_entered != 0){
-      data->perf_counters[data->current_state] += now - data->time_entered;
+      spin_lock(&data->counters->busy);
+      data->counters->data[data->current_state] += now - data->time_entered;
       data->time_entered = now;
+      data->counters->busy = 0;
     }
   }
   if(last_busy != NULL){
@@ -256,39 +290,41 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
   return group->state_names[state];
 }
 
-void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
-  qtperf_enter_state_from(data, data->current_state, state);
-}
-
 // This function will still change states even if _collecting is
 // false, but the timing data will not be recorded.
-void qtperf_enter_state_from(qtperfdata_t* data, qtperfit_t from_state, qtperfid_t state){
+void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
+  qtperfid_t from_state = data->current_state;
   spin_lock(&data->busy);
-  //qtlogargs(1, "data %p", data);
-  if(state != QTPERF_INVALID_STATE && state >= data->state_group->num_states) {
+  if(state != QTPERF_INVALID_STATE && state >= data->counters->state_group->num_states) {
     qtlogargs(LOGERR,"State number %lu is out of bounds!", state);
     data->busy = 0;
     return;
   }
   if(_collecting && from_state != QTPERF_INVALID_STATE) {
     if(data->time_entered < now/2){
-      qtlogargs(LOGERR, "Warning: entering state with invalid time_entered value %lu", data->time_entered);
+      qtlogargs(LOGWARN, "Warning: entering state with invalid time_entered value %lu", data->time_entered);
     }
-    data->perf_counters[from_state] += now - data->time_entered;
-  }
-  if(state != QTPERF_INVALID_STATE){
-    data->time_entered= now;
-  } else {
-    data->time_entered = 0;
+    spin_lock(&data->counters->busy);
+    data->counters->data[from_state] += now - data->time_entered;
+    data->counters->busy = 0;
   }
   data->current_state = state;
-  if(data->piggybacks != NULL && data->piggybacks[data->current_state] != NULL){
-    qtperf_piggyback_list_t* current = data->piggybacks[data->current_state];
-    for(; current != NULL; current = current->next){
-      // WARNING! recursive call, make sure the length of this chain
-      // is very short.
-      qtperf_enter_state(current->target_data, current->target_state);
+  // threads in QTPERF_INVALID_STATE should not log data. This can be
+  // used to switch off logging for particular threads in lieu of
+  // having to use the qtperf_start() and qtperf_stop() methods, which
+  // affect all threads.
+  if(state == QTPERF_INVALID_STATE){
+    data->time_entered = 0;
+  } else {
+    data->time_entered = now;
+    if(data->piggybacks != NULL && data->piggybacks[data->current_state] != NULL){
+      qtperf_piggyback_list_t* current = data->piggybacks[data->current_state];
+      for(; current != NULL; current = current->next){
+        // WARNING! recursive call, make sure the length of this chain
+        // is very short.
+        qtperf_enter_state(current->target_data, current->target_state);
+      }
     }
   }
   data->busy = 0;
@@ -310,6 +346,8 @@ qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter){
   return &iter->current->performance_data;
 }
 
+// First cycle through the counters within a group. This function
+// takes the iterator to the next counter.
 bool incr_counter(qtperf_iterator_t** iter){
   if(*iter != qtperf_iter_end() && (*iter)->current != NULL){
     (*iter)->current = (*iter)->current->next;
@@ -317,6 +355,8 @@ bool incr_counter(qtperf_iterator_t** iter){
   return (*iter)->current != NULL;
 }
 
+// Cycle through groups when the counters in a group are
+// exhausted. This function takes the iterator to the next group.
 bool incr_group(qtperf_iterator_t** iter){
   if(*iter != qtperf_iter_end() && (*iter)->current_group != NULL){
     (*iter)->current_group = (*iter)->current_group->next;
@@ -329,6 +369,8 @@ bool incr_group(qtperf_iterator_t** iter){
 
 qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter){
   qtperfdata_t* data = qtperf_iter_deref(*iter);
+  // try to increment the counter. If that fails, try to increment the
+  // group. If that also fails, the iterator is finished.
   if(!incr_counter(iter) && !incr_group(iter)){
     (*iter) = qtperf_iter_end();
     return NULL;
@@ -425,8 +467,8 @@ qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group){
 qtperfcounter_t qtperf_total_time(qtperfdata_t* data){
   size_t i=0;
   qtperfcounter_t result=0;
-  for(i=0; i<data->num_states; i++){
-    result += data->perf_counters[i];
+  for(i=0; i<data->counters->num_states; i++){
+    result += data->counters->data[i];
   }
   return result;
 }
@@ -437,8 +479,8 @@ void qtperf_piggyback_state(qtperfdata_t* source_data, qtperfid_t trigger_state,
   QTPERF_ASSERT(source_data != NULL);
   spin_lock(&source_data->busy);
   if(source_data->piggybacks==NULL){
-    source_data->piggybacks = calloc(source_data->num_states, sizeof(qtperfdata_t*));
-    memset(source_data->piggybacks, 0, sizeof(qtperfdata_t*) * source_data->num_states);
+    source_data->piggybacks = calloc(source_data->counters->num_states, sizeof(qtperfdata_t*));
+    memset(source_data->piggybacks, 0, sizeof(qtperfdata_t*) * source_data->counters->num_states);
   }
   next = malloc(sizeof(qtperf_piggyback_list_t));
   next->next = source_data->piggybacks[trigger_state];
@@ -500,9 +542,9 @@ void qtperf_print_delimited(qtstategroup_t* group, const char* sep, bool print_h
     printf("%s%lu%s", pfx,i, sep);
     for(column=0; column < group->num_states; column++){
       if(column+1 < group->num_states){
-        printf("%llu%s",  current->performance_data.perf_counters[column], sep);
+        printf("%llu%s",  current->performance_data.counters->data[column], sep);
       }else{
-        printf("%llu\n",  current->performance_data.perf_counters[column]);
+        printf("%llu\n",  current->performance_data.counters->data[column]);
       }
     }
   }
@@ -525,9 +567,14 @@ void qtperf_print_group(qtstategroup_t* group){
 
 void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_zeros){
   size_t i=0;
-  const char** names = (const char**)perfdata->state_group->state_names;
-  qtperfcounter_t* data = perfdata->perf_counters;
-  for(i=0; i<perfdata->state_group->num_states; i++){
+  const char** names = (const char**)perfdata->counters->state_group->state_names;
+  qtperfcounter_t* data = perfdata->counters->data;
+  if(!perfdata->ctr_owner) {// don't print individual records for aggregated groups
+    return;
+  }
+  spin_lock(&perfdata->busy);
+  spin_lock(&perfdata->counters->busy);
+  for(i=0; i<perfdata->counters->state_group->num_states; i++){
     if(show_zeros || (data[i] != 0)){
       if(names != NULL){
         printf("    %s: %llu\n", names[i], data[i]);
@@ -536,6 +583,8 @@ void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_zeros){
       }
     }
   }
+  perfdata->counters->busy = 0;
+  perfdata->busy = 0;
 }
 
 /* Testing related functionality */
@@ -564,7 +613,7 @@ bool qtp_validate_piggyback_list(qtperf_piggyback_list_t* list){
   qtperf_piggyback_list_t* current = list;
   while(current != NULL) {
     assert_true(valid = valid && (current->target_data != NULL));
-    assert_true(valid = valid && (current->target_state < current->target_data->num_states));
+    assert_true(valid = valid && (current->target_state < current->target_data->counters->num_states));
     current = current->next;
   }
   assert_true(current == NULL);
@@ -584,22 +633,25 @@ bool qtp_validate_piggybacks(qtperf_piggyback_list_t** piggybacks, size_t num_st
   return valid;
 }
 
+bool qtp_validate_perfctr(qtperfctr_t* ctr){
+  assert_true(ctr != NULL);
+  assert_true(ctr->num_contributors >= 1);
+  assert_true(ctr->state_group != NULL);
+  assert_true(ctr->num_states > 0 && ctr->num_states != QTPERF_INVALID_STATE);
+  assert_true(ctr->data != NULL);
+  return 1;
+}
+
 bool qtp_validate_perfdata(qtperfdata_t* data){
-  bool valid = 1;
   assert_true(data != NULL);
-  assert_true(data->state_group != NULL);
-  valid = data != NULL && data->state_group != NULL;
-  valid = (data->num_states > 0);
-  assert_true(data->num_states > 0);
-  valid = valid && data->perf_counters != NULL;
-  assert_true(data->perf_counters != NULL);
-  valid = valid && qtp_validate_piggybacks(data->piggybacks, data->num_states);
-  valid = valid && ((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
-                    || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
+  assert_true(data->counters != NULL);
+  assert_true(data->ctr_owner || data->counters->num_contributors > 1);
+  qtp_validate_perfctr(data->counters);
+  qtp_validate_piggybacks(data->piggybacks, data->counters->num_states);
   qtlogargs(PERFDBG,"data->current_state=%lu, data->time_entered=%lu", data->current_state, data->time_entered);
-  assert_true((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
-              || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
-  return valid;
+  assert_true(((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
+               || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0)));
+  return 1;
 }
 
 bool qtp_validate_perf_list(qtperf_perf_list_t* counters,
