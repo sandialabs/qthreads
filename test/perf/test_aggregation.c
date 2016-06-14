@@ -63,6 +63,7 @@ static void test_feblock(void** state) {
   qtstategroup_t* spingroup=NULL;
   qtstategroup_t* totalgroup=NULL;
   qtperfdata_t* totaldata=NULL;
+  qtperfdata_t* all_data[NTHREAD];
   qtperf_start();
   qtperf_set_instrument_qthreads(1);
   qthread_initialize();
@@ -74,11 +75,18 @@ static void test_feblock(void** state) {
   qtperf_enter_state(totaldata,RUNNING);
   for(i=0; i<NTHREAD; i++){
     qtperfdata_t* spindata = qtperf_create_aggregated_perfdata(spingroup, agg_target);
+    all_data[i]=spindata;
     if(agg_target == NULL) {
       agg_target = spindata->counters;
     }
     assert_true(qtperf_check_invariants());
     qthread_fork(struct_edit, (void*)spindata, &ret);
+  }
+  for(i=1; i<NTHREAD; i++){
+    // These are all aggregated, so they should all push data to the
+    // same logging struct
+    assert_true(all_data[0]->counters == all_data[i]->counters);
+    assert_true(all_data[0] != all_data[i]);
   }
   for(i=0; i<NTHREAD; i++){
     qthread_readFE(NULL,&ret);
