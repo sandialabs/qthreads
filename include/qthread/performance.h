@@ -295,7 +295,7 @@ void qtperf_stop(void);
  * library. Do not call this function until you are completely
  * finished with the data, as any further access will be invalid and
  * likely will cause a crash.
- */
+ a*/
 void qtperf_free_data(void);
 
 /** @brief Return the name for the given state id
@@ -350,7 +350,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
     from. This is used by the aggregate collection system so that
     transitions can be recorded for state groups that share perfdata.
  */
-void qtperf_enter_state_from(qtperfdata_t* data, qtperfid_t from_state_id, qtperfid_t to_state_id);
+/* void qtperf_enter_state_from(qtperfdata_t* data, qtperfid_t from_state_id, qtperfid_t to_state_id);*/
 
 /** @brief Get an iterator for inspecting performance data
  *
@@ -501,7 +501,7 @@ void qtperf_print_results(void);
  * qtperf_print_results.
  *
  * Here's an example of a command line to split multiple tables into
- * separate files based on the row_preix (in this case, '*' and "+'):
+ * separate files based on the row_prefix (in this case, '*' and "+'):
  * @code
    ./myprogram | tee >(egrep '^*" > stars.csv) >(egrep '^+' > pluses.csv)
  * @endcode
