@@ -327,7 +327,7 @@ got_m:
             qthread_debug(FEB_DETAILS, "maddr=%p: addrstat invalid; someone else invalidated it!\n", maddr);
             return;
         }
-        if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) &&
+        if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL) &&
             (m->full == 1)) {
             qthread_debug(FEB_DETAILS, "maddr=%p: lists are empty, status is full; invalidating and removing (m:%p)\n", maddr, m);
             m->valid = 0;
@@ -343,7 +343,7 @@ got_m:
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], maddr);
         if (m) {
             QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) &&
+            if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL) &&
                 (m->full == 1)) {
                 qthread_debug(FEB_DETAILS, "maddr=%p: lists are empty, status is full; invalidating and removing\n", maddr);
                 qassertnot(qt_hash_remove_locked(FEBs[lockbin], maddr), 0);
@@ -420,7 +420,7 @@ static QINLINE void qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
         FREE_ADDRRES(X);
         qthread_gotlock_fill_inner(shep, m, maddr, 1, precond_tasks);
     }
-    if ((m->full == 1) && (m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL)) {
+    if ((m->full == 1) && (m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL)) {
         removeable = 1;
     } else {
         removeable = 0;
@@ -459,19 +459,20 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
     assert(maddr);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
-    /* dequeue all FFQ, do their operation, and schedule them */
-    while (m->FFQ != NULL) {
+    /* dequeue all FFWQ, do their operation, and schedule them */
+    // TODO could be optimized to only perform the last operation
+    while (m->FFWQ != NULL) {
         /* dQ */
-        X      = m->FFQ;
-        m->FFQ = X->next;
+        X       = m->FFWQ;
+        m->FFWQ = X->next;
         /* op */
-        if (X->addr && (X->addr != maddr)) {
-            *(aligned_t *)(X->addr) = *(aligned_t *)maddr;
+        if (maddr && (maddr != X->addr)) {
+            *(aligned_t *)maddr = *(X->addr);
             MACHINE_FENCE;
         }
         /* schedule */
         qthread_t *waiter = X->waiter;
-        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFWQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
         if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
             if (*precond_tasks == NULL) {
                 /* create empty head to avoid later checks/branches; use the waiter to find the tail */
@@ -491,6 +492,32 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
              * thus avoiding a possible dead-lock but having to launch all
              * sequentially after releasing the lock. On the plus side,
              * all tasks present in the ready queue (or cache) are ready to run.*/
+            ((qthread_addrres_t *)((*precond_tasks)->waiter))->next = X;
+            (*precond_tasks)->waiter                                = (void *)X;
+        } else {
+            qt_feb_schedule(waiter, shep);
+            FREE_ADDRRES(X);
+        }
+    }
+    /* dequeue all FFQ, do their operation, and schedule them */
+    while (m->FFQ != NULL) {
+        /* dQ */
+        X      = m->FFQ;
+        m->FFQ = X->next;
+        /* op */
+        if (X->addr && (X->addr != maddr)) {
+            *(aligned_t *)(X->addr) = *(aligned_t *)maddr;
+            MACHINE_FENCE;
+        }
+        /* schedule */
+        qthread_t *waiter = X->waiter;
+        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
+            if (*precond_tasks == NULL) {
+                /* create empty head to avoid later checks/branches; use the waiter to find the tail */
+                *precond_tasks           = ALLOC_ADDRRES();
+                (*precond_tasks)->waiter = (void *)(*precond_tasks);
+            }
             ((qthread_addrres_t *)((*precond_tasks)->waiter))->next = X;
             (*precond_tasks)->waiter                                = (void *)X;
         } else {
@@ -1453,12 +1480,13 @@ static void qt_feb_call_tf(const qt_key_t      addr,
     if (sync) {
         QTHREAD_FASTLOCK_LOCK(&m->lock);
     }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         qthread_addrres_t *curs, **base;
         switch (i) {
-            case 0: curs = m->EFQ; base = &m->EFQ; break;
-            case 1: curs = m->FEQ; base = &m->FEQ; break;
-            case 2: curs = m->FFQ; base = &m->FFQ; break;
+            case 0: curs = m->EFQ;  base = &m->EFQ;  break;
+            case 1: curs = m->FEQ;  base = &m->FEQ;  break;
+            case 2: curs = m->FFQ;  base = &m->FFQ;  break;
+            case 3: curs = m->FFWQ; base = &m->FFWQ; break;
         }
         for (; curs != NULL; curs = curs->next) {
             qthread_t *waiter = curs->waiter;
