@@ -49,6 +49,7 @@ typedef enum bt {
     WRITEEF,
     WRITEEF_NB,
     WRITEF,
+    WRITEFF,
     READFF,
     READFF_NB,
     READFE,
@@ -212,6 +213,9 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
             break;
         case WRITEF:
             a->retval = qthread_writeF(a->a, a->b);
+            break;
+        case WRITEFF:
+            a->retval = qthread_writeFF(a->a, a->b);
             break;
         case FILL:
             a->retval = qthread_fill(a->a);
@@ -989,7 +993,7 @@ int API_FUNC qthread_writeFF(aligned_t *restrict       dest,
 
     qthread_addrstat_t *m       = NULL;
     qthread_addrres_t  *X       = NULL;
-    const int           lockbin = QTHREAD_CHOOSE_STRIPE2(src);
+    const int           lockbin = QTHREAD_CHOOSE_STRIPE2(dest);
     qthread_t          *me      = qthread_internal_self();
 
     QTHREAD_FEB_TIMER_DECLARATION(febblock);
@@ -997,12 +1001,12 @@ int API_FUNC qthread_writeFF(aligned_t *restrict       dest,
     assert(qthread_library_initialized);
 
     if (!me) {
-        return qthread_feb_blocker_func(dest, (void *)src, READFF);
+        return qthread_feb_blocker_func(dest, (void *)src, WRITEFF);
     }
     qthread_debug(FEB_CALLS, "dest=%p, src=%p (tid=%u)\n", dest, src, me->thread_id);
-    QTHREAD_FEB_UNIQUERECORD(feb, src, me);
+    QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
     QTHREAD_FEB_TIMER_START(febblock);
-    QALIGN(src, alignedaddr);
+    QALIGN(dest, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 # ifdef LOCK_FREE_FEBS
     do {
@@ -1043,10 +1047,10 @@ int API_FUNC qthread_writeFF(aligned_t *restrict       dest,
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             return QTHREAD_MALLOC_ERROR;
         }
-        X->addr   = (aligned_t *)dest;
+        X->addr   = (aligned_t *)src;
         X->waiter = me;
-        X->next   = m->FFQ;
-        m->FFQ    = X;
+        X->next   = m->FFWQ;
+        m->FFWQ   = X;
         qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): back to parent\n", dest, src, me->thread_id);
         me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
         me->rdata->blockedon.addr = m;
