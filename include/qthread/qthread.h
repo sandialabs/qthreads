@@ -487,6 +487,22 @@ int qthread_syncvar_writeF(syncvar_t *restrict      dest,
 int qthread_syncvar_writeF_const(syncvar_t *restrict dest,
                                  uint64_t            src);
 
+/* This function waits for memory to become full, and leaves it full. When
+ * memory becomes full, all threads waiting for it to become full with a
+ * writeFF will write their value and be queued to run. Data is read from src
+ * and written to dest.
+
+ *
+ * The semantics of writeFF are:
+ * 1 - destination's FEB state must be "full"
+ * 2 - data is copied from src to destination
+ */
+int qthread_writeFF(aligned_t *restrict       dest,
+                    const aligned_t *restrict src);
+int qthread_writeFF_const(aligned_t *dest,
+                          aligned_t  src);
+// NOTE: There is no syncvar version of writeFF or writeFF_const
+
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
  * become full with a readFF will receive the value at once and will be queued

@@ -977,6 +977,105 @@ int INTERNAL qthread_writeEF_const_nb(aligned_t *dest,
     return qthread_writeEF_nb(dest, &src);
 }                      /*}}} */
 
+
+/* the way this works is that:
+ * 1 - destination's FEB state must be "full"
+ * 2 - data is copied from src to destination
+ */
+int API_FUNC qthread_writeFF(aligned_t *restrict       dest,
+                             const aligned_t *restrict src)
+{                      /*{{{ */
+    const aligned_t *alignedaddr;
+
+    qthread_addrstat_t *m       = NULL;
+    qthread_addrres_t  *X       = NULL;
+    const int           lockbin = QTHREAD_CHOOSE_STRIPE2(src);
+    qthread_t          *me      = qthread_internal_self();
+
+    QTHREAD_FEB_TIMER_DECLARATION(febblock);
+
+    assert(qthread_library_initialized);
+
+    if (!me) {
+        return qthread_feb_blocker_func(dest, (void *)src, READFF);
+    }
+    qthread_debug(FEB_CALLS, "dest=%p, src=%p (tid=%u)\n", dest, src, me->thread_id);
+    QTHREAD_FEB_UNIQUERECORD(feb, src, me);
+    QTHREAD_FEB_TIMER_START(febblock);
+    QALIGN(src, alignedaddr);
+    QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+# ifdef LOCK_FREE_FEBS
+    do {
+        m = qt_hash_get(FEBs[lockbin], (void *)alignedaddr);
+        if (!m) { break; }
+        hazardous_ptr(0, m);
+        if (m != qt_hash_get(FEBs[lockbin], (void *)alignedaddr)) { continue; }
+        if (!m->valid) { continue; }
+        QTHREAD_FASTLOCK_LOCK(&m->lock);
+        if (!m->valid) {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            continue;
+        }
+        break;
+    } while(1);
+# else /* ifdef LOCK_FREE_FEBS */
+    qt_hash_lock(FEBs[lockbin]);
+    {
+        m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], (void *)alignedaddr);
+        if (m) {
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+        }
+    }
+    qt_hash_unlock(FEBs[lockbin]);
+# endif /* ifdef LOCK_FREE_FEBS */
+    qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): data structure locked or null (m=%p)\n", dest, src, me->thread_id, m);
+    /* now m, if it exists, is locked - if m is NULL, then we're done! */
+    if (m == NULL) {               /* already full! */
+        if (dest && (dest != src)) {
+            *(aligned_t *)dest = *(aligned_t *)src;
+            MACHINE_FENCE;
+        }
+        qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): non-blocking success!\n", dest, src, me->thread_id);
+    } else if (m->full != 1) {         /* not full... so we must block */
+        QTHREAD_WAIT_TIMER_DECLARATION;
+        X = ALLOC_ADDRRES();
+        if (X == NULL) {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            return QTHREAD_MALLOC_ERROR;
+        }
+        X->addr   = (aligned_t *)dest;
+        X->waiter = me;
+        X->next   = m->FFQ;
+        m->FFQ    = X;
+        qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): back to parent\n", dest, src, me->thread_id);
+        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        me->rdata->blockedon.addr = m;
+        QTHREAD_WAIT_TIMER_START();
+        qthread_back_to_master(me);
+        QTHREAD_WAIT_TIMER_STOP(me, febwait);
+#ifdef QTHREAD_USE_EUREKAS
+        qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
+        qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded after waiting\n", dest, src, me->thread_id);
+    } else {                   /* exists AND is empty... weird, but that's life */
+        if (dest && (dest != src)) {
+            *(aligned_t *)dest = *(aligned_t *)src;
+            MACHINE_FENCE;
+        }
+        qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded!\n", dest, src, me->thread_id);
+        QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+    }
+    QTHREAD_FEB_TIMER_STOP(febblock, me);
+    return QTHREAD_SUCCESS;
+}                      /*}}} */
+
+
+int API_FUNC qthread_writeFF_const(aligned_t *dest,
+                                   aligned_t  src)
+{                      /*{{{ */
+    return qthread_writeFF(dest, &src);
+}                      /*}}} */
+
 /* the way this works is that:
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
