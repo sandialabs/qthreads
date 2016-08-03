@@ -60,9 +60,8 @@ struct _qt_threadqueue {
 /* Memory Management and Initialization/Shutdown */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 
-
-//#define mycounter(w_inds) *(size_t*)(w_inds + (qthread_cacheline() * qthread_worker(NULL)))
-#define mycounter(w_inds) w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)]
+#define mycounter(w_inds) *(size_t*)(((uint8_t*) w_inds) + (qthread_cacheline() * (qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep))))
+//#define mycounter(w_inds) w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)]
 #define myqueue(q) (q->t + mycounter(q->w_inds))
 
 static qt_threadqueue_t* alloc_threadqueue(){
@@ -301,7 +300,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t              active){   
   qt_threadqueue_internal * q= myqueue(qe);
-  mycounter(qe->w_inds) = (mycounter(qe->w_inds) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node = NULL;
   qthread_t* t;
   int numwaits = 0;

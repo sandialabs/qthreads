@@ -17,10 +17,7 @@ TESTS = \
 		qthread_id \
 		qthread_incr qthread_fincr qthread_dincr \
 		qthread_stackleft \
-		qthread_migrate_to \
-		qthread_disable_shepherd \
 		qtimer \
-		qthread_fork_precond \
 		qalloc \
 		arbitrary_blocking_operation \
 		sinc_null \
@@ -33,6 +30,9 @@ TESTS = \
 		read \
 		test_teams \
 		test_subteams
+#		qthread_fork_precond 
+#		qthread_migrate_to 
+#		qthread_disable_shepherd 
 
 check_PROGRAMS = $(TESTS)
 
