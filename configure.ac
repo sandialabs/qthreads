@@ -650,9 +650,9 @@ AS_IF([test "x$enable_pooled_memory" = "xno"],
 AS_IF([test "x$enable_memory_scribbling" = "xyes"],
       [AC_DEFINE([QTHREAD_MEMORY_SCRIBBLING], [1], [turns on memory scribbling])])
 
-AS_IF([test "x$enable_spawn_cache" != "xno"],
+AS_IF([test "x$enable_spawn_cache" = "xyes"],
       [AC_DEFINE([QTHREAD_USE_SPAWNCACHE],[1],[Define to use worker-specific spawn cache])
-       enable_spawn_cache=yes])
+       enable_spawn_cache=no])
 
 AS_IF([test "x$enable_eurekas" = "xyes"],
       [AC_DEFINE([QTHREAD_USE_EUREKAS],[1],[Define to use eurekas])
@@ -841,7 +841,7 @@ AS_IF([test "x$with_scheduler" != "x"],
          default)
            [with_scheduler="sherwood"]
            ;;
-         sherwood|loxley|nemesis|lifo|mutexfifo|mtsfifo)
+         sherwood|loxley|nemesis|lifo|mutexfifo|mtsfifo|distrib)
            # all valid options that require no additional configuration
            ;;
          mdlifo)
