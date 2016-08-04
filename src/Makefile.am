@@ -61,14 +61,6 @@ include patterns/Makefile.inc
 include syscalls/Makefile.inc
 include rcrtool/Makefile.inc
 
-if COMPILE_CHAPEL_INTERFACE
-include interfaces/chapel/Makefile.inc
-endif
-
-if COMPILE_ROSE_EXTENSIONS
-include interfaces/rose/Makefile.inc
-endif
-
 if COMPILE_MULTINODE
 libqthread_la_SOURCES += spr.c
 

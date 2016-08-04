@@ -166,7 +166,6 @@ AC_ARG_ENABLE([debug],
                                Other available areas are:
                                affinity,
                                barrier,
-                               chapel,
                                core,
                                febs,
                                futurelib,
@@ -184,7 +183,7 @@ AC_ARG_ENABLE([debug],
                                threadqueues,
                                xomp])],
               [AS_IF([test "x$enable_debug" = "xyes"],
-                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp,multinode,chapel"])
+                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp,multinode"])
                for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
                      affinity) enable_debug_affinity=yes ;;
@@ -205,7 +204,6 @@ AC_ARG_ENABLE([debug],
                      futurelib) enable_debug_futurelib=yes ;;
                      xomp) enable_debug_xomp=yes ;;
                      multinode) enable_debug_multinode=yes ;;
-                     chapel) enable_debug_chapel=yes ;;
                      *) AC_MSG_ERROR([Unrecognized debug category ($area).]) ;;
                  esac
                done],
@@ -215,8 +213,8 @@ AC_ARG_ENABLE([profiling],
               [AS_HELP_STRING([--enable-profiling=[[areas]]],
                               [turn on the specified comma-separated types of
                                profiling. Available types are: shepherd, lock,
-                               steal, cas_steal, threadc, sincs, teams, spr, and
-                               chapel. Shepherd profiling counts the wall-clock 
+                               steal, cas_steal, threadc, sincs, teams, and spr
+                               . Shepherd profiling counts the wall-clock 
                                time that each shepherd spends idle. FEB
                                profiling counts the time spent waiting for FEB 
                                states. Steal profiling counts the amount of 
@@ -227,8 +225,7 @@ AC_ARG_ENABLE([profiling],
                                threads available to run concurrently. Sincs 
                                profiling reports sinc counter usage data. Teams
                                profiling reports team counter usage data. SPR
-                               profiling reports communication information. 
-                               Chapel profiling reports Chapel interface usage.])],
+                               profiling reports communication information. ])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
                    shepherd|shepherds)
@@ -255,11 +252,8 @@ AC_ARG_ENABLE([profiling],
                    spr)
                      enable_spr_profiling=yes
                      ;;
-                   chapel)
-                     enable_chapel_profiling=yes
-                     ;;
                    *)
-                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr, chapel])
+                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr])
                      ;;
                  esac
                done],
@@ -338,26 +332,6 @@ AC_ARG_ENABLE([condwait-queue],
                                interfere with each other). Default enabled on
                                sparc/solaris, but default disabled elsewhere.])])
 
-AC_ARG_ENABLE([interfaces],
-              [AS_HELP_STRING([--enable-interfaces=[[list]]],
-                              [Comma separated list of compiler interfaces to
-                               support. Available interfaces include chapel and
-                               rose.])],
-              [for iface in $(echo "$enable_interfaces" | sed 's/,/ /g') ; do
-                 case "$iface" in
-                   chapel)
-                     compile_chapel_interface=yes
-                     ;;
-                   rose)
-                     enable_rose_extensions=yes
-                     ;;
-                   *)
-                     AC_MSG_ERROR([Unsupported interface ($iface) selected.])
-                     ;;
-                 esac
-               done
-               EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-interfaces=$enable_interfaces"])
-
 AC_ARG_ENABLE([rose-extensions],
               [AS_HELP_STRING([--enable-rose-extensions],
                               [Enable some experimental extensions to qthreads
@@ -433,14 +407,6 @@ AC_ARG_WITH([cacheline-width],
                              runtime.])],
             [],
             [with_cacheline_width=64])
-
-AC_ARG_VAR([CHPL_HOME],
-           [Provide the path to the Chapel build directory. Only used if the
-            Chapel compiler interface is enabled. Also sets CHPL_OPTS])
-
-AS_IF([test "x$CHPL_HOME" != "x"],
-      [CHPL_OPTS=`$CHPL_HOME/util/config/compileline --includes-and-defines`
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS CHPL_HOME=\"$CHPL_HOME\""])
 
 AC_ARG_ENABLE([multinode],
           [AS_HELP_STRING([--enable-multinode],
@@ -897,10 +863,6 @@ AS_IF([test "x$enable_spr_profiling" = xyes],
       [AC_DEFINE([SPR_PROFILE], [1], [Support dynamic profile of SPR infomation])],
       [enable_spr_profiling="no"])
 
-AS_IF([test "x$enable_chapel_profiling" = xyes],
-      [AC_DEFINE([CHAPEL_PROFILE], [1], [Support dynamic profile of Chapel infomation])],
-      [enable_chapel_profiling="no"])
-
 AS_IF([test "x$enable_cas_steal_profiling" = xyes],
       [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
       [enable_cas_steal_profiling="no"])
@@ -984,8 +946,6 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
                       [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
        QT_COND_DEFINE([$enable_debug_multinode],
                       [QTHREAD_DEBUG_MULTINODE], [prints out multinode debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_chapel],
-                      [QTHREAD_DEBUG_CHAPEL], [prints out chapel interface debugging information at runtime])
        ])
 
 AS_IF([test "x$enable_rcrtool" = "xyes"],
@@ -1156,7 +1116,6 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xalti
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xyes"])
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
-AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
