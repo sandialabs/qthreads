@@ -29,6 +29,9 @@
 #include "qt_expect.h"
 #include "qt_subsystems.h"
 
+// Non portable
+typedef uint8_t cacheline[64];
+
 /* Cutoff variables */
 int max_backoff; 
 int spinloop_backoff;
@@ -49,26 +52,31 @@ typedef struct {
   pthread_cond_t      cond;
   pthread_mutex_t     cond_mut;
   QTHREAD_TRYLOCK_TYPE qlock;
+  cacheline buf; // ensure internal nodes are a cacheline apart
 } qt_threadqueue_internal;
+
+typedef struct {
+  size_t n;
+  cacheline buf; //ensure
+} w_ind;
 
 struct _qt_threadqueue {
   qt_threadqueue_internal *t;
   size_t num_queues;
-  size_t* w_inds;
+  w_ind* w_inds;
 }; 
 
 /* Memory Management and Initialization/Shutdown */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 
-#define mycounter(w_inds) *(size_t*)(((uint8_t*) w_inds) + (qthread_cacheline() * (qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep))))
-//#define mycounter(w_inds) w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)]
-#define myqueue(q) (q->t + mycounter(q->w_inds))
+#define mycounter(q) (q->w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)].n)
+#define myqueue(q) (q->t + mycounter(q))
 
 static qt_threadqueue_t* alloc_threadqueue(){
   qt_threadqueue_t* t = (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues);
   t->num_queues = qlib->nworkerspershep; // Assumption built into api of constant number of workers per shepherd
   t->t = malloc(sizeof(qt_threadqueue_internal) * t->num_queues);
-  t->w_inds = calloc(qlib->nshepherds * qlib->nworkerspershep,  qthread_cacheline());  // Asumes cachline > size_t
+  t->w_inds = calloc(qlib->nshepherds * qlib->nworkerspershep,  sizeof(w_ind));  
   return t;
 }
 
@@ -113,7 +121,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
     }
   }
   for(size_t i=0; i<qlib->nshepherds * qlib->nworkerspershep; i++){
-    qe->w_inds[i] = i % qe->num_queues;
+    qe->w_inds[i].n = i % qe->num_queues;
   }
   return qe;
 } 
@@ -173,7 +181,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q){
 void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
                                           qthread_t *restrict        t){ 
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe->w_inds) = (mycounter(qe->w_inds) + 1) % qe->num_queues;
+  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node = alloc_tqnode();
   node->value = t;
   node->next = NULL;
@@ -194,7 +202,7 @@ void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
 void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
                                           qthread_t *restrict        t){   
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe->w_inds) = (mycounter(qe->w_inds) + 1) % qe->num_queues;
+  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node = alloc_tqnode();
   node->value     = t;
   node->prev = NULL;
@@ -214,7 +222,7 @@ void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){                                     
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe->w_inds) = (mycounter(qe->w_inds) + 1) % qe->num_queues;
+  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node;
   
   // If there is no work or we can't get the lock, fail
@@ -237,7 +245,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *qe){                                     
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe->w_inds) = (mycounter(qe->w_inds) + 1) % qe->num_queues;
+  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node;
   
   // If there is no work or we can't get the lock, fail
@@ -312,7 +320,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
     // If we've done QT_STEAL_RATIO waits on local queue, try to steal 
     if(!node && steal_ratio > 0 && numwaits % steal_ratio == 0) {
       for(int i=0; i < qlib->nshepherds; i++){
-        qt_threadqueue_t *victim_queue = qlib->shepherds[my_shepherd->sorted_sheplist[i]].ready;
+        qt_threadqueue_t *victim_queue = qlib->shepherds[i].ready;
         node = qt_threadqueue_dequeue_head(victim_queue);
         if (node){
           t = node->value;
@@ -327,7 +335,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
         for(int i=0; i<1<<numwaits; i++){
           SPINLOCK_BODY();
         }
-      } else {
+      } else if (max_backoff) {
         struct timespec t; 
         struct timeval n; 
         gettimeofday(&n, NULL); 
