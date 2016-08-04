@@ -498,28 +498,29 @@ qtperfdata_t* qtperf_get_qthread_data(void){
   }
   return me->rdata->performance_data;
 }
-
-/// qtperf_print_delimited prints the data for a state group as a
-/// table, one row per instance of the state group, with columns
-/// separated by the string given in sep. The first column is the
-/// instance number, then each subsequent column gives the time spent
-/// in the corresponding state starting with zero and going up from
-/// there. You can use this function to get data that's easy to import
-/// into a spreadsheet (e.g CSV). Provide a row_prefix if you want to
-/// be able to print multiple tables at a time and use grep to
-/// separate them in the output. row_prefix can be NULL. If you do
-/// choose to output multiple tables, you can split them out to
-/// separate files using output redirection in bash like this
-/// (assuming you have two tables, one with the output prefix '-' and
-/// the other with '+'):
-///
-/// myprog | tee >(egrep '^-' > table1.csv) >(egrep '^\+' > table2.csv)
-///
-/// You can also use the program 'q' (https://github.com/harelba/q) to
-/// make queries against the csv output as if it was a sqlite3
-/// database:
-///
-/// myprog | egrep '^-' | q -d, 'select c2,1.0*c1/c2 as ratio from - order by ratio'
+/**
+ * qtperf_print_delimited prints the data for a state group as a
+ * table, one row per instance of the state group, with columns
+ * separated by the string given in sep. The first column is the
+ * instance number, then each subsequent column gives the time spent
+ * in the corresponding state starting with zero and going up from
+ * there. You can use this function to get data that's easy to import
+ * into a spreadsheet (e.g CSV). Provide a row_prefix if you want to
+ * be able to print multiple tables at a time and use grep to
+ * separate them in the output. row_prefix can be NULL. If you do
+ * choose to output multiple tables, you can split them out to
+ * separate files using output redirection in bash like this
+ * (assuming you have two tables, one with the output prefix '-' and
+ * the other with '+'):
+ *
+ * myprog | tee >(egrep '^-' > table1.csv) >(egrep '^\+' > table2.csv)
+ *
+ * You can also use the program 'q' (https://github.com/harelba/q) to
+ * make queries against the csv output as if it was a sqlite3
+ * database:
+ *
+ * myprog | egrep '^-' | q -d, 'select c2,1.0*c1/c2 as ratio from - order by ratio'
+ */
 
 void qtperf_print_delimited(qtstategroup_t* group, const char* sep, bool print_headers, const char* row_prefix){
   qtperf_perf_list_t* current = NULL;

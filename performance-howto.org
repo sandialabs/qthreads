@@ -1,4 +1,6 @@
-Qthreads Performance Measurement API
+#+Title: Qthreads Performance Measurement API
+#+Author: Erik Lee
+#+Date: 8/1/2016
 
 * Introduction 
 
@@ -253,7 +255,7 @@ of memory savings versus performance costs.
 ** Setup Functions
    Setting up qtperf varies a bit depending on what you want to
    measure and how you want to track it. In the most minimal form, all
-   you have to do is call qtperf_start(), then allocate your groups
+   you have to do is call ~qtperf_start()~, then allocate your groups
    and you're off to the races. You can also tell the library to
    record data from the qthreads internally, and from the library's
    workers threads.
@@ -270,7 +272,7 @@ of memory savings versus performance costs.
     In all cases, you must inform the library that you want to record
     this data *before* you call ~qthread_initialize()~.
 
-**** qtperf_set_instrument_workers(int yes_or_no)
+**** ~qtperf_set_instrument_workers(int yes_or_no)~
      This function will create a state group that allows you to
      measure internal timing data for the qthreads library's
      workers. Qthreads implements a system of work stealing, in which
@@ -281,13 +283,13 @@ of memory savings versus performance costs.
      measuring their idle versus busy time. Using this data you can
      determine how well the processors are being utilized.
 
-**** qtperf_set_instrument_qthreads(int yes_or_no)
+**** ~qtperf_set_instrument_qthreads(int yes_or_no)~
      This function allows you to measure the overhead of the qthreads
      scheduling systems in sending task work to the worker
      threads. Each qthread you create will be monitored to measure how
      much time is spent on task versus stalled in various parts of the
      qthreads system.
-
+     
 *** State group management
     The main abstraction that this API relies upon is a state
     group. As the user, you will define a set of states that your code
@@ -307,7 +309,7 @@ of memory savings versus performance costs.
     actually attach those states to a thread and measure something,
     you need to make a ~qtperfdata_t~ struct.
 
-**** qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* group_name, const char** state_names)
+**** ~qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* group_name, const char** state_names)~
      This function creates a new state group. You must provide a name,
      but the array of state names is optional. If no state names are
      provided, the library will simply assign numeric identifiers to
@@ -318,22 +320,22 @@ of memory savings versus performance costs.
      though you can access its fields if you need to as with any other
      struct. For details of its contents, see ~qthreads/performance.h~.
 
-**** qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* group)
+**** ~qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* group)~
      This creates a new performance counters structure
      (~qtperfdata_t~) that will use the given state group to measure
      transitions. This function should be called for each thread that
      you want to measure. Data logged here will be kept separate from
      other threads. If you want to log data from a group of similar
      threads into the same performance counters structure, use
-     ~[[qtperf_create_aggregated_perfdata()]]~ (see below).
+     ~qtperf_create_aggregated_perfdata()~ (see below).
 
      The value returned from this function should be treated as an
      opaque identifier unless you are very sure of what you need to do
      to it. In order to cause a state transition for this counter,
-     call ~[[qtperf_enter_state]]~ with it.
+     call ~qtperf_enter_state~ with it.
 
-**** qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* group)
-     This function is similar to ~[[qtperf_create_perfdata]]~ except that
+**** ~qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* group)~
+     This function is similar to ~qtperf_create_perfdata~ except that
      it creates a performance counter that is intended to be shared by
      many threads during a run. In some cases, large numbers of
      threads are doing essentially the same task, and the data you
@@ -341,9 +343,9 @@ of memory savings versus performance costs.
      system. This function is intended to support that use case.
 
      If you need to measure data for each thread separately, use
-     ~[[qtperf_create_perfdata]]~ instead.
+     ~qtperf_create_perfdata~ instead.
 
-**** void qtperf_piggyback_state(...)
+**** ~void qtperf_piggyback_state(...)~
      Arguments:
      1. ~qtperfdata_t* source_data~ - The perfdata you want to
         piggyback onto
@@ -387,7 +389,7 @@ of memory savings versus performance costs.
    running. They are oriented toward making measurements as painlessly
    as possible, and also support getting output at various points.
 
-*** void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id)
+*** ~void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id)~
     This is the function that you should call each time you want to
     record that something has changed. The data argument is the
     pointer returned by the ~qtperf_create_*_perfdata~ functions, and
@@ -398,17 +400,17 @@ of memory savings versus performance costs.
     perfdata_t is an aggregated collector, it will also ensure that
     only one thread is updating at a time using a CAS-based spin lock.
 
-*** const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id)
+*** ~const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id)~
     This just returns the state name you provided when the state group
     was created, for convenience. If you did not define names, this
     function returns ~NULL~.
 
-*** void qtperf_start()
+*** ~void qtperf_start()~
     This function enables data recording. It and its opposite function
     (~qtperf_stop~) can be called any number of times while the
     program is running to turn collection on and off as needed.
 
-*** void qtperf_stop()
+*** ~void qtperf_stop()~
     This function halts collection globally. You can restart it with
     ~qtperf_start~, and both can be called at any time during program
     execution without danger.
@@ -420,19 +422,19 @@ of memory savings versus performance costs.
    access directly to the data structures themselves via an iterator
    for low-level or programmatic access.
 
-*** void qtperf_print_results()
+*** ~void qtperf_print_results()~
     Print out all of the data for all of the counters, using the
     human-readable format provided by ~qtperf_print_delimited~. States
     with zero time will be omitted for brevity.
 
-*** void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print_headers, const char* prefix)
+*** ~void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print_headers, const char* prefix)~
     This function is intended to make it easy to export data from a
     run into other tools by printing it in tabular, delimited
-    format. It prints out by state *group*, so all instances of that
+    format. It prints out by state /group/, so all instances of that
     group will be printed, one in each row of the table. You can
     specify what delimiter to use within rows with ~delim~, and you
     can also specify an optional prefix to be printed at column zero
-    of each row (including the optional header). If print_headers is
+    of each row (including the optional header). If ~print_headers~ is
     true, the name of each state will be printed in a header row so
     that the columns of the table are identifiable.
 
@@ -449,7 +451,7 @@ of memory savings versus performance costs.
     begin with '*', and a separate file called ~pluses.csv~ that has
     all lines that begin with '+'.
 
-*** void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time)
+*** ~void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time)~
     This prints the states in a human-readable format along with their
     recorded times. If ~show_states_with_zero_time~ is non-zero, it
     will display all states regardless of their time data. Otherwise,
@@ -457,23 +459,23 @@ of memory savings versus performance costs.
     is mostly useful if you have a number of states that aren't used
     yet but might be in the future.
 
-*** void qtperf_print_group(qtstategroup_t* group)
+*** ~void qtperf_print_group(qtstategroup_t* group)~
     Print the performance data for a state group in human-readable
     list format. This will print a list of all instances of this
     group, along with some summary information for the group as a
     whole.
 
-*** void qtperf_print_perfdata(qtperfdata_t* data, bool show_states_with_zero_time)
+*** ~void qtperf_print_perfdata(qtperfdata_t* data, bool show_states_with_zero_time)~
     This prints a single entry in the human-readable list format. If
     ~show_states_with_zero_time~ is true, it will print an entry for
     all states, otherwise it will only print if the state actually has
     some time recorded.
 
-*** qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group)
+*** ~qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group)~
     This function adds up all of the time for all of the instances of
     the given state group and returns the result.A
 
-*** qtperfcounter_t qtperf_total_time(qtperfdata_t* data)
+*** ~qtperfcounter_t qtperf_total_time(qtperfdata_t* data)~
     This function returns the total time elapsed in all states of the
     given perfdata instance. If you put your perfdata into the
     ~QTHREAD_INVALID_STATE~ state when it finishes or is otherwise not
@@ -487,7 +489,7 @@ of memory savings versus performance costs.
    perfcounters within a stategroup before moving to the next
    stategroup.  In order to avoid allocation, the iterator interface
    expects you to provide it with an iterator struct to use. This is
-   typically done by declaring a qtperf_iterator_t as a local
+   typically done by declaring a ~qtperf_iterator_t~ as a local
    variable, then declaring *another* local variable that points to
    the iterator itself, and passing a *pointer* to that pointer for
    the iterator functions. This allows the API to initialize and
@@ -521,7 +523,7 @@ of memory savings versus performance costs.
    so that future changes to the library will be less likely to break
    your code.
 
-*** void qtperf_iter_begin(qtperf_iterator** iter) 
+*** ~void qtperf_iter_begin(qtperf_iterator** iter)~
     This function initializes a new iterator. ~iter~ should be a
     pointer to a pointer that has been initialized to point at a
     ~qtperf_iterator_t~ that you allocated (usually on the stack, by
@@ -529,18 +531,18 @@ of memory savings versus performance costs.
     allocate a new iterator, so don't pass it ~NULL~, or a pointer to
     ~NULL~.
 
-*** qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter)
+*** ~qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter)~
     This function advances the iterator one slot, and returns the
     ~qtperfdata_t~ it was pointing at before it advanced. You can use
     this in the termination condition of a loop as described at the
     top of this section.
 
-*** qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t * iter)
+*** ~qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t * iter)~
     This function returns the ~qtperfdata_t~ that the iterator is
     currently pointing at. If the iterator is exhausted, it will
     return NULL.
 
-*** qtperf_iterator_t* qtperf_iter_end()
+*** ~qtperf_iterator_t* qtperf_iter_end()~
     This function returns a termination value that you can use to
     compare with your iterator to see if you're done. Currently, this
     is just NULL, but in the future it may be a value that points to
