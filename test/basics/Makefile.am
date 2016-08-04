@@ -30,9 +30,9 @@ TESTS = \
 		read \
 		test_teams \
 		test_subteams
-#		qthread_fork_precond 
-#		qthread_migrate_to 
-#		qthread_disable_shepherd 
+ 		qthread_fork_precond \
+		qthread_migrate_to  \
+		qthread_disable_shepherd 
 
 check_PROGRAMS = $(TESTS)
 
