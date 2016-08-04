@@ -35,6 +35,7 @@ typedef uint8_t cacheline[64];
 /* Cutoff variables */
 int max_backoff; 
 int spinloop_backoff;
+int condwait_backoff;
 int steal_ratio;
 
 /* Data Structures */
@@ -107,6 +108,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
   qt_threadqueue_t *qe = alloc_threadqueue();
   steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
   spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 16, 0);
+  condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 22, 0);
   max_backoff = qt_internal_get_env_num("MAX_BACKOFF", 23, 0);
   for(int i=0; i<qe->num_queues; i++){
     qt_threadqueue_internal* q = qe->t + i; 
@@ -331,11 +333,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
     }
    
     if(!node){
-      if(numwaits < spinloop_backoff){
-        for(int i=0; i<1<<numwaits; i++){
-          SPINLOCK_BODY();
-        }
-      } else if (max_backoff) {
+      if(numwaits > condwait_backoff){
         struct timespec t; 
         struct timeval n; 
         gettimeofday(&n, NULL); 
@@ -347,8 +345,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
         pthread_cond_timedwait(&q->cond, &q->cond_mut, &t);
         qthread_incr(&q->numwaiters, -1);
         pthread_mutex_unlock(&q->cond_mut);
+      } else if (numwaits < spinloop_backoff) {
+        for(int i=0; i<1<<numwaits; i++){
+          SPINLOCK_BODY();
+        }
       }
-    numwaits++;
+      numwaits++;
     }
   }
   t = node->value;
