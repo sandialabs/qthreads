@@ -29,7 +29,7 @@ TESTS = \
 		external_syncvar \
 		read \
 		test_teams \
-		test_subteams
+		test_subteams \
  		qthread_fork_precond \
 		qthread_migrate_to  \
 		qthread_disable_shepherd 
