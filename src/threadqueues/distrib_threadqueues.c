@@ -67,6 +67,8 @@ struct _qt_threadqueue {
   w_ind* w_inds;
 }; 
 
+qthread_t *mccoy = NULL;
+
 /* Memory Management and Initialization/Shutdown */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 
@@ -131,8 +133,6 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *qe){   
   for(int i=0; i<qe->num_queues; i++){
     qt_threadqueue_internal* q = qe->t + i;
-    pthread_cond_destroy(&q->cond);
-    pthread_mutex_destroy(&q->cond_mut);
     if (q->head != q->tail) {
       qthread_t *t;
       QTHREAD_TRYLOCK_LOCK(&q->qlock);
@@ -157,6 +157,9 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *qe){
     }
     assert(q->head == q->tail);
     QTHREAD_TRYLOCK_DESTROY(q->qlock);
+    pthread_cond_broadcast(&q->cond);
+    pthread_cond_destroy(&q->cond);
+    pthread_mutex_destroy(&q->cond_mut);
   }
   free_threadqueue(qe);
 } 
@@ -182,6 +185,15 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q){
  * We have 4 basic queue operations, enqueue and dequeue for head and tail */
 void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
                                           qthread_t *restrict        t){ 
+  if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
+    if(mccoy) {
+      printf("mccoy thread non-null and trying to set!\n");
+      exit(-1);
+    }
+    mccoy = t;
+    return;
+  }
+
   qt_threadqueue_internal* q = myqueue(qe);
   mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node = alloc_tqnode();
@@ -203,6 +215,15 @@ void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
 
 void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
                                           qthread_t *restrict        t){   
+  if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
+    if(mccoy) {
+      printf("mccoy thread non-null and trying to set!\n");
+      exit(-1);
+    }
+    mccoy = t;
+    return;
+  }
+
   qt_threadqueue_internal* q = myqueue(qe);
   mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node = alloc_tqnode();
@@ -351,6 +372,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
         }
       }
       numwaits++;
+    }
+    if(!node &&  qthread_worker(NULL) == 0 && mccoy){ // after 10 waits, check mccoy return mccoy;
+      qthread_t *t = mccoy;
+      mccoy = NULL;
+      return t; 
     }
   }
   t = node->value;
