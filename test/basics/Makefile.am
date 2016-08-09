@@ -8,6 +8,8 @@
 TESTS = \
 		hello_world \
 		aligned_prodcons \
+		aligned_writeFF_basic \
+		aligned_writeFF_waits \
 		hello_world_multi \
 		syncvar_prodcons \
 		reinitialization \
@@ -63,6 +65,10 @@ LDADD = $(qthreadlib)
 hello_world_SOURCES = hello_world.c
 
 aligned_prodcons_SOURCES = aligned_prodcons.c
+
+aligned_writeFF_basic_SOURCES = aligned_writeFF_basic.c
+
+aligned_writeFF_waits_SOURCES = aligned_writeFF_waits.c
 
 hello_world_multi_SOURCES = hello_world_multi.c
 
