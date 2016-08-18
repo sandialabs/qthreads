@@ -46,6 +46,7 @@ QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
  * Local Types
  *********************************************************************/
 typedef enum bt {
+    WRITEE,
     WRITEEF,
     WRITEEF_NB,
     WRITEF,
@@ -204,6 +205,9 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
             break;
         case READFF_NB:
             a->retval = qthread_readFF_nb(a->a, a->b);
+            break;
+        case WRITEE:
+            a->retval = qthread_writeE(a->a, a->b);
             break;
         case WRITEEF:
             a->retval = qthread_writeEF(a->a, a->b);
@@ -802,13 +806,14 @@ int API_FUNC qthread_writeE(aligned_t *restrict       dest,
     assert(qthread_library_initialized);
 
     if (!shep) {
-        return qthread_feb_blocker_func((void *)dest, NULL, EMPTY);
+        return qthread_feb_blocker_func(dest, (void *)src, WRITEE);
     }
     QALIGN(dest, alignedaddr);
+    QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
     {
         const int lockbin = QTHREAD_CHOOSE_STRIPE2(alignedaddr);
         FEBbin = FEBs[lockbin];
-        qthread_debug(FEB_CALLS, "dest=%p (tid=%i lockbin=%u)\n", dest, qthread_id(), lockbin);
+        qthread_debug(FEB_CALLS, "dest=%p src=%p (tid=%i lockbin=%u)\n", dest, src, qthread_id(), lockbin);
 
         QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     }
@@ -860,21 +865,25 @@ int API_FUNC qthread_writeE(aligned_t *restrict       dest,
             QTHREAD_EMPTY_TIMER_START(m);
             COMPILER_FENCE;
             qassertnot(qt_hash_put_locked(FEBbin, (void *)alignedaddr, m), 0);
-            qthread_debug(FEB_DETAILS, "dest=%p (tid=%i): inserted m=%p\n", dest, qthread_id(), m);
+            qthread_debug(FEB_DETAILS, "dest=%p src=%p (tid=%i): inserted m=%p\n", dest, src, qthread_id(), m);
             m = NULL;
         } else {
             /* it could be either full or not, don't know */
-            qthread_debug(FEB_DETAILS, "dest=%p (tid=%i): found m=%p\n", dest, qthread_id(), m);
+            qthread_debug(FEB_DETAILS, "dest=%p src=%p (tid=%i): found m=%p\n", dest, src, qthread_id(), m);
             QTHREAD_FASTLOCK_LOCK(&m->lock);
         }
     }                      /* END CRITICAL SECTION */
     qt_hash_unlock(FEBbin);
 #endif  /* ifdef LOCK_FREE_FEBS */
+    if (dest && (dest != src)) {
+	*(aligned_t *)dest = *(aligned_t *)src;
+	MACHINE_FENCE;
+    }
     if (m) {
-        qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): waking waiters\n", dest, qthread_id());
+        qthread_debug(FEB_BEHAVIOR, "dest=%p src=%p (tid=%i): waking waiters\n", dest, src, qthread_id());
         qthread_gotlock_empty(shep, m, (void *)alignedaddr);
     }
-    qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): success\n", dest, qthread_id());
+    qthread_debug(FEB_BEHAVIOR, "dest=%p src=%p (tid=%i): success\n", dest, src, qthread_id());
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
