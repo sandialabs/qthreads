@@ -8,6 +8,7 @@
 TESTS = \
 		hello_world \
 		aligned_prodcons \
+		aligned_readXX_basic \
 		aligned_writeE_basic \
 		aligned_writeE_wakes \
 		aligned_writeFF_basic \
@@ -67,6 +68,8 @@ LDADD = $(qthreadlib)
 hello_world_SOURCES = hello_world.c
 
 aligned_prodcons_SOURCES = aligned_prodcons.c
+
+aligned_readXX_basic_SOURCES = aligned_readXX_basic.c
 
 aligned_writeE_basic_SOURCES = aligned_writeE_basic.c
 
