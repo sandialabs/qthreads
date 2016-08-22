@@ -46,6 +46,7 @@ QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
  * Local Types
  *********************************************************************/
 typedef enum bt {
+    WRITEE,
     WRITEEF,
     WRITEEF_NB,
     WRITEF,
@@ -204,6 +205,9 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
             break;
         case READFF_NB:
             a->retval = qthread_readFF_nb(a->a, a->b);
+            break;
+        case WRITEE:
+            a->retval = qthread_writeE(a->a, a->b);
             break;
         case WRITEEF:
             a->retval = qthread_writeEF(a->a, a->b);
@@ -784,6 +788,111 @@ int API_FUNC qthread_writeF_const(aligned_t *dest,
 {                      /*{{{ */
     return qthread_writeF(dest, &src);
 }                      /*}}} */
+
+/* the way this works is that:
+ * 1 - data is copies from src to destination
+ * 2 - the destination's FEB state gets set to empty
+ */
+
+int API_FUNC qthread_writeE(aligned_t *restrict       dest,
+                            const aligned_t *restrict src)
+{                      /*{{{ */
+    const aligned_t *alignedaddr;
+
+    qthread_addrstat_t *m;
+    qt_hash             FEBbin;
+    qthread_shepherd_t *shep = qthread_internal_getshep();
+
+    assert(qthread_library_initialized);
+
+    if (!shep) {
+        return qthread_feb_blocker_func(dest, (void *)src, WRITEE);
+    }
+    QALIGN(dest, alignedaddr);
+    QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
+    {
+        const int lockbin = QTHREAD_CHOOSE_STRIPE2(alignedaddr);
+        FEBbin = FEBs[lockbin];
+        qthread_debug(FEB_CALLS, "dest=%p src=%p (tid=%i lockbin=%u)\n", dest, src, qthread_id(), lockbin);
+
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+    }
+#ifdef LOCK_FREE_FEBS
+    do {
+        m = qt_hash_get(FEBbin, (void *)alignedaddr);
+        if (!m) {
+            /* currently full, and must be added to the hash to empty */
+            m = qthread_addrstat_new();
+            if (!m) { return QTHREAD_MALLOC_ERROR; }
+            m->full = 0;
+            MACHINE_FENCE;
+            QTHREAD_EMPTY_TIMER_START(m);
+            if (!qt_hash_put(FEBbin, (void *)alignedaddr, m)) {
+                qthread_addrstat_delete(m);
+                continue;
+            }
+            m = NULL;
+            break;
+        } else {
+            /* it could be either full or not, don't know */
+            hazardous_ptr(0, m);
+            if (m != qt_hash_get(FEBbin, (void *)alignedaddr)) { continue; }
+            if (!m->valid) { continue; }
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+            if (!m->valid) {
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                continue;
+            }
+            if (!m->full) {
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                m = NULL;
+            }
+            break;
+        }
+    } while (1);
+#else  /* ifdef LOCK_FREE_FEBS */
+    qt_hash_lock(FEBbin);
+    {                      /* BEGIN CRITICAL SECTION */
+        m = (qthread_addrstat_t *)qt_hash_get_locked(FEBbin, (void *)alignedaddr);
+        if (!m) {
+            /* currently full, and must be added to the hash to empty */
+            m = qthread_addrstat_new();
+            if (!m) {
+                qt_hash_unlock(FEBbin);
+                return QTHREAD_MALLOC_ERROR;
+            }
+            m->full = 0;
+            QTHREAD_EMPTY_TIMER_START(m);
+            COMPILER_FENCE;
+            qassertnot(qt_hash_put_locked(FEBbin, (void *)alignedaddr, m), 0);
+            qthread_debug(FEB_DETAILS, "dest=%p src=%p (tid=%i): inserted m=%p\n", dest, src, qthread_id(), m);
+            m = NULL;
+        } else {
+            /* it could be either full or not, don't know */
+            qthread_debug(FEB_DETAILS, "dest=%p src=%p (tid=%i): found m=%p\n", dest, src, qthread_id(), m);
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+        }
+    }                      /* END CRITICAL SECTION */
+    qt_hash_unlock(FEBbin);
+#endif  /* ifdef LOCK_FREE_FEBS */
+    if (dest && (dest != src)) {
+	*(aligned_t *)dest = *(aligned_t *)src;
+	MACHINE_FENCE;
+    }
+    if (m) {
+        qthread_debug(FEB_BEHAVIOR, "dest=%p src=%p (tid=%i): waking waiters\n", dest, src, qthread_id());
+        qthread_gotlock_empty(shep, m, (void *)alignedaddr);
+    }
+    qthread_debug(FEB_BEHAVIOR, "dest=%p src=%p (tid=%i): success\n", dest, src, qthread_id());
+    return QTHREAD_SUCCESS;
+}                      /*}}} */
+
+int API_FUNC qthread_writeE_const(aligned_t *dest,
+                                  aligned_t  src)
+{                      /*{{{ */
+    return qthread_writeE(dest, &src);
+}                      /*}}} */
+
 
 /* the way this works is that:
  * 1 - destination's FEB state must be "empty"
