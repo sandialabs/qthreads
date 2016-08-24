@@ -109,9 +109,9 @@ static QINLINE void free_qthread(qthread_t* t){
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){   
   qt_threadqueue_t *qe = alloc_threadqueue();
   steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
-  spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 16, 0);
-  condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 22, 0);
-  max_backoff = qt_internal_get_env_num("MAX_BACKOFF", 23, 0);
+  spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 128, 0);
+  condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 512, 0);
+  max_backoff = qt_internal_get_env_num("MAX_BACKOFF", 1024, 0);
   for(int i=0; i<qe->num_queues; i++){
     qt_threadqueue_internal* q = qe->t + i; 
     if (q != NULL) {
@@ -322,6 +322,8 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict p
                                             qthread_t *restrict                t)
 { return 0; }
 
+inline int square (int x) { return x * x; }
+
 int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
                                                     qthread_t *restrict                t)
 { return 0; } 
@@ -358,7 +360,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
         struct timespec t; 
         struct timeval n; 
         gettimeofday(&n, NULL); 
-        t.tv_nsec = (n.tv_usec * 1000) + (1 << (numwaits > max_backoff ? max_backoff : numwaits)); 
+        t.tv_nsec = (n.tv_usec * 1000) + (square(numwaits > max_backoff ? max_backoff : numwaits)); 
         t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); 
         t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); 
         pthread_mutex_lock(&q->cond_mut);
@@ -367,7 +369,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
         qthread_incr(&q->numwaiters, -1);
         pthread_mutex_unlock(&q->cond_mut);
       } else if (numwaits < spinloop_backoff) {
-        for(int i=0; i<1<<numwaits; i++){
+        for(int i=0; i<square(numwaits); i++){
           SPINLOCK_BODY();
         }
       }
