@@ -54,7 +54,6 @@ typedef enum bt {
     READFF,
     READFF_NB,
     READFE,
-    READXX,
     READFE_NB,
     FILL,
     EMPTY
@@ -206,9 +205,6 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
             break;
         case READFF_NB:
             a->retval = qthread_readFF_nb(a->a, a->b);
-            break;
-        case READXX:
-            a->retval = qthread_readXX(a->a, a->b);
             break;
         case WRITEE:
             a->retval = qthread_writeE(a->a, a->b);
@@ -1476,19 +1472,10 @@ got_m:
 int API_FUNC qthread_readXX(aligned_t *restrict       dest,
                             const aligned_t *restrict src)
 {                      /*{{{ */
-    qthread_t          *me      = qthread_internal_self();
-
-    assert(qthread_library_initialized);
-
-    if (!me) {
-        return qthread_feb_blocker_func(dest, (void *)src, READXX);
-    }
-    qthread_debug(FEB_CALLS, "dest=%p, src=%p (tid=%i)\n", dest, src, me->thread_id);
-    QTHREAD_FEB_UNIQUERECORD(feb, src, me);
+    qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
 
     if (dest && (dest != src)) {
         *(aligned_t *)dest = *(aligned_t *)src;
-        MACHINE_FENCE;
     }
     return QTHREAD_SUCCESS;
 }                      /*}}} */
