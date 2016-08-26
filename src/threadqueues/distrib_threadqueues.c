@@ -3,7 +3,6 @@
 #endif
 
 /* System Headers */
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -50,8 +49,6 @@ typedef struct {
   qt_threadqueue_node_t *tail;
   long                 qlength;
   long                 numwaiters;
-  pthread_cond_t      cond;
-  pthread_mutex_t     cond_mut;
   QTHREAD_TRYLOCK_TYPE qlock;
   cacheline buf; // ensure internal nodes are a cacheline apart
 } qt_threadqueue_internal;
@@ -66,6 +63,11 @@ struct _qt_threadqueue {
   size_t num_queues;
   w_ind* w_inds;
 }; 
+
+// global cond pool
+QTHREAD_COND_DECL(cond_pool);
+int numwaiters;
+int finalizing;
 
 qthread_t *mccoy = NULL;
 
@@ -108,10 +110,6 @@ static QINLINE void free_qthread(qthread_t* t){
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){   
   qt_threadqueue_t *qe = alloc_threadqueue();
-  steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
-  spinloop_backoff = qt_internal_get_env_num("SPINLOOP_BACKOFF", 128, 0);
-  condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 512, 0);
-  max_backoff = qt_internal_get_env_num("MAX_BACKOFF", 1024, 0);
   for(int i=0; i<qe->num_queues; i++){
     qt_threadqueue_internal* q = qe->t + i; 
     if (q != NULL) {
@@ -120,8 +118,6 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
       q->qlength           = 0;
       q->numwaiters        = 0;
       QTHREAD_TRYLOCK_INIT(q->qlock);
-      pthread_cond_init(&q->cond, NULL);
-      pthread_mutex_init(&q->cond_mut, NULL);
     }
   }
   for(size_t i=0; i<qlib->nshepherds * qlib->nworkerspershep; i++){
@@ -157,19 +153,22 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *qe){
     }
     assert(q->head == q->tail);
     QTHREAD_TRYLOCK_DESTROY(q->qlock);
-    pthread_cond_broadcast(&q->cond);
-    pthread_cond_destroy(&q->cond);
-    pthread_mutex_destroy(&q->cond_mut);
   }
   free_threadqueue(qe);
 } 
 
 static void qt_threadqueue_subsystem_shutdown(){   
+  QTHREAD_COND_DESTROY(cond_pool);
   qt_mpool_destroy(generic_threadqueue_pools.nodes);
   qt_mpool_destroy(generic_threadqueue_pools.queues);
 } 
 
 void INTERNAL qt_threadqueue_subsystem_init(){   
+  steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
+  condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 2048, 0);
+  numwaiters = 0;
+  finalizing = 0;
+  QTHREAD_COND_INIT(cond_pool);
   generic_threadqueue_pools.queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_t),
                                                              qthread_cacheline());
   generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
@@ -185,32 +184,44 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q){
  * We have 4 basic queue operations, enqueue and dequeue for head and tail */
 void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
                                           qthread_t *restrict        t){ 
+  if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
+    finalizing = 1;
+  }
   if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
     if(mccoy) {
       printf("mccoy thread non-null and trying to set!\n");
       exit(-1);
     }
     mccoy = t;
-    return;
-  }
-
-  qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
-  qt_threadqueue_node_t *node = alloc_tqnode();
-  node->value = t;
-  node->next = NULL;
-
-  QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  node->prev = q->tail;
-  q->tail    = node;
-  if (q->head == NULL) {
-    q->head = node;
   } else {
-    node->prev->next = node;
+    qt_threadqueue_internal* q = myqueue(qe);
+    mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
+    qt_threadqueue_node_t *node = alloc_tqnode();
+    node->value = t;
+    node->next = NULL;
+
+    QTHREAD_TRYLOCK_LOCK(&q->qlock);
+    node->prev = q->tail;
+    q->tail    = node;
+    if (q->head == NULL) {
+      q->head = node;
+    } else {
+      node->prev->next = node;
+    }
+    q->qlength++;
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   }
-  q->qlength++;
-  QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-  if (q->numwaiters > 0) pthread_cond_broadcast (&q->cond);
+  // we need to wake up all threads when finalizing and if pushing the mccoy
+  // thread to make sure we get worker 0
+  if(finalizing || t->flags & QTHREAD_REAL_MCCOY){
+    QTHREAD_COND_LOCK(cond_pool);
+    QTHREAD_COND_BCAST(cond_pool);
+    QTHREAD_COND_UNLOCK(cond_pool);
+  } else if(numwaiters){
+    QTHREAD_COND_LOCK(cond_pool);
+    if(numwaiters) QTHREAD_COND_SIGNAL(cond_pool);
+    QTHREAD_COND_UNLOCK(cond_pool);
+  }
 } 
 
 void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
@@ -240,7 +251,13 @@ void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
   }
   q->qlength++;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-  if (q->numwaiters > 0) pthread_cond_broadcast (&q->cond);
+  if(numwaiters){
+    QTHREAD_COND_LOCK(cond_pool);
+    if(numwaiters) {
+      QTHREAD_COND_SIGNAL(cond_pool);
+    }
+    QTHREAD_COND_UNLOCK(cond_pool);
+  }
 } 
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){                                     
@@ -335,11 +352,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
   qt_threadqueue_internal * q= myqueue(qe);
   qt_threadqueue_node_t *node = NULL;
   qthread_t* t;
-  int numwaits = 0;
   qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
 
-  // Simple exponential backoff that switches to cond_wait spinloop_backoff waits
-  while(!node){
+  for(int numwaits = 0; !node; numwaits ++){
     node = qt_threadqueue_dequeue_tail(qe);
 
     // If we've done QT_STEAL_RATIO waits on local queue, try to steal 
@@ -354,31 +369,23 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
         }
       }
     }
-   
-    if(!node){
-      if(numwaits > condwait_backoff){
-        struct timespec t; 
-        struct timeval n; 
-        gettimeofday(&n, NULL); 
-        t.tv_nsec = (n.tv_usec * 1000) + (square(numwaits > max_backoff ? max_backoff : numwaits)); 
-        t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); 
-        t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); 
-        pthread_mutex_lock(&q->cond_mut);
-        qthread_incr(&q->numwaiters, 1);
-        pthread_cond_timedwait(&q->cond, &q->cond_mut, &t);
-        qthread_incr(&q->numwaiters, -1);
-        pthread_mutex_unlock(&q->cond_mut);
-      } else if (numwaits < spinloop_backoff) {
-        for(int i=0; i<square(numwaits); i++){
-          SPINLOCK_BODY();
-        }
-      }
-      numwaits++;
-    }
-    if(!node &&  qthread_worker(NULL) == 0 && mccoy){ // after 10 waits, check mccoy return mccoy;
+
+    if(!node && qthread_worker(NULL) == 0 && mccoy){
       qthread_t *t = mccoy;
       mccoy = NULL;
       return t; 
+    } else if(!node){
+      if(numwaits > condwait_backoff && !finalizing){
+        QTHREAD_COND_LOCK(cond_pool);
+        numwaiters++;
+        MACHINE_FENCE;
+        if(!finalizing) QTHREAD_COND_WAIT(cond_pool);
+        numwaiters--;
+        QTHREAD_COND_UNLOCK(cond_pool);
+        numwaits = 0;
+      } else {
+        SPINLOCK_BODY();
+      }
     }
   }
   t = node->value;
