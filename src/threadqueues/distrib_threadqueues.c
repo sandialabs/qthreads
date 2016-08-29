@@ -48,7 +48,6 @@ typedef struct {
   qt_threadqueue_node_t *head;
   qt_threadqueue_node_t *tail;
   long                 qlength;
-  long                 numwaiters;
   QTHREAD_TRYLOCK_TYPE qlock;
   cacheline buf; // ensure internal nodes are a cacheline apart
 } qt_threadqueue_internal;
@@ -62,11 +61,11 @@ struct _qt_threadqueue {
   qt_threadqueue_internal *t;
   size_t num_queues;
   w_ind* w_inds;
+  QTHREAD_COND_DECL(cond);
+  long                 numwaiters;
 }; 
 
 // global cond pool
-QTHREAD_COND_DECL(cond_pool);
-int numwaiters;
 int finalizing;
 
 qthread_t *mccoy = NULL;
@@ -116,13 +115,13 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
       q->head              = NULL;
       q->tail              = NULL;
       q->qlength           = 0;
-      q->numwaiters        = 0;
       QTHREAD_TRYLOCK_INIT(q->qlock);
     }
   }
   for(size_t i=0; i<qlib->nshepherds * qlib->nworkerspershep; i++){
     qe->w_inds[i].n = i % qe->num_queues;
   }
+  QTHREAD_COND_INIT(qe->cond);
   return qe;
 } 
 
@@ -154,11 +153,11 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *qe){
     assert(q->head == q->tail);
     QTHREAD_TRYLOCK_DESTROY(q->qlock);
   }
+  QTHREAD_COND_DESTROY(qe->cond);
   free_threadqueue(qe);
 } 
 
 static void qt_threadqueue_subsystem_shutdown(){   
-  QTHREAD_COND_DESTROY(cond_pool);
   qt_mpool_destroy(generic_threadqueue_pools.nodes);
   qt_mpool_destroy(generic_threadqueue_pools.queues);
 } 
@@ -166,9 +165,7 @@ static void qt_threadqueue_subsystem_shutdown(){
 void INTERNAL qt_threadqueue_subsystem_init(){   
   steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
   condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 2048, 0);
-  numwaiters = 0;
   finalizing = 0;
-  QTHREAD_COND_INIT(cond_pool);
   generic_threadqueue_pools.queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_t),
                                                              qthread_cacheline());
   generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
@@ -214,13 +211,13 @@ void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
   // we need to wake up all threads when finalizing and if pushing the mccoy
   // thread to make sure we get worker 0
   if(finalizing || t->flags & QTHREAD_REAL_MCCOY){
-    QTHREAD_COND_LOCK(cond_pool);
-    QTHREAD_COND_BCAST(cond_pool);
-    QTHREAD_COND_UNLOCK(cond_pool);
-  } else if(numwaiters){
-    QTHREAD_COND_LOCK(cond_pool);
-    if(numwaiters) QTHREAD_COND_SIGNAL(cond_pool);
-    QTHREAD_COND_UNLOCK(cond_pool);
+    QTHREAD_COND_LOCK(qe->cond);
+    QTHREAD_COND_BCAST(qe->cond);
+    QTHREAD_COND_UNLOCK(qe->cond);
+  } else if(qe->numwaiters){
+    QTHREAD_COND_LOCK(qe->cond);
+    if(qe->numwaiters) QTHREAD_COND_SIGNAL(qe->cond);
+    QTHREAD_COND_UNLOCK(qe->cond);
   }
 } 
 
@@ -251,12 +248,12 @@ void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
   }
   q->qlength++;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-  if(numwaiters){
-    QTHREAD_COND_LOCK(cond_pool);
-    if(numwaiters) {
-      QTHREAD_COND_SIGNAL(cond_pool);
+  if(qe->numwaiters){
+    QTHREAD_COND_LOCK(qe->cond);
+    if(qe->numwaiters) {
+      QTHREAD_COND_SIGNAL(qe->cond);
     }
-    QTHREAD_COND_UNLOCK(cond_pool);
+    QTHREAD_COND_UNLOCK(qe->cond);
   }
 } 
 
@@ -376,12 +373,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
       return t; 
     } else if(!node){
       if(numwaits > condwait_backoff && !finalizing){
-        QTHREAD_COND_LOCK(cond_pool);
-        numwaiters++;
+        QTHREAD_COND_LOCK(qe->cond);
+        qe->numwaiters++;
         MACHINE_FENCE;
-        if(!finalizing) QTHREAD_COND_WAIT(cond_pool);
-        numwaiters--;
-        QTHREAD_COND_UNLOCK(cond_pool);
+        if(!finalizing) QTHREAD_COND_WAIT(qe->cond);
+        qe->numwaiters--;
+        QTHREAD_COND_UNLOCK(qe->cond);
         numwaits = 0;
       } else {
         SPINLOCK_BODY();
