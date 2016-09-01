@@ -38,6 +38,7 @@ int nanosleep(const struct timespec *rqtp,
             rmtp->tv_sec = rqtp->tv_sec - secs;
             rmtp->tv_nsec = (long)(qtimer_secs(t) - (double)secs) * 1e9;
         }
+        qtimer_destroy(t);
         return 0;
     } else {
 #if HAVE_SYSCALL && HAVE_DECL_SYS_NANOSLEEP
