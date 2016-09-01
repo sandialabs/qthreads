@@ -2,7 +2,7 @@
 # include "config.h"
 #endif
 
-#include <stdint.h>
+#include "qthread-int.h"
 
 static QINLINE size_t qt_gcd(size_t a, size_t b)
 {
