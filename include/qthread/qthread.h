@@ -546,6 +546,17 @@ int qthread_readFE(aligned_t       *dest,
 int qthread_syncvar_readFE(uint64_t *restrict  dest,
                            syncvar_t *restrict src);
 
+/* This function ignores the FEB state. Data is read from src and written to
+ * dest.
+ *
+ * The semantics of readXX are:
+ * 1 - src's FEB state is ignored
+ * 2 - data is copied from src to destination
+ */
+int qthread_readXX(aligned_t       *dest,
+                   const aligned_t *src);
+// NOTE: There is no syncvar version of readXX
+
 /* functions to implement FEB-ish locking/unlocking
  *
  * These are atomic and functional, but do not have the same semantics as full

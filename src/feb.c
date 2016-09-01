@@ -1464,6 +1464,22 @@ got_m:
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
+/* the way this works is that:
+ * 1 - src's FEB state is ignored
+ * 2 - data is copied from src to destination
+ */
+
+int API_FUNC qthread_readXX(aligned_t *restrict       dest,
+                            const aligned_t *restrict src)
+{                      /*{{{ */
+    qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
+
+    if (dest && (dest != src)) {
+        *(aligned_t *)dest = *(aligned_t *)src;
+    }
+    return QTHREAD_SUCCESS;
+}                      /*}}} */
+
 /* This is the non-blocking version of the previous one */
 int INTERNAL qthread_readFE_nb(aligned_t *restrict       dest,
                                const aligned_t *restrict src)
