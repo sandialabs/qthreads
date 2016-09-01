@@ -55,6 +55,8 @@ int main(int argc,
 
     testWriteEOnFull();
     testWriteEOnEmpty();
+
+    return 0;
 }
 
 /* vim:set expandtab */

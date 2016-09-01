@@ -68,6 +68,8 @@ int main(int argc,
     iprintf("  %i threads total\n", qthread_num_workers());
 
     testWriteFFWaits();
+
+    return 0;
 }
 
 /* vim:set expandtab */
