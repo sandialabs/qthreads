@@ -74,6 +74,8 @@ int main(int argc,
 
     testBasicWriteFF();
     testConcurrentWriteFF();
+
+    return 0;
 }
 
 /* vim:set expandtab */

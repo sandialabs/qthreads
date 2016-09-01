@@ -55,6 +55,8 @@ int main(int argc,
 
     testReadXXOnFull();
     testReadXXOnEmpty();
+
+    return 0;
 }
 
 /* vim:set expandtab */
