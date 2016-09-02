@@ -487,20 +487,23 @@ int qthread_syncvar_writeF(syncvar_t *restrict      dest,
 int qthread_syncvar_writeF_const(syncvar_t *restrict dest,
                                  uint64_t            src);
 
-/* This function is a cross between qthread_empty() and qthread_writeEF(). It
- * does not wait for memory to become empty, but performs the write and sets
- * the state to empty atomically with respect to other FEB-based actions. Data
- * is read from src and written to dest.
+/* This function is essentially qthread_empty, but it also writes 0. It does
+ * not wait for memory to become empty, but performs the write and sets the
+ * state to empty.
  *
- * The semantics of writeE are:
- * 1 - data is copied from src to destination
+ * The semantics of purge are:
+ * 1 - the destination's value is set to 0
  * 2 - the destination's FEB state gets set to empty
  */
-int qthread_writeE(aligned_t *restrict       dest,
-                   const aligned_t *restrict src);
-int qthread_writeE_const(aligned_t *dest,
-                         aligned_t  src);
-// NOTE: There is no syncvar version of writeE or writeE_const
+int qthread_purge(aligned_t *dest);
+
+// Intended only for Chapel where 0 might not be the default value for a type
+int qthread_purge_to(aligned_t *restrict       dest,
+                     const aligned_t *restrict src);
+int qthread_purge_to_const(aligned_t *dest,
+                     aligned_t  purgeVal);
+
+// NOTE: There is no syncvar version of purge
 
 /* This function waits for memory to become full, and leaves it full. When
  * memory becomes full, all threads waiting for it to become full with a
