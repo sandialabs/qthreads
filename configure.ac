@@ -381,11 +381,6 @@ AC_ARG_WITH([barrier],
             [AS_HELP_STRING([--with-barrier=[[type]]],
                             [Specify the barrier implementation. Options are 'feb' (default), 'sinc', 'array', and 'log'.])])
 
-AC_ARG_WITH([multinode-runtime],
-                   [AS_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],
-                                   [Use OPTION as runtime support, current options
-                                    are shmemrt, mpi, and pmi @<:@default=mpi@:>@])])
-
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
                               [Enable modifications so that HPCToolkit can unwind Qthreads threads.])])
@@ -419,28 +414,7 @@ AC_CACHE_SAVE
 #}}}
 
 AS_IF([test "x$enable_multinode" = "xyes"], 
-      [AS_IF([test "x$with_multinode_runtime" = "x"],
-             [with_multinode_runtime=mpi])
-       dnl ((((  make parens from case statement match something
-       case "$with_multinode_runtime" in
-           mpi)
-           AS_IF([test "x$MPICC" = "x"],
-                 [AC_PATH_PROGS([MPICC],[mpicc mpic])])
-           AS_IF([test "x$MPICC" != "x"],
-                 [CC="$MPICC"],
-                 [AC_MSG_ERROR([Cannot find an MPI C compiler wrapper.])])
-           AS_IF([test "x$MPICXX" = "x"],
-                 [AC_PATH_PROGS([MPICXX],[mpic++ mpicxx mpiCC])])
-           AS_IF([test "x$MPICXX" != "x"],
-                 [CXX="$MPICXX"],
-                 [AC_MSG_ERROR([Cannot find an MPI C++ compiler wrapper.])])
-           ;;
-           pmi)
-	       ;;
-           *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
-       esac],
-      [enable_multinode="no"
-       with_multinode_runtime=""])
+      ])
 
 ## ------------------- ##
 ## Checks for programs ##
@@ -1066,29 +1040,10 @@ AS_IF([test "x$qthread_topo" != xno],
 AS_IF([test "x$enable_multinode" = "xyes"], 
       [AC_DEFINE([QTHREAD_MULTINODE], [1], [Defined if multinode support desired])
        QTHREAD_CHECK_PORTALS4([], [AC_MSG_ERROR([Could not find Portals 4 library])])
-       CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS"
-       LDFLAGS="$LDFLAGS $portals4_LDFLAGS"
-       LIBS="$LIBS $portals4_LIBS"
-       dnl ((((  make parens from case statement match something
-       case "$with_multinode_runtime" in
-           shmemrt)
-             AS_IF([test "x$check_portals4_dir" != "x" -a -d "$check_portals4_dir/bin"],
-                   [yodsearchpath="$check_portals4_dir/bin:$PATH"],
-                   [yodsearchpath="$PATH"])
-             AC_PATH_PROG([yod],[yod], [], [$yodsearchpath])
-             AS_IF([test "x$ac_cv_path_yod" = "x"],
-                   [AC_MSG_ERROR([Cannot find yod.])])
-           ;;
-           mpi)
-           ;;
-	   pmi)
-             ORTE_CHECK_PMI([pmi], [], [AC_MSG_ERROR([PMI runtime requested, PMI not found])])
-	     CPPFLAGS="$CPPFLAGS $pmi_CPPFLAGS"
-             LDFLAGS="$LDFLAGS $pmi_LDFLAGS"
-             LIBS="$LIBS $pmi_LIBS"
-	   ;;
-           *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
-       esac])
+       CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS $portals4_runtime_CPPFLAGS"
+       LDFLAGS="$LDFLAGS $portals4_LDFLAGS $portals4_runtime_LDFLAGS"
+       LIBS="$LIBS $portals4_LIBS $portals4_runtime_LIBS"
+      ])
 
 AS_IF([test "x$enable_lf_febs" == "xyes"],
       [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
@@ -1121,10 +1076,7 @@ AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
-AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
-AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
-AM_CONDITIONAL([WANT_PMI_RUNTIME], [test "$with_multinode_runtime" = "pmi"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
 AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
