@@ -413,9 +413,6 @@ AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
 AC_CACHE_SAVE
 #}}}
 
-AS_IF([test "x$enable_multinode" = "xyes"], 
-      ])
-
 ## ------------------- ##
 ## Checks for programs ##
 ## ------------------- ##
