@@ -511,6 +511,19 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          esac])
 
+AS_IF([test "x$enable_picky" = x],
+      [case "$qthread_cv_c_compiler_type" in dnl (
+         Clang)
+           CFLAGS="-Wno-unknown-warning-option -Wno-absolute-value $CFLAGS"
+           ;;
+       esac
+       case "$qthread_cv_cxx_compiler_type" in dnl (
+         Clang)
+           CXXFLAGS="-Wno-unknown-warning-option -Wno-absolute-value $CXXFLAGS"
+           ;;
+         esac])
+
+
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 case "$qthread_cv_asm_arch" in
     POWERPC32|SPARCV9_32)
