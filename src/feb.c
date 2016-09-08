@@ -46,7 +46,7 @@ QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
  * Local Types
  *********************************************************************/
 typedef enum bt {
-    WRITEE,
+    PURGE,
     WRITEEF,
     WRITEEF_NB,
     WRITEF,
@@ -206,8 +206,8 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
         case READFF_NB:
             a->retval = qthread_readFF_nb(a->a, a->b);
             break;
-        case WRITEE:
-            a->retval = qthread_writeE(a->a, a->b);
+        case PURGE:
+            a->retval = qthread_purge_to(a->a, a->b);
             break;
         case WRITEEF:
             a->retval = qthread_writeEF(a->a, a->b);
@@ -794,8 +794,8 @@ int API_FUNC qthread_writeF_const(aligned_t *dest,
  * 2 - the destination's FEB state gets set to empty
  */
 
-int API_FUNC qthread_writeE(aligned_t *restrict       dest,
-                            const aligned_t *restrict src)
+int API_FUNC qthread_purge_to(aligned_t *restrict       dest,
+                              const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
@@ -806,7 +806,7 @@ int API_FUNC qthread_writeE(aligned_t *restrict       dest,
     assert(qthread_library_initialized);
 
     if (!shep) {
-        return qthread_feb_blocker_func(dest, (void *)src, WRITEE);
+        return qthread_feb_blocker_func(dest, (void *)src, PURGE);
     }
     QALIGN(dest, alignedaddr);
     QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
@@ -887,10 +887,15 @@ int API_FUNC qthread_writeE(aligned_t *restrict       dest,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int API_FUNC qthread_writeE_const(aligned_t *dest,
-                                  aligned_t  src)
+int API_FUNC qthread_purge_to_const(aligned_t *dest,
+                                    aligned_t  src)
 {                      /*{{{ */
-    return qthread_writeE(dest, &src);
+    return qthread_purge_to(dest, &src);
+}                      /*}}} */
+
+int API_FUNC qthread_purge(aligned_t *dest)
+{                      /*{{{ */
+    return qthread_purge_to_const(dest, 0);
 }                      /*}}} */
 
 

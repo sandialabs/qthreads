@@ -18,17 +18,17 @@ static aligned_t writeEF_wrapper(void *arg)
     return 0;
 }
 
-// Test that writeE wakes a blocked writeEF
+// Test that purge wakes a blocked writeEF
 // Requires that only one worker is running. Basically does:
-//     1: fork(writeE)
+//     1: fork(writeEF)
 //     1: yields
 //     2: starts runnning
 //     2: hits writeEF, and yields since var is full
-//     1: writeE
+//     1: purge
 //     1: hits readFF on forked task and yields
 //     2: running again, finishes writeEF, task returns
 //     1: readFF competes, finishes
-static void testWriteEWakes(void)
+static void testPurgeWakes(void)
 {
     aligned_t ret;
     concurrent_t=45;
@@ -44,8 +44,8 @@ static void testWriteEWakes(void)
     assert(qthread_feb_status(&concurrent_t) == 1);
     assert(concurrent_t != 55);
 
-    iprintf("1: Writing E\n");
-    qthread_writeE_const(&concurrent_t, 35);
+    iprintf("1: purging\n");
+    qthread_purge(&concurrent_t);
 
     // wait for writeEF wrapper to complete
     qthread_readFF(NULL, &ret);
@@ -65,7 +65,7 @@ int main(int argc,
     iprintf("%i shepherds...\n", qthread_num_shepherds());
     iprintf("  %i threads total\n", qthread_num_workers());
 
-    testWriteEWakes();
+    testPurgeWakes();
 
     return 0;
 }

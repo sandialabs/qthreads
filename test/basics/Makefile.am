@@ -9,8 +9,8 @@ TESTS = \
 		hello_world \
 		aligned_prodcons \
 		aligned_readXX_basic \
-		aligned_writeE_basic \
-		aligned_writeE_wakes \
+		aligned_purge_basic \
+		aligned_purge_wakes \
 		aligned_writeFF_basic \
 		aligned_writeFF_waits \
 		hello_world_multi \
@@ -71,9 +71,9 @@ aligned_prodcons_SOURCES = aligned_prodcons.c
 
 aligned_readXX_basic_SOURCES = aligned_readXX_basic.c
 
-aligned_writeE_basic_SOURCES = aligned_writeE_basic.c
+aligned_purge_basic_SOURCES = aligned_purge_basic.c
 
-aligned_writeE_wakes_SOURCES = aligned_writeE_wakes.c
+aligned_purge_wakes_SOURCES = aligned_purge_wakes.c
 
 aligned_writeFF_basic_SOURCES = aligned_writeFF_basic.c
 
