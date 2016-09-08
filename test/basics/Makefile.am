@@ -37,6 +37,7 @@ TESTS = \
 		test_subteams \
  		qthread_fork_precond \
 		qthread_migrate_to  \
+		queue \
 		qthread_disable_shepherd 
 
 check_PROGRAMS = $(TESTS)
