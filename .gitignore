@@ -2,7 +2,6 @@
 stamp-h1
 Makefile
 Makefile.in
-configure
 config.log
 config.h
 libtool
