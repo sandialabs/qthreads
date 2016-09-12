@@ -37,7 +37,6 @@ TESTS = \
 		test_subteams \
  		qthread_fork_precond \
 		qthread_migrate_to  \
-		queue \
 		qthread_disable_shepherd 
 
 check_PROGRAMS = $(TESTS)
@@ -106,7 +105,7 @@ qthread_disable_shepherd_SOURCES = qthread_disable_shepherd.c
 
 qtimer_SOURCES = qtimer.c
 
-queue_SOURCES = queue.c
+#queue_SOURCES = queue.c
 
 qthread_fork_precond_SOURCES = qthread_fork_precond.c
 
