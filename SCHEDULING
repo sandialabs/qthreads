@@ -13,6 +13,10 @@ In multi-threaded shepherd mode, the following schedulers are available:
 
 Brief descriptions of each option follow:
 
+Distrib: Like sherwood, but creates a double ended queue for each worker within
+  a shepherd, and spread the work across those queues to reduce contention. Also
+  comes with condwait enabled by default.
+
 Nemesis: This is a lock-free FIFO queue based on the NEMESIS lock-free queue
 	design from the MPICH folks. It is extremely efficient, as long as FIFO is
 	the scheduling order that you want.
