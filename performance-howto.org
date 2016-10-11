@@ -45,7 +45,14 @@ of memory savings versus performance costs.
   and all memory will be safely deallocated.
 
 * Building
-  
+
+** Prerequisites
+   * autoconf (apt-get installautoconf)
+   * libtool (apt-get install libtool)
+   * cmocka, only for testing (apt-get install libcmocka-dev)
+   * valgrind, for testing (apt-get install valgrind)
+
+** Build Steps
   The performance API is only loosely integrated with qthreads
   proper. In order to build qthreads with support for performance
   monitoring, there are two steps to complete:
