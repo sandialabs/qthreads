@@ -1,5 +1,5 @@
 
-QTHREADS=/home/erik/qthreads/qthreads
+QTHREADS=../..
 QTH_INC=$(QTHREADS)/include
 QTH_LIB=$(QTHREADS)/src/.libs
 
@@ -11,7 +11,7 @@ CFLAGS=${CFLAGS_DBG}
 LDFLAGS=-L$(QTH_LIB) -lqthread $(shell pkg-config --libs cmocka)
 TESTS=$(shell ls test_*.c)
 OBJECTS=$(subst .c,.o,${TESTS})
-TARGETS=$(subst test_,,$(subst .c,.test,$(shell ls test_*.c)))
+TARGETS=$(subst test_,,$(subst .c,.test,${TESTS}))
 
 all: ${TARGETS}
 
