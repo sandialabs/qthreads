@@ -78,7 +78,7 @@ fi
 
 echo " **** Configure..."
 ## enable testing, disable perf debug output 
-CFLAGS='-DQTHREAD_PERFORMANCE -DQTPERF_TESTING' LDFLAGS=-L${cmocka_lib} LIBS=-lcmocka ./configure --enable-debugging --disable-lazy-threadids  --enable-picky
+CFLAGS="-DQTHREAD_PERFORMANCE -DQTPERF_TESTING -I${cmocka_inc}" LDFLAGS="-L${cmocka_lib}" LIBS=-lcmocka ./configure --enable-debugging --disable-lazy-threadids  --enable-picky
 
 if [ ! -f ./Makefile ]; then
     echo "Error configuring qthreads, look above for clues"

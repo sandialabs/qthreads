@@ -52,10 +52,10 @@ aligned_t struct_edit(void*data){
     interruptions += spin_lock(&busy);
     qtperf_enter_state(mydata, SPIN_WORKING);
     start = strct;
-    for(j=0; j<1000000; j++){
+    for(j=0; j<100000; j++){
       strct = strct+1;
     }
-    assert_true(strct == start+1000000);
+    assert_true(strct == start+100000);
     start = strct;
     busy = 0;
   }
