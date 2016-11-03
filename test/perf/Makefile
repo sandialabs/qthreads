@@ -2,16 +2,20 @@
 QTHREADS=../..
 QTH_INC=$(QTHREADS)/include
 QTH_LIB=$(QTHREADS)/src/.libs
+CMOCK_LIB=${QTHREADS}/dependencies/install/lib
+CMOCK_INC=${QTHREADS}/dependencies/install/include
 
-CFLAGS_OPT=-I$(QTH_INC) -O3 -Wall -pedantic -DPERFDBG=1 -DQTPERF_TESTING -DQTHREAD_PERFORMANCE -DQTHREAD_NONLAZY_THREADIDS=1 -g $(shell pkg-config --cflags cmocka)
-CFLAGS_DBG=-I$(QTH_INC) -Wall -pedantic -DPERFDBG=1 -DQTPERF_TESTING -DQTHREAD_PERFORMANCE -DQTHREAD_NONLAZY_THREADIDS=1 -g $(shell pkg-config --cflags cmocka)
+CFLAGS_OPT=-I$(QTH_INC) -I${CMOCK_INC} -O3 -Wall -pedantic -DPERFDBG=1 -DQTPERF_TESTING -DQTHREAD_PERFORMANCE -DQTHREAD_NONLAZY_THREADIDS=1 -g $(shell pkg-config --cflags cmocka)
+CFLAGS_DBG=-I$(QTH_INC) -I${CMOCK_INC} -Wall -pedantic -DPERFDBG=1 -DQTPERF_TESTING -DQTHREAD_PERFORMANCE -DQTHREAD_NONLAZY_THREADIDS=1 -g $(shell pkg-config --cflags cmocka)
 CFLAGS_NOPERF=-I$(QTH_INC) -DQTHREAD_NONLAZY_THREADIDS=1 -g 
 CFLAGS=${CFLAGS_DBG}
 
-LDFLAGS=-L$(QTH_LIB) -lqthread $(shell pkg-config --libs cmocka)
+LDFLAGS=-L$(QTH_LIB) -lqthread -L${CMOCK_LIB} -lcmocka
 TESTS=$(shell ls test_*.c)
 OBJECTS=$(subst .c,.o,${TESTS})
 TARGETS=$(subst test_,,$(subst .c,.test,${TESTS}))
+
+LIBPATH=${QTH_LIB}:${CMOCK_LIB}:${LD_LIBRARY_PATH}
 
 all: ${TARGETS}
 
@@ -19,7 +23,7 @@ all: ${TARGETS}
 	gcc -o $*.test test_$*.o $(LDFLAGS)
 
 check: all
-	for tst in ${TARGETS}; do echo "start $${tst}"; QT_NUM_SHEPHERDS=9 valgrind -q --leak-check=full "./$$tst" > /dev/null; echo "finish $${tst}"; done
+	for tst in ${TARGETS}; do echo "start $${tst}"; LD_LIBRARY_PATH="${LIBPATH}" QT_NUM_SHEPHERDS=9 valgrind -q --leak-check=full "./$$tst" > /dev/null; echo "finish $${tst}"; done
 
 %.o: %.c
 	gcc -c -o $*.o $(CFLAGS) $*.c
