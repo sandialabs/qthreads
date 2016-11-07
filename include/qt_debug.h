@@ -3,6 +3,7 @@
 
 #include <stdlib.h> /* for malloc() and friends */
 
+#ifndef EXTERNAL_ALLOCATOR
 #ifdef QTHREAD_MEMORY_SCRIBBLING
 #include <string.h> /* for memset(), per C90 */
 # define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
@@ -20,6 +21,10 @@ static QINLINE void *MALLOC(size_t sz)
 # define FREE_SCRIBBLE(ptr, sz)  do { } while (0)
 # define MALLOC(sz) malloc(sz)
 # define FREE(ptr, sz) free(ptr)
+#endif
+#else
+# define ALLOC_SCRIBBLE(ptr, sz) do { } while (0)
+# define FREE_SCRIBBLE(ptr, sz)  do { } while (0)
 #endif
 
 #ifdef QTHREAD_DEBUG
