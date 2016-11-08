@@ -2503,6 +2503,29 @@ void API_FUNC qthread_flushsc(void)
  */
 #define QTHREAD_SPAWN_MASK_TEAMS (QTHREAD_SPAWN_NEW_TEAM | QTHREAD_SPAWN_NEW_SUBTEAM)
 
+
+typedef struct {
+  qthread_f f;
+  const void *arg;
+  size_t arg_size;
+  qthread_shepherd_id_t target_shep;
+  unsigned int feature_flag;
+} shepherd_spawn_args;
+
+
+aligned_t INTERNAL shepherd_spawn(void* vargs)
+{
+  shepherd_spawn_args* args = (shepherd_spawn_args*) vargs;
+  aligned_t rets [qlib->nworkerspershep];
+  for(int i=0; i<qlib->nworkerspershep; i++){
+    qthread_spawn(args->f, args->arg, args->arg_size, rets + i, 0, NULL, args->target_shep, args->feature_flag);
+  }
+  for(int i=0; i<qlib->nworkerspershep; i++){
+    qthread_readFF(NULL, rets + i);
+  }
+}
+
+
 int API_FUNC qthread_spawn(qthread_f             f,
                            const void           *arg,
                            size_t                arg_size,
@@ -2584,6 +2607,19 @@ int API_FUNC qthread_spawn(qthread_f             f,
     qt_team_t *curr_team   = (me && me->team) ? me->team : NULL;
     qt_team_t *new_team    = NULL;
     int        team_leader = -1;
+
+    shepherd_spawn_args sa;
+    if (feature_flag & QTHREAD_SPAWN_SHEPHERD){
+      sa.f = f;
+      sa.arg = arg;
+      sa.arg_size = arg_size;
+      sa.target_shep = target_shep;
+      sa.feature_flag = feature_flag & ~QTHREAD_SPAWN_SHEPHERD;
+
+      f = shepherd_spawn; 
+      arg = (void*)&sa;
+      arg_size = sizeof(sa);
+    }
 
     if (!(feature_flag & QTHREAD_SPAWN_MASK_TEAMS)) {
         // Spawn into the current team
