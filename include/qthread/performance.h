@@ -663,18 +663,20 @@ bool qtperf_check_invariants(void);
 #ifdef QTHREAD_PERFORMANCE
 #define QTPERF_ENTER_STATE(...) qtperf_enter_state(__VA_ARGS__)
 #define QTPERF_WORKER_ENTER_STATE(pdata,state) do{      \
-    if(qtperf_should_instrument_workers){\
-      QTPERF_ASSERT(pdata != NULL);\
-      qtperf_enter_state(pdata, state);\
+    if(qtperf_should_instrument_workers){               \
+      QTPERF_ASSERT(pdata != NULL);                     \
+      qtperf_enter_state(pdata, state);                 \
     } } while(0)
-#define QTPERF_QTHREAD_ENTER_STATE(pdata,state) do{                     \
-    if(qtperf_should_instrument_qthreads){                                     \
-        QTPERF_ASSERT(pdata != NULL);\
-        qtperf_enter_state(pdata, state);\
+#define QTPERF_QTHREAD_ENTER_STATE(pdata,state) do{     \
+    if(qtperf_should_instrument_qthreads){              \
+        QTPERF_ASSERT(pdata != NULL);                   \
+        qtperf_enter_state(pdata, state);               \
     }} while(0)
 
 #else
 # define QTPERF_ENTER_STATE(...)
+# define QTPERF_QTHREAD_ENTER_STATE(...)
+# define QTPERF_WORKER_ENTER_STATE(...)
 #endif // ifdef QTHREAD_PERFORMANCE
 
 
