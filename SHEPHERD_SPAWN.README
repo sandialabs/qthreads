@@ -1,0 +1,6 @@
+Shepherd spawns create one qthread per worker on the desired shepherd. See
+"shepherd_spawn" in qthread.c. Kokkos likely wants a way to ensure that there
+are never two shepherd tasks in progress at the same time (to prevent deadlock
+on internal barriers in the code), but I wasn't able to get that working
+correctly. I've added the shepherd_spawn test in test/basics as a VERY simple
+test.

@@ -7,6 +7,7 @@
 
 TESTS = \
 		hello_world \
+		shepherd_spawn \
 		aligned_prodcons \
 		aligned_writeE_basic \
 		aligned_writeE_wakes \
