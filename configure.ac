@@ -712,6 +712,11 @@ AS_IF([test "x$enable_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_GUARD_PAGES], [1], [Use guard pages to detect stack overruns])],
       [enable_guard_pages="no"])
 
+AS_IF([test "x$enable_precache_guard_pages" = "xyes"],
+      [AC_DEFINE([QTHREAD_PRECACHE_GUARD_PAGES], [1], [Precache guard pages in pooled stacks])],
+      [enable_precache_guard_pages="no"])
+
+
 AC_CACHE_SAVE
 
 ## --------------------------- ##
@@ -1081,6 +1086,7 @@ AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
+AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([EXTERNAL_ALLOCATOR], [test "$enable_external_allocator" = "yes"])
@@ -1152,6 +1158,7 @@ echo    "    Check alignment: $enable_aligncheck"
 echo    "          Profiling: $enable_profiling"
 echo    "   Debugging Output: $enable_debug"
 echo    "        Guard Pages: $enable_guard_pages"
+echo    "          Precaching: $enable_precache_guard_pages"
 echo    ""
 AS_IF([test "x$enable_pooled_memory" = "xyes"],
       [pool_string="memory"],
