@@ -1879,6 +1879,21 @@ unsigned API_FUNC qthread_size_tasklocal(void)
     return f->rdata->tasklocal_size ? f->rdata->tasklocal_size : qlib->qthread_tasklocal_size;
 } /*}}}*/
 
+void* API_FUNC qthread_tos(void)
+{
+    const qthread_t *f = qthread_internal_self();
+
+    return f->rdata->stack;
+}
+
+
+void* API_FUNC qthread_bos(void)
+{
+    const qthread_t *f = qthread_internal_self();
+
+    return f->rdata->stack + qlib->qthread_stack_size;
+}
+
 size_t API_FUNC qthread_stackleft(void)
 {                      /*{{{ */
     const qthread_t *f = qthread_internal_self();
