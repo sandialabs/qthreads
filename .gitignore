@@ -23,3 +23,8 @@ cscope.out
 *.lo
 .libs
 .dirstamp
+GPATH
+GRTAGS
+GTAGS
+*.trs
+*.log

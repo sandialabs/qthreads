@@ -1,4 +1,9 @@
 aligned_prodcons
+aligned_purge_wakes
+aligned_readXX_basic
+aligned_purge_basic
+aligned_writeFF_basic
+aligned_writeFF_waits
 arbitrary_blocking_operation
 external_fork
 external_syncvar
