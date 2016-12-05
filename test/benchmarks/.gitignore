@@ -42,6 +42,7 @@ time_task_spawn
 time_thrcrt_bench
 time_thrcrt_bench_pthread
 time_threading
+time_thread_ring
 time_uts_aligned
 time_uts_donecount
 time_uts_donecount2
