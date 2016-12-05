@@ -6,6 +6,7 @@ time_chain_bench
 time_chain_bench_pthread
 time_cncthr_bench
 time_cncthr_bench_pthread
+time_chpl_spawn
 time_eager_future
 time_febs
 time_febs_graph_test
