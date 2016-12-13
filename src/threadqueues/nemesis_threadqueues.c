@@ -89,9 +89,9 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 {   /*{{{*/
 
 #ifdef QTHREAD_OVERSUBSCRIPTION
-    num_spins_before_condwait = qt_internal_get_env_num("QT_SPINCOUNT", 300, 0);
+    num_spins_before_condwait = qt_internal_get_env_num("SPINCOUNT", 300, 0);
 #else
-    num_spins_before_condwait = qt_internal_get_env_num("QT_SPINCOUNT", 300000, 0);
+    num_spins_before_condwait = qt_internal_get_env_num("SPINCOUNT", 300000, 0);
 #endif
 
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
