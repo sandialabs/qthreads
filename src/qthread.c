@@ -79,7 +79,7 @@
 #ifdef QTHREAD_MULTINODE
 # include "qt_multinode_innards.h"
 #endif
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_teams.h"
 #ifdef QTHREAD_USE_EUREKAS
 # include "qt_eurekas.h"
@@ -944,7 +944,8 @@ int API_FUNC qthread_initialize(void)
     qlib->nshepherds        = nshepherds;
     qlib->nworkerspershep   = nworkerspershep;
     qlib->nshepherds_active = nshepherds;
-    qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
+    qlib->shepherds         = (qthread_shepherd_t *) qt_calloc(nshepherds,
+                                                               sizeof(qthread_shepherd_t));
     qlib->threadqueues      = (qt_threadqueue_t **)MALLOC(nshepherds * sizeof(qt_threadqueue_t *));
 #ifdef QTHREAD_LOCAL_PRIORITY
     qlib->local_priority_queues = (qt_threadqueue_t **)MALLOC(nshepherds * sizeof(qt_threadqueue_t *));
@@ -1014,7 +1015,8 @@ int API_FUNC qthread_initialize(void)
         qlib->shepherds[i].node            = -1;
         qlib->shepherds[i].shep_dists      = NULL;
         qlib->shepherds[i].sorted_sheplist = NULL;
-        qlib->shepherds[i].workers = (qthread_worker_t *)calloc(nworkerspershep, sizeof(qthread_worker_t));
+        qlib->shepherds[i].workers = (qthread_worker_t *) qt_calloc(nworkerspershep,
+                                                                    sizeof(qthread_worker_t));
         qassert_ret(qlib->shepherds[i].workers, QTHREAD_MALLOC_ERROR);
     }
     qaffinity = qt_internal_get_env_bool("AFFINITY", 1);
@@ -1197,10 +1199,10 @@ int API_FUNC qthread_initialize(void)
         }
 # endif
         for (j = 0; j < nworkerspershep; ++j) {
-            qlib->shepherds[i].workers[j].nostealbuffer = calloc(STEAL_BUFFER_LENGTH,
-                                                                 sizeof(qthread_t *));
-            qlib->shepherds[i].workers[j].stealbuffer = calloc(STEAL_BUFFER_LENGTH,
-                                                               sizeof(qthread_t *));
+            qlib->shepherds[i].workers[j].nostealbuffer = qt_calloc(STEAL_BUFFER_LENGTH,
+                                                                    sizeof(qthread_t *));
+            qlib->shepherds[i].workers[j].stealbuffer = qt_calloc(STEAL_BUFFER_LENGTH,
+                                                                  sizeof(qthread_t *));
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
@@ -1855,7 +1857,7 @@ void API_FUNC *qthread_get_tasklocal(unsigned int size)
                 return *data_blob;
             } else {
                 qthread_debug(THREAD_DETAILS, "Resize alloc'd data blob to %u from %u\n", size, f->rdata->tasklocal_size);
-                *data_blob = realloc(*data_blob, size);
+                *data_blob = qt_realloc(*data_blob, size);
                 assert(NULL != *data_blob);
 
                 qthread_debug(THREAD_DETAILS, "set tlsize = %u\n", size);
@@ -2146,7 +2148,7 @@ void qthread_thread_free(qthread_t *t)
     }
     if (t->flags & QTHREAD_HAS_ARGCOPY) {
         assert(&t->data != t->arg);
-        free(t->arg); // I don't record the size of this anywhere, so I can't scribble it
+        qt_free(t->arg); // I don't record the size of this anywhere, so I can't scribble it
         t->arg = NULL;
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);

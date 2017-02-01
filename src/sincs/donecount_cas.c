@@ -17,7 +17,7 @@
 #include "qt_shepherd_innards.h"
 #include "qt_expect.h"
 #include "qt_visibility.h"
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_debug.h"
 #include "qt_int_ceil.h"
 

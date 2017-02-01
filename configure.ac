@@ -167,7 +167,6 @@ AC_ARG_ENABLE([debug],
                                affinity,
                                barrier,
                                core,
-                               external-allocator,
                                febs,
                                futurelib,
                                io,
@@ -374,6 +373,11 @@ AC_ARG_WITH([sinc],
                             [Specify the sinc implementation. Options are
                              'donecount' (default), 'donecount_cas', 'snzi', and 'original'.])])
 
+AC_ARG_WITH([alloc],
+          [AS_HELP_STRING([--with-alloc=[[type]]],
+                             [Specify the memory allocator. The only
+                             option is 'base' for now.])])
+
 AC_ARG_WITH([dict],
             [AS_HELP_STRING([--with-dict=[[type]]],
                             [Specify the dictionary implementation. Options are
@@ -407,11 +411,6 @@ AC_ARG_WITH([cacheline-width],
 AC_ARG_ENABLE([multinode],
           [AS_HELP_STRING([--enable-multinode],
                               [Enable experimental support for multi-node qthreads applications])])
-
-AC_ARG_ENABLE([external-allocator],
-          [AS_HELP_STRING([--enable-external-allocator],
-                              [Enable the use of external memory allocators instead of local malloc])])
-
 
 AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
 AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
@@ -589,10 +588,6 @@ AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 AS_IF([test "x$enable_pooled_memory" = "xno"],
       [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
       [enable_pooled_memory=yes])
-
-AS_IF([test "x$enable_external_allocator" = "xyes"],
-      [AC_DEFINE([EXTERNAL_ALLOCATOR], [1], [enables the use of external allocators])],
-      [enable_external_allocator=no])
 
 AS_IF([test "x$enable_memory_scribbling" = "xyes"],
       [AC_DEFINE([QTHREAD_MEMORY_SCRIBBLING], [1], [turns on memory scribbling])])
@@ -861,6 +856,14 @@ case "$with_sinc" in
  *) AC_MSG_ERROR([Unknown sinc option]) ;;
 esac
 
+AS_IF([test "x$with_alloc" = "x"],
+      [with_alloc="base"],
+      [])
+case "$with_alloc" in
+ base|chapel) ;;
+ *) AC_MSG_ERROR([Unknown alloc option]) ;;
+esac
+
 AS_IF([test "x$with_barrier" = "x"],
       [with_barrier="feb"])
 case "$with_barrier" in
@@ -1068,6 +1071,7 @@ AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 AC_SUBST(qthread_topo)
 AC_SUBST(with_scheduler)
 AC_SUBST(with_sinc)
+AC_SUBST(with_alloc)
 AC_SUBST(with_dict)
 AC_SUBST(with_barrier)
 AC_SUBST(OPENMP_CFLAGS)
@@ -1089,7 +1093,6 @@ AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
-AM_CONDITIONAL([EXTERNAL_ALLOCATOR], [test "$enable_external_allocator" = "yes"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
@@ -1187,6 +1190,7 @@ AS_IF([test "x$using_mdlifo" = "xyes"],
 echo    "Speed:"
 echo    "          Scheduler: $with_scheduler"
 echo    "         Sinc Style: $with_sinc"
+echo    "        Alloc Style: $with_alloc"
 echo    "      Barrier Style: $with_barrier"
 echo    "   Dictionary Style: $with_dict"
 echo    "    Lazy Thread IDs: $enable_lazy_threadids"

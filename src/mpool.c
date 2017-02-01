@@ -33,7 +33,7 @@
 #include "qt_gcd.h"                    /* for qt_lcm() */
 #include "qt_macros.h"
 #include "qt_visibility.h"
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_subsystems.h"
 
 /* Seems SLIGHTLY faster without TLS, and a whole lot safer and cleaner */
@@ -93,7 +93,7 @@ static void qt_mpool_subsystem_shutdown(void)
     TLS_DELETE(pool_cache_count);
     for (int i = 0; i < qthread_readstate(TOTAL_WORKERS); ++i) {
         if (pool_cache_array[i]) {
-            free(pool_cache_array[i]);
+            qt_free(pool_cache_array[i]);
         }
     }
     FREE(pool_cache_array, sizeof(void *) * qthread_readstate(TOTAL_WORKERS));
@@ -105,7 +105,8 @@ void INTERNAL qt_mpool_subsystem_init(void)
 #ifdef TLS
     assert(TLS_GET(pool_caches) == NULL);
     assert(TLS_GET(pool_cache_count) == 0);
-    pool_cache_array = calloc(sizeof(void *), qthread_readstate(TOTAL_WORKERS));
+    pool_cache_array = qt_calloc(sizeof(void *),
+                                 qthread_readstate(TOTAL_WORKERS));
     qthread_internal_cleanup_late(qt_mpool_subsystem_shutdown);
 #endif
 }
@@ -249,7 +250,8 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool)
                         }
                         )
             qthread_debug(MPOOL_DETAILS, "%u -> realloc-ing the tc (%p)\n", wkr, tc);
-            qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
+            qt_mpool_threadlocal_cache_t *newtc = qt_realloc(tc,
+                                                             sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
             qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
             assert(newtc);
             if (tc != newtc) {

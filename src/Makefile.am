@@ -30,6 +30,7 @@ libqthread_la_SOURCES = \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
+	alloc/@with_alloc@.c \
 	affinity/common.c \
 	affinity/@qthread_topo@.c \
 	touch.c \

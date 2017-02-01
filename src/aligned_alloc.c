@@ -21,7 +21,7 @@ static QINLINE int getpagesize()
 
 /* Internal Headers */
 #include "qt_visibility.h"
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_debug.h"
 
@@ -88,28 +88,28 @@ void INTERNAL qthread_internal_aligned_free(void         *ptr,
     assert(ptr);
     switch (alignment) {
         case 0:
-            free(ptr);
+            qt_free(ptr);
             break;
 #if defined(HAVE_16ALIGNED_MALLOC)
         case 16:
         case 8:
         case 4:
         case 2:
-            free(ptr);
+            qt_free(ptr);
             break;
 #endif
         default:
 #if defined(HAVE_WORKING_VALLOC) || defined(HAVE_PAGE_ALIGNED_MALLOC)
             if (alignment == pagesize) {
-                free(ptr);
+                qt_free(ptr);
                 break;
             }
 #endif
 #if defined(HAVE_MEMALIGN) || defined(HAVE_POSIX_MEMALIGN)
-            free(ptr);
+            qt_free(ptr);
 #else
             assert((uintptr_t)*((void **)ptr - 1) > 4096);
-            free(*((void **)ptr - 1));
+            qt_free(*((void **)ptr - 1));
 #endif
     }
 }

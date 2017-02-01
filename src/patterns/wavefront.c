@@ -10,6 +10,7 @@
 #include <qthread/wavefront.h>
 #include <qthread/qpool.h>
 
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_int_ceil.h"
 
@@ -92,7 +93,7 @@ static void qt_wavefront_worker(struct qt_wavefront_wargs *const arg)
         local = qarray_create_configured(vertCount * horizCount, L->unit_size,
                                          ALL_LOCAL, 1, 1);
         assert(local);
-        R = calloc(horizCount, sizeof(char *));
+        R = qt_calloc(horizCount, sizeof(char *));
         assert(R);
         for (size_t i = 0; i < horizCount - 1; i++) {
             R[i] = qarray_elem_nomigrate(local, i * vertCount);
@@ -179,7 +180,7 @@ static void qt_wavefront_worker(struct qt_wavefront_wargs *const arg)
         }
     }
     if (R) {
-        free(R);
+        qt_free(R);
     }
     if (local) {
         qarray_destroy(local);
@@ -322,17 +323,17 @@ void qt_wavefront_destroy_lattice(qt_wavefront_lattice *const L)
         for (size_t seg = 0; seg < slatSegCount; seg++) {
             qarray_destroy(L->slats.strips[i][seg]);
         }
-        free((void *)(L->slats.strips[i]));
+        qt_free((void *)(L->slats.strips[i]));
     }
-    free((void *)(L->slats.strips));
+    qt_free((void *)(L->slats.strips));
     for (size_t i = 0; i < strutCount; i++) {
         for (size_t seg = 0; seg < strutSegCount; seg++) {
             qarray_destroy(L->struts.strips[i][seg]);
         }
-        free((void *)(L->struts.strips[i]));
+        qt_free((void *)(L->struts.strips[i]));
     }
-    free((void *)(L->struts.strips));
-    free(L);
+    qt_free((void *)(L->struts.strips));
+    qt_free(L);
 }
 
 void qt_wavefront_print_lattice(const qt_wavefront_lattice *const L)

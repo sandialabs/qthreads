@@ -18,7 +18,7 @@
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #endif
 #ifdef QTHREAD_USE_EUREKAS
 #include "qt_eurekas.h"

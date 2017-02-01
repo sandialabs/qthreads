@@ -56,7 +56,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           qt_sinc_op_f op,
                           const size_t will_spawn)
 {
-    qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
+    qt_sinc_t *sinc = qt_malloc(sizeof(qt_sinc_t));
 
     assert(sinc);
 
@@ -80,7 +80,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
         const size_t num_lines              = num_sheps * num_lines_per_shep;
         const size_t sizeof_shep_value_part = num_lines_per_shep * cacheline;
 
-        sinc->initial_value = malloc(sizeof_value);
+        sinc->initial_value = qt_malloc(sizeof_value);
         assert(sinc->initial_value);
         memcpy(sinc->initial_value, initial_value, sizeof_value);
 
@@ -99,7 +99,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                        sizeof_value);
             }
         }
-        sinc->result = malloc(sinc->sizeof_value);
+        sinc->result = qt_malloc(sinc->sizeof_value);
         assert(sinc->result);
     } else {
         sinc->initial_value          = NULL;
@@ -271,11 +271,11 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
     qthread_internal_aligned_free(sinc->counts, cacheline);
     if (sinc->result || sinc->values) {
         assert(sinc->result);
-        free(sinc->result);
+        qt_free(sinc->result);
         assert(sinc->values);
         qthread_internal_aligned_free(sinc->values, cacheline);
     }
-    free(sinc);
+    qt_free(sinc);
 }
 
 /* Adds a new participant to the sinc.

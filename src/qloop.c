@@ -18,7 +18,7 @@
 #include "qt_expect.h"
 #include "qt_asserts.h"
 #include "qt_debug.h"
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_barrier.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
@@ -1637,7 +1637,7 @@ static qt_qsort_iprets_t qt_qsort_inner_partitioner(double      *array,
     struct qt_qsort_args *args;
     size_t                i;
 
-    rets = (syncvar_t *)calloc(numthreads, sizeof(syncvar_t));
+    rets = (syncvar_t *) qt_calloc(numthreads, sizeof(syncvar_t));
     args = (struct qt_qsort_args *)MALLOC(sizeof(struct qt_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
     for (i = 0; i < numthreads; i++) {
