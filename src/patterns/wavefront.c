@@ -10,6 +10,7 @@
 #include <qthread/wavefront.h>
 #include <qthread/qpool.h>
 
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_int_ceil.h"
 

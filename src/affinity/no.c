@@ -2,6 +2,7 @@
 # include "config.h"
 #endif
 
+#include "qt_alloc.h"
 #include "qt_affinity.h"
 #include "qt_asserts.h"
 #include "qt_debug.h"
