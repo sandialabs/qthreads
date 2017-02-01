@@ -8,7 +8,7 @@
 
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qt_aligned_alloc.h"          /* for aligned alloc */
+#include "qt_alloc.h"          /* for aligned alloc */
 
 /* queue declarations */
 struct qswsrqueue_s {             /* typedef'd to qswsrqueue_t */

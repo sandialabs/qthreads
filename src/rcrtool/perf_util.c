@@ -54,7 +54,7 @@ perf_setup_argv_events(char **argv, perf_event_desc_t **fd)
 				warn("too many entries");
 				goto error;
 			}
-			fdt = realloc(fdt, new_max * sizeof(*fdt));
+			fdt = qt_realloc(fdt, new_max * sizeof(*fdt));
 			if (!fdt) {
 				warn("cannot allocate memory");
 				goto error;
@@ -76,7 +76,7 @@ perf_setup_argv_events(char **argv, perf_event_desc_t **fd)
 	*fd = fdt;
 	return num;
 error:
-	free(fdt);
+	qt_free(fdt);
 	return -1;
 }
 
@@ -103,9 +103,9 @@ perf_setup_list_events(const char *ev, perf_event_desc_t **fd)
 	num++;
 	num++; /* terminator */
   
-	argv = malloc(num * sizeof(char *));
+	argv = qt_malloc(num * sizeof(char *));
 	if (!argv) {
-		free(events);
+		qt_free(events);
 		return -1;
 	}
 
@@ -117,7 +117,7 @@ perf_setup_list_events(const char *ev, perf_event_desc_t **fd)
 	argv[i++] = q;
 	argv[i] = NULL;
 	ret = perf_setup_argv_events(argv, fd);
-	free(argv);
+	qt_free(argv);
 	return ret;
 }
 

@@ -94,7 +94,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
         qt_stack_create(&(q->shared_stack), 1024);
         QTHREAD_TRYLOCK_INIT(q->trylock);
         QTHREAD_FASTLOCK_INIT(q->steallock);
-        q->local = calloc(local_length, sizeof(qt_threadqueue_local_t *));
+        q->local = qt_calloc(local_length, sizeof(qt_threadqueue_local_t *));
         for(i = 0; i < local_length; i++) {
             posix_memalign((void **)&q->local[i], 64, sizeof(qt_threadqueue_local_t));
             qt_stack_create(&(q->local[i]->stack), 1024);
@@ -115,10 +115,10 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     qt_stack_free(&q->shared_stack);
     for(i = 0; i < local_length; i++) {
         qt_stack_free(&(q->local[i]->stack));
-        free(q->local[i]);
+        qt_free(q->local[i]);
     }
-    free(q->local);
-    free(q);
+    qt_free(q->local);
+    qt_free(q);
 } /*}}}*/
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)

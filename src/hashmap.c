@@ -15,7 +15,7 @@
 #include "qt_prefetch.h"
 #include "qt_atomics.h"
 #include "qthread/cacheline.h"
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_debug.h"
 
 #ifndef QT_HASH_CAST
@@ -140,7 +140,7 @@ qt_hash INTERNAL qt_hash_create(int needSync)
 {   /*{{{*/
     qt_hash ret;
 
-    ret = calloc(1, sizeof(struct qt_hash_s));
+    ret = qt_calloc(1, sizeof(struct qt_hash_s));
     if (ret) {
         if (needSync) {
             ret->lock = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE));
@@ -225,7 +225,7 @@ int INTERNAL qt_hash_put(qt_hash  h,
 static void brehash(qt_hash h,
                     size_t  len)
 {   /*{{{*/
-    qt_hash d = calloc(1, sizeof(struct qt_hash_s));
+    qt_hash d = qt_calloc(1, sizeof(struct qt_hash_s));
     size_t  i, copied;
 
     assert(d);

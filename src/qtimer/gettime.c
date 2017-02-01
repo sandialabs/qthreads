@@ -73,7 +73,7 @@ double qtimer_secs(qtimer_t q)
 
 qtimer_t qtimer_create()
 {
-    qtimer_t ret = calloc(1, sizeof(struct qtimer_s));
+    qtimer_t ret = qt_calloc(1, sizeof(struct qtimer_s));
 
     assert(ret);
     return ret;

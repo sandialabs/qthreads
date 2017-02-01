@@ -83,11 +83,11 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
         const size_t         num_lines_per_shep     = QT_CEIL_RATIO(sizeof_shep_values, cacheline);
         const size_t         num_lines              = num_sheps * num_lines_per_shep;
         const size_t         sizeof_shep_value_part = num_lines_per_shep * cacheline;
-        qt_sinc_reduction_t *rdata                  = sinc->rdata = malloc(sizeof(qt_sinc_reduction_t));
+        qt_sinc_reduction_t *rdata                  = sinc->rdata = qt_malloc(sizeof(qt_sinc_reduction_t));
         assert(rdata);
         rdata->op            = op;
         rdata->sizeof_value  = sizeof_value;
-        rdata->initial_value = malloc(2 * sizeof_value);
+        rdata->initial_value = qt_malloc(2 * sizeof_value);
         assert(rdata->initial_value);
         memcpy(rdata->initial_value, initial_value, sizeof_value);
         rdata->result = ((uint8_t *)rdata->initial_value) + sizeof_value;
@@ -109,7 +109,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
             }
         }
     }
-    qt_sinc_snzi_t *snzi = sinc->snzi = malloc(sizeof(qt_sinc_snzi_t));
+    qt_sinc_snzi_t *snzi = sinc->snzi = qt_malloc(sizeof(qt_sinc_snzi_t));
     assert(snzi);
 
     assert(sizeof(qt_sinc_cache_count_t) <= cacheline);
@@ -156,7 +156,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           qt_sinc_op_f op,
                           const size_t expect)
 {
-    qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
+    qt_sinc_t *sinc = qt_malloc(sizeof(qt_sinc_t));
 
     assert(sinc);
     qt_sinc_init(sinc, sizeof_value, initial_value, op, expect);
@@ -264,7 +264,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
 void qt_sinc_destroy(qt_sinc_t *sinc_)
 {
     qt_sinc_fini(sinc_);
-    free(sinc_);
+    qt_free(sinc_);
 }
 
 #define SNZI_HALF 1
