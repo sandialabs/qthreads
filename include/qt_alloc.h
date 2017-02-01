@@ -1,5 +1,8 @@
 #ifndef HAVE_QT_ALIGNED_ALLOC_H
 
+#include <stdlib.h>
+#include <stdint.h>
+
 #include "qt_visibility.h"
 
 void INTERNAL *qt_malloc(size_t size);
