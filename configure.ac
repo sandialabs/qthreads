@@ -860,7 +860,7 @@ AS_IF([test "x$with_alloc" = "x"],
       [with_alloc="base"],
       [])
 case "$with_alloc" in
- base|none) ;;
+ base|chapel) ;;
  *) AC_MSG_ERROR([Unknown alloc option]) ;;
 esac
 
