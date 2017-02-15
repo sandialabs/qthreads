@@ -42,12 +42,7 @@ unsigned int sleep(unsigned int seconds)
             return syscall(SYS_sleep, &tv);
         }
 # elif HAVE_DECL_SYS_USLEEP
-        {
-            struct timespec tv;
-            tv.tv_sec = seconds;
-            tv.tv_usec = 0;
-            return syscall(SYS_usleep, &tv);
-        }
+            return syscall(SYS_usleep, seconds * 1e6);
 # elif HAVE_DECL_SYS_NANOSLEEP
         {
             struct timespec tv, rem;
