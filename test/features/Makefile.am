@@ -35,6 +35,10 @@ if HAVE_GUARD_PAGES
 TESTS += guard_pages
 endif
 
+if HAVE_SYSCALLS 
+TESTS += syscalls
+endif
+
 EXTRA_PROGRAMS = wavefront
 
 if ENABLE_CXX_TESTS

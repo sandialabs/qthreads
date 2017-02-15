@@ -22,6 +22,7 @@
 
 unsigned int sleep(unsigned int seconds)
 {
+  printf("entering sleep\n");
     if (qt_blockable()) {
         qtimer_t t = qtimer_create();
         qtimer_start(t);
@@ -34,13 +35,26 @@ unsigned int sleep(unsigned int seconds)
     } else {
 #if HAVE_SYSCALL
 # if HAVE_DECL_SYS_SLEEP
-        return syscall(SYS_sleep, seconds);
-
+        {
+            struct timespec tv;
+            tv.tv_sec = seconds;
+            tv.tv_usec = 0;
+            return syscall(SYS_sleep, &tv);
+        }
 # elif HAVE_DECL_SYS_USLEEP
-        return syscall(SYS_usleep, seconds * 1e6);
-
+        {
+            struct timespec tv;
+            tv.tv_sec = seconds;
+            tv.tv_usec = 0;
+            return syscall(SYS_usleep, &tv);
+        }
 # elif HAVE_DECL_SYS_NANOSLEEP
-        return syscall(SYS_nanosleep, seconds * 1e9);
+        {
+            struct timespec tv, rem;
+            tv.tv_sec = seconds;
+            tv.tv_nsec = 0;
+            return syscall(SYS_nanosleep, &tv, &rem);
+        }
 
 # else
         return 0;
