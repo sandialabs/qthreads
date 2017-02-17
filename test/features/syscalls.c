@@ -21,6 +21,7 @@ int main(int   argc,
          char *argv[])
 {
     int i;
+    unsigned int ret;
     qtimer_t     t;
     unsigned int iter, iterations = 1;
     double       total_time = 0.0;
@@ -40,7 +41,11 @@ int main(int   argc,
     rets = (aligned_t *)malloc(threads * sizeof(aligned_t));
     assert(rets);
     */
-    sleep(4);
+    ret = sleep(4);
+    if(ret) {
+      fprintf(stderr, "sleep failed %d\n", ret);
+      exit(1);
+    }
     exit(0);
 }
 

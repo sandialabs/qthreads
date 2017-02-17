@@ -35,7 +35,7 @@ if HAVE_GUARD_PAGES
 TESTS += guard_pages
 endif
 
-if HAVE_SYSCALLS 
+if HAVE_SYSCALLS
 TESTS += syscalls
 endif
 
