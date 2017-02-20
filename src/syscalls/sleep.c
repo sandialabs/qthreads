@@ -20,9 +20,8 @@
 #include "qthread_innards.h" /* for qlib */
 #include "qt_qthread_mgmt.h"
 
-unsigned int sleep(unsigned int seconds)
+unsigned int qt_sleep(unsigned int seconds)
 {
-    unsigned int slept;
     if (qt_blockable()) {
         qtimer_t t = qtimer_create();
         qtimer_start(t);
@@ -49,7 +48,7 @@ unsigned int sleep(unsigned int seconds)
         return 0;
 # endif
 #else   /* if HAVE_SYSCALL */
-        return sleep(seconds);
+        return 0;
 #endif  /* if HAVE_SYSCALL */
     }
 }
