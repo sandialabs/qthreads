@@ -84,7 +84,7 @@ void API_FUNC qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
+        rdata->values = qt_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
         ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline);
 
@@ -197,7 +197,7 @@ void API_FUNC qt_sinc_fini(qt_sinc_t *sinc_)
         assert(rdata->initial_value);
         FREE(rdata->initial_value, 2 * rdata->sizeof_value);
         assert(rdata->values);
-        qthread_internal_aligned_free(rdata->values, cacheline);
+        qt_internal_aligned_free(rdata->values, cacheline);
         FREE(rdata, sizeof(qt_sinc_reduction_t));
         sinc->rdata = NULL;
     }

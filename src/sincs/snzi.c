@@ -250,14 +250,14 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
     qt_sinc_snzi_t *const restrict snzi = sinc->snzi;
     assert(snzi);
     assert(snzi->counts);
-    qthread_internal_aligned_free(snzi->counts, cacheline);
+    qt_internal_aligned_free(snzi->counts, cacheline);
     if (sinc->rdata) {
         qt_sinc_reduction_t *rdata = sinc->rdata;
         assert(rdata->result);
         assert(rdata->initial_value);
         free(rdata->initial_value);
         assert(rdata->values);
-        qthread_internal_aligned_free(rdata->values, cacheline);
+        qt_internal_aligned_free(rdata->values, cacheline);
     }
 }
 

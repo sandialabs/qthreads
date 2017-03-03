@@ -11,7 +11,6 @@ SUBDIRS =
 noinst_HEADERS = affinity/shufflesheps.h
 
 libqthread_la_SOURCES = \
-	aligned_alloc.c \
 	cacheline.c \
 	envariables.c \
 	feb.c \

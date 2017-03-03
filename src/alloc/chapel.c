@@ -34,16 +34,16 @@ void *qt_realloc(void *ptr, size_t size) {
 /* local constants */
 size_t _pagesize = 0;
 
-void qthread_internal_alignment_init(void) {
+void qt_internal_alignment_init(void) {
   _pagesize = getpagesize();
 }
 
-void *qthread_internal_aligned_alloc(size_t        alloc_size,
+void *qt_internal_aligned_alloc(size_t        alloc_size,
                                      uint_fast16_t alignment) {
     return chpl_memalign(alignment, alloc_size);
 }
 
-void qthread_internal_aligned_free(void         *ptr,
+void qt_internal_aligned_free(void         *ptr,
                                    uint_fast16_t alignment) {
     chpl_free(ptr);
 }
