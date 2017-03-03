@@ -34,7 +34,7 @@ qswsrqueue_t *qswsrqueue_create(size_t elements)
     if (elements > UINT32_MAX) {
         return NULL;
     }
-    q = qthread_internal_aligned_alloc(sizeof(struct qswsrqueue_s) + (elements * sizeof(void *)), CACHELINE_WIDTH);
+    q = qt_internal_aligned_alloc(sizeof(struct qswsrqueue_s) + (elements * sizeof(void *)), CACHELINE_WIDTH);
     if (q != NULL) {
         q->head  = 0;
         q->size  = elements;
@@ -47,7 +47,7 @@ qswsrqueue_t *qswsrqueue_create(size_t elements)
 int qswsrqueue_destroy(qswsrqueue_t *q)
 {                                      /*{{{ */
     qassert_ret((q != NULL), QTHREAD_BADARGS);
-    qthread_internal_aligned_free(q, sizeof(struct qswsrqueue_s) + (q->size * sizeof(void *)));
+    qt_internal_aligned_free(q, sizeof(struct qswsrqueue_s) + (q->size * sizeof(void *)));
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 

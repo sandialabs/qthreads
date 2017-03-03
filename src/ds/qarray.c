@@ -357,7 +357,7 @@ static qarray *qarray_create_internal(const size_t         count,
     }
 #else /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
       /* For speed, we want page-aligned memory, if we can get it */
-    ret->base_ptr = qthread_internal_aligned_alloc(segment_count * ret->segment_bytes, pagesize);
+    ret->base_ptr = qt_internal_aligned_alloc(segment_count * ret->segment_bytes, pagesize);
 #endif  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
     qassert_goto((ret->base_ptr != NULL), badret_exit);
 
@@ -540,7 +540,7 @@ void qarray_destroy(qarray *a)
                      a->segment_bytes * (a->count / a->segment_size +
                                          ((a->count % a->segment_size) ? 1 : 0)));
 #else
-    qthread_internal_aligned_free(a->base_ptr, pagesize);
+    qt_internal_aligned_free(a->base_ptr, pagesize);
 #endif
     FREE(a, sizeof(qarray));
 }                                      /*}}} */

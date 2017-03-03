@@ -74,7 +74,7 @@ static inline void qt_hash_internal_create(qt_hash ret,
         ret->shrink_size = entries * 0.030f;
     }
     /* data storage */
-    ret->entries = qthread_internal_aligned_alloc(sizeof(hash_entry) * entries, linesize);
+    ret->entries = qt_internal_aligned_alloc(sizeof(hash_entry) * entries, linesize);
     assert(ret->entries);
     if (ret->entries) {
         memset(ret->entries, 0, sizeof(hash_entry) * entries);
@@ -161,7 +161,7 @@ void INTERNAL qt_hash_destroy(qt_hash h)
         FREE((void *)h->lock, sizeof(QTHREAD_FASTLOCK_TYPE));
     }
     assert(h->entries);
-    qthread_internal_aligned_free(h->entries, linesize);
+    qt_internal_aligned_free(h->entries, linesize);
     FREE(h, sizeof(struct qt_hash_s));
 } /*}}}*/
 
@@ -246,7 +246,7 @@ static void brehash(qt_hash h,
     }
     assert(h->population == d->population);
     FREE_SCRIBBLE(h->entries, sizeof(hash_entry) * h->num_entries);
-    qthread_internal_aligned_free(h->entries, linesize);
+    qt_internal_aligned_free(h->entries, linesize);
     h->entries      = d->entries;
     h->mask         = d->mask;
     h->num_entries  = d->num_entries;

@@ -95,7 +95,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
+        rdata->values = qt_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
 
         // Initialize values
@@ -113,7 +113,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     assert(snzi);
 
     assert(sizeof(qt_sinc_cache_count_t) <= cacheline);
-    snzi_counts = qthread_internal_aligned_alloc(num_sheps * cacheline, cacheline);
+    snzi_counts = qt_internal_aligned_alloc(num_sheps * cacheline, cacheline);
     assert(snzi->counts);
     // memset(sinc->counts, 0, num_sheps * cacheline);
     // memset(sinc->counts, 0, QTHREAD_SIZEOF_ALIGNED_T * num_sheps);

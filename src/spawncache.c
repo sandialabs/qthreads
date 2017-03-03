@@ -31,7 +31,7 @@ static void qt_spawncache_shutdown(void)
     qt_threadqueue_private_t *freeme = free_these;
     while (freeme != NULL) {
         free_these = free_these->next;
-        qthread_internal_aligned_free(freeme, qthread_cacheline());
+        qt_internal_aligned_free(freeme, qthread_cacheline());
         freeme = free_these;
     }
     TLS_DELETE(spawn_cache);
@@ -46,7 +46,7 @@ void INTERNAL qt_spawncache_init(void)
 
 qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
 {
-    qt_threadqueue_private_t *const ret = qthread_internal_aligned_alloc(sizeof(qt_threadqueue_private_t), qthread_cacheline());
+    qt_threadqueue_private_t *const ret = qt_internal_aligned_alloc(sizeof(qt_threadqueue_private_t), qthread_cacheline());
 
     assert(ret);
     memset(ret, 0, sizeof(qt_threadqueue_private_t));
