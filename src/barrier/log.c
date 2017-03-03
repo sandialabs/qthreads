@@ -143,8 +143,8 @@ static void qtb_internal_initialize_fixed(qt_barrier_t *b,
     // allocate and init upLock and downLock arrays
     b->upLock   = qt_calloc(b->allocatedSize, sizeof(syncvar_t));
     b->downLock = qt_calloc(b->allocatedSize, sizeof(syncvar_t));
-    //    b->upLock = calloc(b->allocatedSize, sizeof(int64_t));
-    //    b->downLock = calloc(b->allocatedSize, sizeof(int64_t));
+    //    b->upLock = qt_calloc(b->allocatedSize, sizeof(int64_t));
+    //    b->downLock = qt_calloc(b->allocatedSize, sizeof(int64_t));
 
     for (size_t i = 0; i < b->activeSize; i++) {
         b->upLock[i] = SYNCVAR_EMPTY_INITIALIZER;

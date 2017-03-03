@@ -237,13 +237,13 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         }
     }
 
-    free(sinc->count_incrs);
-    free(sinc->count_locals);
-    free(sinc->count_decrs);
-    free(sinc->count_remaining);
-    free(sinc->count_spawns);
-    free(sinc->dist_max);
-    free(sinc->dist_ttl);
+    qt_free(sinc->count_incrs);
+    qt_free(sinc->count_locals);
+    qt_free(sinc->count_decrs);
+    qt_free(sinc->count_remaining);
+    qt_free(sinc->count_spawns);
+    qt_free(sinc->dist_max);
+    qt_free(sinc->dist_ttl);
 #endif /* defined(SINCS_PROFILE) */
 
     assert(sinc);
@@ -255,7 +255,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         qt_sinc_reduction_t *rdata = sinc->rdata;
         assert(rdata->result);
         assert(rdata->initial_value);
-        free(rdata->initial_value);
+        qt_free(rdata->initial_value);
         assert(rdata->values);
         qt_internal_aligned_free(rdata->values, cacheline);
     }

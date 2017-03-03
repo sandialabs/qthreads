@@ -223,7 +223,7 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
         }
 
         /* step 1: create the lattice */
-        L = calloc(1, sizeof(qt_wavefront_lattice));
+        L = qt_calloc(1, sizeof(qt_wavefront_lattice));
         assert(L);
         wargs.L      = L;
         L->unit_size = vertical->unit_size;
@@ -242,14 +242,14 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
         L->struts.seg_len = vertical->segment_size;
         L->struts.segs    = L->slats.num - 1;
         L->slats.segs     = L->struts.num - 1;
-        L->slats.strips   = calloc(L->slats.num, sizeof(qarray * *));
-        L->struts.strips  = calloc(L->struts.num, sizeof(qarray * *));
+        L->slats.strips   = qt_calloc(L->slats.num, sizeof(qarray * *));
+        L->struts.strips  = qt_calloc(L->struts.num, sizeof(qarray * *));
         for (size_t i = 0; i < L->struts.num; i++) {
-            L->struts.strips[i] = calloc(L->struts.segs, sizeof(qarray *));
+            L->struts.strips[i] = qt_calloc(L->struts.segs, sizeof(qarray *));
         }
         assert(L->slats.segs > 0);
         for (size_t i = 0; i < L->slats.num; i++) {
-            L->slats.strips[i] = calloc(L->slats.segs, sizeof(qarray *));
+            L->slats.strips[i] = qt_calloc(L->slats.segs, sizeof(qarray *));
         }
         /* -- now that memory is initialized, populate the first qarrays
          * by copying the input data into the lattice
