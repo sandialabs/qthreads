@@ -1,4 +1,5 @@
 #ifndef HAVE_QT_ALIGNED_ALLOC_H
+#define HAVE_QT_ALIGNED_ALLOC_H
 
 #include <stdlib.h>
 #include <stdint.h>

@@ -1,5 +1,19 @@
-// need an include file
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdlib.h>
+#ifdef HAVE_GETPAGESIZE
+# include <unistd.h>
+#else
+static QINLINE int getpagesize()
+{
+  return 4096;
+}
+#endif
+
+#include "chpl-mem-impl.h"
 
 void *qt_malloc(size_t size){
   return chpl_malloc(size);
@@ -15,4 +29,21 @@ void *qt_calloc(size_t nmemb, size_t size) {
 
 void *qt_realloc(void *ptr, size_t size) {
   return chpl_realloc(ptr, size);
+}
+
+/* local constants */
+size_t _pagesize = 0;
+
+void qthread_internal_alignment_init(void) {
+  _pagesize = getpagesize();
+}
+
+void *qthread_internal_aligned_alloc(size_t        alloc_size,
+                                     uint_fast16_t alignment) {
+    return chpl_memalign(alignment, alloc_size);
+}
+
+void qthread_internal_aligned_free(void         *ptr,
+                                   uint_fast16_t alignment) {
+    chpl_free(ptr);
 }
