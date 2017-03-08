@@ -186,7 +186,7 @@ qt_mpool generic_big_qthread_pool = NULL;
 static QINLINE void *ALLOC_STACK(void)
 {                      /*{{{ */
     if (GUARD_PAGES) {
-        uint8_t *tmp = valloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
+        uint8_t *tmp = qt_internal_aligned_alloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()), getpagesize());
 
         assert(tmp != NULL);
         if (tmp == NULL) {
