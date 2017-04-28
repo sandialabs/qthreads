@@ -39,6 +39,11 @@ TESTS = \
 		qthread_migrate_to  \
 		qthread_disable_shepherd 
 
+
+if QTHREAD_PERFORMANCE
+TESTS += performance
+endif
+
 check_PROGRAMS = $(TESTS)
 
 TESTS_ENVIRONMENT =
@@ -132,3 +137,7 @@ read_SOURCES = read.c
 test_teams_SOURCES = test_teams.c
 
 test_subteams_SOURCES = test_subteams.c
+
+if QTHREAD_PERFORMANCE
+performance_SOURCES = performance.c
+endif

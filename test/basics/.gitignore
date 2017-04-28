@@ -9,6 +9,7 @@ external_fork
 external_syncvar
 hello_world
 hello_world_multi
+performance
 qalloc
 qthread_cacheline
 qthread_cas
