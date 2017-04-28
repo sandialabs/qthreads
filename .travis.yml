@@ -1,2 +1,2 @@
 language: c
-script: ./autogen.sh && ./configure && make && make check
+script: ./autogen.sh && CFLAGS='-DQTHREAD_PERFORMANCE' ./configure --disable-lazy-threadids --enable-picky && make && make check
