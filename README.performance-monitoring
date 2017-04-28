@@ -1,51 +1,31 @@
-<div id="table-of-contents">
-<h2>Table of Contents</h2>
-<div id="text-table-of-contents">
-<ul>
-<li><a href="#sec-1">1. Introduction</a></li>
-<li><a href="#sec-2">2. Quick note on memory management</a></li>
-<li><a href="#sec-3">3. Tutorial</a>
-<ul>
-<li><a href="#sec-3-1">3.1. Quickstart</a></li>
-<li><a href="#sec-3-2">3.2. Setup Functions</a>
-<ul>
-<li><a href="#sec-3-2-1">3.2.1. Internal measurements</a></li>
-<li><a href="#sec-3-2-2">3.2.2. State group management</a></li>
-</ul>
-</li>
-<li><a href="#sec-3-3">3.3. Runtime Functions</a>
-<ul>
-<li><a href="#sec-3-3-1">3.3.1. <code>void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id)</code></a></li>
-<li><a href="#sec-3-3-2">3.3.2. <code>const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id)</code></a></li>
-<li><a href="#sec-3-3-3">3.3.3. <code>void qtperf_start()</code></a></li>
-<li><a href="#sec-3-3-4">3.3.4. <code>void qtperf_stop()</code></a></li>
-</ul>
-</li>
-<li><a href="#sec-3-4">3.4. Reporting and data access functions</a>
-<ul>
-<li><a href="#sec-3-4-1">3.4.1. <code>void qtperf_print_results()</code></a></li>
-<li><a href="#sec-3-4-2">3.4.2. <code>void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print_headers, const char* prefix)</code></a></li>
-<li><a href="#sec-3-4-3">3.4.3. <code>void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time)</code></a></li>
-<li><a href="#sec-3-4-4">3.4.4. <code>void qtperf_print_group(qtstategroup_t* group)</code></a></li>
-<li><a href="#sec-3-4-5">3.4.5. <code>void qtperf_print_perfdata(qtperfdata_t* data, bool show_states_with_zero_time)</code></a></li>
-<li><a href="#sec-3-4-6">3.4.6. <code>qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group)</code></a></li>
-<li><a href="#sec-3-4-7">3.4.7. <code>qtperfcounter_t qtperf_total_time(qtperfdata_t* data)</code></a></li>
-</ul>
-</li>
-<li><a href="#sec-3-5">3.5. Iterators</a>
-<ul>
-<li><a href="#sec-3-5-1">3.5.1. <code>void qtperf_iter_begin(qtperf_iterator** iter)</code></a></li>
-<li><a href="#sec-3-5-2">3.5.2. <code>qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter)</code></a></li>
-<li><a href="#sec-3-5-3">3.5.3. <code>qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t * iter)</code></a></li>
-<li><a href="#sec-3-5-4">3.5.4. <code>qtperf_iterator_t* qtperf_iter_end()</code></a></li>
-</ul>
-</li>
-<li><a href="#sec-3-6">3.6. Teardown</a></li>
-</ul>
-</li>
-</ul>
-</div>
-</div>
+# Table of contents
+1. [Introduction](#introduction)
+2. [Quick note on memory management](#quick-note-on-memory-management)
+3. [Tutorial](#tutorial)
+    1. [Quickstart](#quickstart)
+    2. [Setup Functions](#setup-functions)
+        1. [Internal measurements](#internal-measurements)
+        2. [State group management](#state-group-management)
+    3. [Runtime Functions](#runtime-functions)
+        1. `void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id)`
+        2. `const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id)`
+        3. `void qtperf_start()`
+        4. `void qtperf_stop()`
+    4. [Reporting and data access functions](#report-and-data-access-functions)
+        1. `void qtperf_print_results()`
+        2. `void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print_headers, const char* prefix)`
+        3. `void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time)`
+        4. `void qtperf_print_group(qtstategroup_t* group)`
+        5. `void qtperf_print_perfdata(qtperfdata_t* data, bool show_states_with_zero_time)`
+        6. `void qtperf_print_group(qtstategroup_t* group)`
+        7. `qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group)`
+        8. `qtperfcounter_t qtperf_total_time(qtperfdata_t* data)`
+    5. [Iterators](#iterators)
+        1. `void qtperf_iter_begin(qtperf_iterator** iter)`
+        2. `qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter)`
+        3. `qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t * iter)`
+        4. `qtperf_iterator_t* qtperf_iter_end()`
+    6. [Teardown](#teardown)
 
 # Introduction
 
@@ -101,7 +81,7 @@ they are to be tracked.
 
 Here is a quick example of a tiny program that makes use of the
 basic internal logging features of qtperf:
-
+```
     #include<qthread/qthread.h>
     #include<qthread/performance.h>
     #include<qthread/logging.h>
@@ -149,9 +129,9 @@ basic internal logging features of qtperf:
     
       return 0;
     }
-
+```
 Here is a program to demonstrate how to set up and use a custom state group:
-
+```
     #include<qthread/qthread.h>
     #include<qthread/performance.h>
     #include<qthread/logging.h>
@@ -292,7 +272,7 @@ Here is a program to demonstrate how to set up and use a custom state group:
     
       return 0;
     }
-
+```
 API
 
 ## Setup Functions
