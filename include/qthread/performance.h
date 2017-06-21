@@ -36,6 +36,10 @@
  * \version 0.1
  */
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
 #ifndef QT_PERFORMANCE_H
 #define QT_PERFORMANCE_H
 #include<stddef.h>
@@ -45,7 +49,7 @@
 #  define PERFDBG 0
 #endif
 
-typedef unsigned char bool;
+//typedef unsigned char bool;
 typedef size_t qtperfid_t;
 typedef unsigned long long qtperfcounter_t;
 typedef unsigned long qttimestamp_t;
@@ -680,4 +684,9 @@ bool qtperf_check_invariants(void);
 #endif // ifdef QTHREAD_PERFORMANCE
 
 
+#endif
+
+    /* Declarations of this file */
+#ifdef __cplusplus
+}
 #endif
