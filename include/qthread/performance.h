@@ -49,7 +49,9 @@ extern "C" {
 #  define PERFDBG 0
 #endif
 
-//typedef unsigned char bool;
+#ifndef __cplusplus
+typedef unsigned char bool;
+#endif
 typedef size_t qtperfid_t;
 typedef unsigned long long qtperfcounter_t;
 typedef unsigned long qttimestamp_t;
