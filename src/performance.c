@@ -159,9 +159,6 @@ qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
 }
 
 void qtperf_free_perfdata_internals(qtperfdata_t* perfdata) {
-  qt_free(perfdata->perf_counters);
-  perfdata->perf_counters = NULL;
-  perfdata->state_group = NULL;
   // don't spin lock here, it will deadlock from qtperf_free_perf_list
   if(perfdata->piggybacks != NULL) {
     size_t index=0;
