@@ -155,6 +155,11 @@ AC_ARG_ENABLE([internal-spinlock],
               [AS_HELP_STRING([--disable-internal-spinlock],
                               [avoid using the internal spinlock])])
 
+AC_ARG_ENABLE([performance-monitoring],
+              [AS_HELP_STRING([--enable-performance-monitoring],
+                              [enable performance monitoring infrastructure])])
+
+
 AC_ARG_ENABLE([debug],
               [AS_HELP_STRING([--enable-debug=[[areas]]],
                               [prints out debugging information as programs
@@ -742,6 +747,12 @@ AC_CACHE_SAVE
 # Figure out if we need makecontext
 QTHREAD_PICK_CONTEXT_TYPE(qthread_makecontext_type)
 
+AS_IF([test "x$enable_performance_monitoring" = "xyes"],
+[AC_DEFINE([QTHREAD_PERFORMANCE], [1], [Defined if performance monitoring support desired]),
+[disable_lazy_threadids=yes]
+[enable_picky=yes]
+])
+
 AS_IF([test "x$with_gcd" = "xshift"],
       [AC_DEFINE([QTHREAD_SHIFT_GCD],[1],[use a shift-based gcd algorithm])])
 
@@ -1060,6 +1071,8 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        LIBS="$LIBS $portals4_LIBS $portals4_runtime_LIBS"
       ])
 
+
+
 AS_IF([test "x$enable_lf_febs" == "xyes"],
       [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
       [enable_lf_febs=no])
@@ -1093,6 +1106,7 @@ AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
+AM_CONDITIONAL([QTHREAD_PERFORMANCE], [test "$enable_performance_monitoring" = "yes"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
