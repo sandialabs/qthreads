@@ -39,8 +39,9 @@ TESTS = \
 		qthread_migrate_to  \
 		qthread_disable_shepherd 
 
+
 if QTHREAD_PERFORMANCE
-	TESTS += performance
+TESTS += performance
 endif
 
 check_PROGRAMS = $(TESTS)
