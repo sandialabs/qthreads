@@ -2,7 +2,7 @@
 #define QT_SHEPHERD_INNARDS_H
 
 #ifdef QTHREAD_PERFORMANCE
-#include<qthread/performance.h>
+#include <qthread/performance.h>
 #endif
 
 /* System Pre-requisites */
@@ -48,7 +48,7 @@ struct qthread_worker_s {
     qthread_worker_id_t       worker_id;
     qthread_worker_id_t       packed_worker_id;
 #ifdef QTHREAD_PERFORMANCE
-    qtperfdata_t*             performance_data;
+    struct qtperfdata_s*             performance_data;
 #endif
     Q_ALIGNED(8) uint_fast8_t QTHREAD_CASLOCK(active);
 };
