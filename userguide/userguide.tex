@@ -147,6 +147,19 @@ workers, and assigning each worker to a subset of the array to be summed.
 
 \lstinputlisting{examples/worker_id.c}
 
+\subsection{Shepard Spawning}
+
+Shepherd spawns create one qthread per worker on the desired shepherd. See
+"shepherd\textunderscore spawn" in qthread.c. Certain runtimes that might use this functionality 
+(eg. Kokkos) will likely want a way to ensure that there are never two shepherd 
+tasks in progress at the same time (to prevent deadlock
+on internal barriers in the code), and this functionality is still in progress.
+
+The following program is a simple test of the the shepherd\textunderscore spawn functionality
+in action.
+
+\lstinputlisting{../test/basics/shepherd_spawn.c}
+
 \section{Atomics and Blocking}
 
 Qthreads has a number of tools for doing atomic and blocking operations. An
@@ -195,18 +208,6 @@ enter some numbers (remember it's naive fibonacci, so don't enter large numbers
 if you want a result!). To get interesting asynchronous behaviour, responses will
 likely start slowing down around {\tt n = 40}.
 
-\subsection{Shepard Spawning}
-
-Shepherd spawns create one qthread per worker on the desired shepherd. See
-"shepherd_spawn" in qthread.c. Certain runtimes that might use this functionality 
-(eg. Kokkos) will likely want a way to ensure that there are never two shepherd 
-tasks in progress at the same time (to prevent deadlock
-on internal barriers in the code), and this functionality is still in progress.
-
-The following program is a simple test of the the shepherd_spawn functionality
-in action.
-
-\lstinputlisting{test/basics/spawn_shepard.c}
 % TODO: yield, spawn cache
 
 \end{document}
