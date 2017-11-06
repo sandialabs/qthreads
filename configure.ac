@@ -369,8 +369,8 @@ AC_ARG_WITH([scheduler],
                             [Specify the scheduler. Options when using
                              single-threaded shepherds are: nemesis (default),
                              lifo, mdlifo, mutexfifo, and mtsfifo. Options 
-                             when using multi-threaded shepherds are: sherwood 
-                             (default), nottingham, and loxley. Details on 
+                             when using multi-threaded shepherds are: distrib
+                             (default), sherwood, nottingham, and loxley. Details on 
                              these options are in the SCHEDULING file.])])
 
 AC_ARG_WITH([sinc],
@@ -797,7 +797,7 @@ AS_IF([test "x$enable_aligncheck" = "xyes"],
 AS_IF([test "x$with_scheduler" != "x"],
       [case "$with_scheduler" in
          default)
-           [with_scheduler="sherwood"]
+           [with_scheduler="distrib"]
            ;;
          sherwood|loxley|nemesis|lifo|mutexfifo|mtsfifo|distrib)
            # all valid options that require no additional configuration
