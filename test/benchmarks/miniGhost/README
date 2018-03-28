@@ -1,0 +1,5 @@
+Based from Mantevo, January 5, 2014. 
+Modified to allow progress in over-decomposition strategy in the absence
+of MPI support for doing so: source and target must match, but tags static.
+Answer will therefore presumably not be correct, but computation and communication
+patters will be representative. Therefore application of boundary conditions are turned off.
