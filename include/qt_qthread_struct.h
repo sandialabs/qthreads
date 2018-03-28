@@ -31,7 +31,7 @@
 #define QTHREAD_BIG_STRUCT       (1 << 9)
 #define QTHREAD_AGGREGABLE       (1 << 10)
 #define QTHREAD_AGGREGATED       (1 << 11)
-#define QTHREAD_RESERVED_FLAG4   (1 << 12)
+#define QTHREAD_NETWORK          (1 << 12)
 #define QTHREAD_RESERVED_FLAG3   (1 << 13)
 #define QTHREAD_RESERVED_FLAG2   (1 << 14)
 #define QTHREAD_RESERVED_FLAG1   (1 << 15)

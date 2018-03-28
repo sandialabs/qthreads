@@ -284,7 +284,8 @@ enum _qthread_features {
     SPAWN_PC_SYNCVAR_T,
     SPAWN_AGGREGABLE,
     SPAWN_COUNT,
-    SPAWN_LOCAL_PRIORITY
+    SPAWN_LOCAL_PRIORITY,
+    SPAWN_NETWORK
 };
 
 #define QTHREAD_SPAWN_PARENT        (1 << SPAWN_PARENT)
@@ -297,6 +298,7 @@ enum _qthread_features {
 #define QTHREAD_SPAWN_PC_SYNCVAR_T  (1 << SPAWN_PC_SYNCVAR_T)
 #define QTHREAD_SPAWN_AGGREGABLE    (1 << SPAWN_AGGREGABLE)
 #define QTHREAD_SPAWN_LOCAL_PRIORITY (1 << SPAWN_LOCAL_PRIORITY)
+#define QTHREAD_SPAWN_NETWORK (1 << SPAWN_NETWORK)
 
 int qthread_spawn(qthread_f             f,
                   const void           *arg,
