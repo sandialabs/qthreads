@@ -1,0 +1,64 @@
+
+################################# File dependcies ####################################
+
+OBJS = main.o \
+        mg_utils.o mg_grid_utils.o mg_spikes.o \
+	mg_block_init.o mg_block_def_random.o mg_block_def_comm_first_rand.o \
+        mg_stencils.o mg_sum_grid.o \
+	mg_flux_accumulate.o mg_flux_accumulate_2d5pt3d7pt.o mg_flux_accumulate_2d9pt.o mg_flux_accumulate_3d27pt.o mg_bc.o \
+        MG_ENV.o mg_profiling.o
+
+INC =   mg_tp.h
+
+######################################################################################
+
+all ::  MG_ENV $(EXEC)
+
+pat_build_hwpc:all
+	pat_build -f miniGhost.x
+
+pat_build_mpi:all
+	pat_build -fg mpi miniGhost.x
+
+####################### Create executable #######################
+
+$(EXEC): $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+	chgrp -R wg-hawksnest $(EXEC) $(OBJS)
+	chmod g=wrx $(EXEC)
+	chmod g=wr $(OBJS)
+	mkdir -p ../bin/$(ARCH)
+	mv $(EXEC) ../bin/$(ARCH)
+
+MG_ENV:
+	./capture_env "$(CC)" "$(LD)" "$(CFLAGS)" "$(ARCH)"
+
+runtest.mpi: realclean
+	make -f makefile.mpi
+	qsub runtest.mpi
+
+runtest.serial: realclean
+	make -f makefile.serial
+	./runtest.serial
+
+###############################################################
+
+clean:
+	rm -f \
+		$(OBJS) \
+		$(COBJS) \
+		*.mod *.trace core
+
+realclean::
+	rm -f \
+		$(OBJS) \
+		$(COBJS) \
+		*.mod *.trace core
+		rm -f $(EXEC)
+
+############################### Compilation rules ####################################
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+############################### Dependencies #########################################
