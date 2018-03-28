@@ -2602,6 +2602,10 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
         }
     }
+
+    if (feature_flag & QTHREAD_SPAWN_NETWORK)
+        t->flags |= QTHREAD_NETWORK;
+
     return QTHREAD_SUCCESS;
 } /*}}}*/
 
