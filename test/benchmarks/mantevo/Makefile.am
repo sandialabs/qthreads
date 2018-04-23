@@ -1,10 +1,10 @@
-SUBDIRS = hpccg
+SUBDIRS = hpccg miniGhost
 
 DIST_SUBDIRS = $(SUBDIRS) hpccg_rose
 
 .PHONY: buildall buildextra benchmarks
 
-mantevo_benchmarks = hpccg/hpccg
+mantevo_benchmarks = hpccg/hpccg miniGhost/minighost
 
 if COMPILE_ROSE_EXTENSIONS
 SUBDIRS += hpccg_rose
@@ -21,6 +21,10 @@ buildextra:
 
 hpccg/hpccg:
 	$(MAKE) -C hpccg buildall
+
+miniGhost/minighost:
+	$(MAKE) -C miniGhost buildall
+
 
 hpccg_rose/hpccg:
 	$(MAKE) -C hpccg_rose buildall
