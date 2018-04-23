@@ -1,10 +1,10 @@
-SUBDIRS = hpccg
+SUBDIRS = hpccg miniGhost
 
 DIST_SUBDIRS = $(SUBDIRS)
 
 .PHONY: buildall buildextra benchmarks
 
-mantevo_benchmarks = hpccg/hpccg
+mantevo_benchmarks = hpccg/hpccg miniGhost/minighost
 
 benchmarks: buildextra
 buildall: buildextra
@@ -16,6 +16,9 @@ buildextra:
 
 hpccg/hpccg:
 	$(MAKE) -C hpccg buildall
+
+miniGhost/minighost:
+	$(MAKE) -C miniGhost buildall
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la

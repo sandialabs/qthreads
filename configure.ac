@@ -389,8 +389,7 @@ AC_ARG_ENABLE([multinode],
           [AS_HELP_STRING([--enable-multinode],
                               [Enable experimental support for multi-node qthreads applications])])
 
-AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
-AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
+LX_FIND_MPI()
 
 AC_CACHE_SAVE
 #}}}
@@ -1087,6 +1086,10 @@ AC_CONFIG_FILES([Makefile
                  test/benchmarks/mantevo/hpccg/Makefile
                  test/benchmarks/finepoints/Makefile
                  test/benchmarks/finepoints/partSendPrototype/Makefile])
+                 test/benchmarks/mantevo/miniGhost/Makefile
+                 test/benchmarks/mantevo/hpccg_rose/Makefile
+                 test/benchmarks/rose_lulesh/Makefile
+                 test/benchmarks/rose_bots/Makefile])
 AC_OUTPUT
 
 case "$qthread_cv_stack_size" in
