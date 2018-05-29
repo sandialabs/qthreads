@@ -394,7 +394,7 @@ AC_ARG_WITH([dict],
                              'simple' (default), 'trie', and 'shavit'.])])
 AC_ARG_WITH([barrier],
             [AS_HELP_STRING([--with-barrier=[[type]]],
-                            [Specify the barrier implementation. Options are 'feb' (default), 'sinc', 'array', and 'log'.])])
+                            [Specify the barrier implementation. Options are 'feb' (default), 'sinc', 'array', 'log', 'dsmn' and 'mcs'.])])
 
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
@@ -883,8 +883,8 @@ esac
 AS_IF([test "x$with_barrier" = "x"],
       [with_barrier="feb"])
 case "$with_barrier" in
-    feb|log|sinc|array) ;;
-    *) AC_MSG_ERROR([Unknown barrier implementation: "$with_barrier". Use 'feb', 'sinc', 'array', or 'log'.]) ;;
+    feb|log|sinc|array|dsmn|mcs) ;;
+    *) AC_MSG_ERROR([Unknown barrier implementation: "$with_barrier". Use 'feb', 'sinc', 'array', 'log', 'dsmn' or 'mcs'.]) ;;
 esac
 
 AS_IF([test "x$with_dict" = "x"],
