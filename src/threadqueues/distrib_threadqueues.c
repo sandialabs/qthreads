@@ -282,17 +282,28 @@ int take_from_network()
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){
   qt_threadqueue_internal* q;
+  int is_network;
   // Add logic to take from network tasks here.
-  if (take_from_network())
+  if (take_from_network()) {
     q = myqueue(qe)->nq;
-  else
+    is_network = 1;
+  } else {
     q = myqueue(qe);
-
+    is_network = 0;
+  }
   mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node;
 
   // If there is no work or we can't get the lock, fail
-  if (q->qlength == 0) return NULL;
+  if (q->qlength == 0) {
+    if(is_network) {
+      q = myqueue(qe);
+    }else {
+      q = q->nq;
+    }
+    if (q->qlength == 0)
+      return NULL;
+  }
   if (!QTHREAD_TRYLOCK_TRY(&q->qlock)) return NULL;
   if (q->qlength == 0){
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
@@ -311,16 +322,26 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe
 
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *qe){
   qt_threadqueue_internal* q;
-  if (take_from_network())
+  int is_network = 0;
+  if (take_from_network()) {
     q = myqueue(qe)->nq;
-  else
+    is_network = 1;
+  } else
     q = myqueue(qe);
 
   mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node;
 
   // If there is no work or we can't get the lock, fail
-  if (q->qlength == 0) return NULL;
+  if (q->qlength == 0) {
+    if(is_network) {
+      q = myqueue(qe);
+    }else {
+      q = q->nq;
+    }
+    if (q->qlength == 0)
+      return NULL;
+  }
   if (!QTHREAD_TRYLOCK_TRY(&q->qlock)) return NULL;
   if (q->qlength == 0){
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
@@ -380,18 +401,12 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t              active){
-  qt_threadqueue_internal* q;
-  if (take_from_network())
-    q = myqueue(qe)->nq;
-  else
-    q = myqueue(qe);
   qt_threadqueue_node_t *node = NULL;
   qthread_t* t;
   qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
 
   for(int numwaits = 0; !node; numwaits ++){
     node = qt_threadqueue_dequeue_tail(qe);
-
     // If we've done QT_STEAL_RATIO waits on local queue, try to steal
     if(!node && steal_ratio > 0 && numwaits % steal_ratio == 0) {
       for(int i=0; i < qlib->nshepherds; i++){
