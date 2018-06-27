@@ -214,6 +214,11 @@ void qthread_flushsc(void);
 int qthread_fork(qthread_f   f,
                  const void *arg,
                  aligned_t  *ret);
+
+int qthread_fork_net(qthread_f   f,
+                 const void *arg,
+                 aligned_t  *ret);
+
 int qthread_fork_precond(qthread_f   f,
                          const void *arg,
                          aligned_t  *ret,

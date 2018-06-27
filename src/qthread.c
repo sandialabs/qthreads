@@ -2867,6 +2867,14 @@ int API_FUNC qthread_fork(qthread_f   f,
     return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
 } /*}}}*/
 
+int API_FUNC qthread_fork_net(qthread_f   f,
+                          const void *arg,
+                          aligned_t  *ret)
+{   /*{{{*/
+  qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+  return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NETWORK);
+} /*}}}*/
+
 int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
                                            const void *arg,
                                            size_t      arg_size,
