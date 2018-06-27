@@ -21,7 +21,8 @@ generic_benchmarks = \
                      time_qt_loops \
                      time_qt_loopaccums \
                      time_thread_ring \
-                     time_chpl_spawn
+                     time_chpl_spawn \
+                     time_1dheat
 
 thesis_benchmarks = \
                     time_allpairs \
@@ -260,6 +261,10 @@ time_threading_SOURCES = generic/time_threading.c
 time_thread_ring_SOURCES = generic/time_thread_ring.c
 
 time_chpl_spawn_SOURCES = generic/time_chpl_spawn.c
+
+time_1dheat_CC = $(MPICC)
+time_1dheat_LD = $(MPICC)
+time_1dheat_SOURCES = generic/time_1dheat.c
 
 if COMPILE_OMP_BENCHMARKS
 time_threading_omp_SOURCES = generic/time_threading.omp.c
