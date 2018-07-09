@@ -26,6 +26,7 @@ TESTS = \
 		qalloc \
 		arbitrary_blocking_operation \
 		sinc_null \
+		sinc_workers \
 		sinc \
 		tasklocal_data \
 		tasklocal_data_no_default \
@@ -119,6 +120,8 @@ qalloc_SOURCES = qalloc.c
 arbitrary_blocking_operation_SOURCES = arbitrary_blocking_operation.c
 
 sinc_null_SOURCES = sinc_null.c
+
+sinc_workers_SOURCES = sinc_workers.c
 
 sinc_SOURCES = sinc.c
 
