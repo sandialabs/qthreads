@@ -203,9 +203,9 @@ void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
     q->tail    = node;
     if (q->head == NULL) {
       q->head = node;
-    } else {
+    } else if(node->prev != NULL) {
       node->prev->next = node;
-    }
+    } 
     MACHINE_FENCE;
     q->qlength++;
     assert(q->qlength > 0 && q->head != NULL); 
