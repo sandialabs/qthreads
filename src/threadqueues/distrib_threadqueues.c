@@ -206,7 +206,9 @@ void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
     } else {
       node->prev->next = node;
     }
+    MACHINE_FENCE;
     q->qlength++;
+    assert(q->qlength > 0 && q->head != NULL); 
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   }
   // we need to wake up all threads when finalizing and if pushing the mccoy
@@ -247,7 +249,9 @@ void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
   } else {
       node->next->prev = node;
   }
+  MACHINE_FENCE;
   q->qlength++;
+  assert(q->qlength > 0 && q->tail != NULL); 
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   if(qe->numwaiters){
     QTHREAD_COND_LOCK(qe->cond);
@@ -271,10 +275,12 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe
     return NULL;
   }
   
+  assert(q->tail != NULL); 
   node = (qt_threadqueue_node_t *)q->tail;
   q->tail = node->prev;
   if(q->tail) q->tail->next = NULL;
   if(q->head == node) q->head = NULL;
+  MACHINE_FENCE;
   q->qlength--;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
@@ -293,11 +299,12 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *qe
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
     return NULL;
   }
-  
+  assert(q->head != NULL); 
   node = (qt_threadqueue_node_t *)q->head;
   q->head = node->next;
   if(q->head) q->head->prev = NULL;
   if(q->tail == node) q->tail = NULL;
+  MACHINE_FENCE;
   q->qlength--;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
