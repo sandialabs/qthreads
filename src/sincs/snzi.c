@@ -19,6 +19,7 @@
 #include "qt_expect.h"
 #include "qt_visibility.h"
 #include "qt_int_ceil.h"
+#include "qt_alloc.h"
 
 typedef aligned_t qt_sinc_count_t;
 
@@ -113,7 +114,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     assert(snzi);
 
     assert(sizeof(qt_sinc_cache_count_t) <= cacheline);
-    snzi_counts = qt_internal_aligned_alloc(num_sheps * cacheline, cacheline);
+    snzi->counts = qt_internal_aligned_alloc(num_sheps * cacheline, cacheline);
     assert(snzi->counts);
     // memset(sinc->counts, 0, num_sheps * cacheline);
     // memset(sinc->counts, 0, QTHREAD_SIZEOF_ALIGNED_T * num_sheps);
@@ -350,7 +351,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
 }
 
 void qt_sinc_submit(qt_sinc_t *restrict sinc_,
-                    void *restrict      value)
+                    const void *restrict      value)
 {
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc    = (qt_internal_sinc_t *)sinc_;
