@@ -1,15 +1,10 @@
 SUBDIRS = hpccg miniGhost
 
-DIST_SUBDIRS = $(SUBDIRS) hpccg_rose
+DIST_SUBDIRS = $(SUBDIRS)
 
 .PHONY: buildall buildextra benchmarks
 
 mantevo_benchmarks = hpccg/hpccg miniGhost/minighost
-
-if COMPILE_ROSE_EXTENSIONS
-SUBDIRS += hpccg_rose
-mantevo_benchmarks += hpccg_rose/hpccg
-endif
 
 benchmarks: buildextra
 buildall: buildextra
@@ -22,6 +17,7 @@ buildextra:
 hpccg/hpccg:
 	$(MAKE) -C hpccg buildall
 
+<<<<<<< HEAD
 miniGhost/minighost:
 	$(MAKE) -C miniGhost buildall
 
@@ -29,6 +25,8 @@ miniGhost/minighost:
 hpccg_rose/hpccg:
 	$(MAKE) -C hpccg_rose buildall
 
+=======
+>>>>>>> remove ROSE and RCRTool support, they now exist in branch rcr-tool-and-rose
 AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la
 

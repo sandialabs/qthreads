@@ -1,3 +1,7 @@
+--- 1.14(tentative) --
+Improvements:
+ - Removed deprecated ROSE support
+ - Removed deprecated RCRtool support
 --- 1.13 ---
 New Features:
  - Performance Monitoring: use --enable-performance-monitoring

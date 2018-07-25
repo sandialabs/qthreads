@@ -60,7 +60,6 @@ include qtimer/Makefile.inc
 include ds/Makefile.inc
 include patterns/Makefile.inc
 include syscalls/Makefile.inc
-include rcrtool/Makefile.inc
 
 if COMPILE_MULTINODE
 libqthread_la_SOURCES += spr.c
