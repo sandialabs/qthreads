@@ -28,6 +28,7 @@ read
 reinitialization
 sinc
 sinc_null
+sinc_workers
 syncvar_prodcons
 tasklocal_data
 tasklocal_data_no_argcopy
