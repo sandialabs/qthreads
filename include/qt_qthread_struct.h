@@ -59,9 +59,6 @@ struct qthread_runtime_data_s {
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
 #endif
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int forCount;                     /* added akp */
-#endif
 # ifdef QTHREAD_OMP_AFFINITY
     /* affinity for children created by this task */
     qthread_shepherd_id_t child_affinity;
@@ -82,14 +79,6 @@ struct qthread_s {
     /* preconditions for data-dependent tasks */
     void                          *preconds;
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    // XXX: I suspect that several of these should be moved into the qthread_runtime_data_s struct
-    aligned_t                  id;                    /* id used in barrier and arrive_first */
-    qthread_parallel_region_t *currentParallelRegion; /* parallel region barrier this thread should use */
-    aligned_t                  task_counter;
-    struct qthread_s          *parent;                 /* pointer to parent task */
-    enum threadstate           prev_thread_state;      /* save the previous thread state */
-#endif
     unsigned int               thread_id;
     qthread_shepherd_id_t      target_shepherd; /* the shepherd we'd rather run on; set to NO_SHEPHERD unless the thread either migrated or was spawned to a specific destination (aka the programmer expressed a desire for this thread to be somewhere) */
     uint16_t                   flags;           /* may not need all bits */

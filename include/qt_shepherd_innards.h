@@ -78,9 +78,6 @@ struct qthread_shepherd_s {
 #ifdef QTHREAD_OMP_AFFINITY
     unsigned int           stealing_mode; /* Specifies when a shepherd may steal */
 #endif
-#ifdef QTHREAD_RCRTOOL
-    volatile unsigned int active_workers;
-#endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
     size_t steal_called;
     size_t steal_elected;

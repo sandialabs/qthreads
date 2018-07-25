@@ -6,7 +6,7 @@ use warnings;
 use Cwd qw/getcwd/;
 
 # Setup configuration options
-my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutexfifo', 'rose', 'slowcontext', 'shep_profile', 'lock_profile', 'steal_profile', 'tc_profile', 'hi_st', 'hi_mt', 'dev');
+my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutexfifo', 'slowcontext', 'shep_profile', 'lock_profile', 'steal_profile', 'tc_profile', 'hi_st', 'hi_mt', 'dev');
 
 my %config = (
     default       => '',
@@ -20,7 +20,6 @@ my %config = (
     mutexfifo     => '--with-scheduler=mutexfifo',
     mtsfifo       => '--with-scheduler=mtsfifo',
     nottingham    => '--with-scheduler=nottingham',
-    rose          => '--enable-interfaces=rose --enable-timer-progs --enable-rose-extensions --enable-hpctoolkit-support --with-scheduler=sherwood --with-topology=hwloc --disable-lf-febs',
     slowcontext   => '--disable-fastcontext',
     shavit        => '--with-dict=shavit',
     shep_profile  => '--enable-profiling=shepherd',
