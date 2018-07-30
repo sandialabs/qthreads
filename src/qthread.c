@@ -501,208 +501,208 @@ static void *qthread_master(void *arg)
 #endif
             done = 1;
             qthread_thread_free(t); /* free qthread data structures */
+            continue;
+        }
+        /* yielded only happens for the first thread */
+        assert((t->thread_state == QTHREAD_STATE_NEW) ||
+               (t->thread_state == QTHREAD_STATE_RUNNING) ||
+               (t->thread_state == QTHREAD_STATE_YIELDED &&
+                t->flags & QTHREAD_REAL_MCCOY));
+
+        assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
+        if (t->rdata == NULL) {
+            alloc_rdata(me, t);
         } else {
-            /* yielded only happens for the first thread */
-            assert((t->thread_state == QTHREAD_STATE_NEW) ||
-                   (t->thread_state == QTHREAD_STATE_RUNNING) ||
-                   (t->thread_state == QTHREAD_STATE_YIELDED &&
-                    t->flags & QTHREAD_REAL_MCCOY));
-
-            assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
-            if (t->rdata == NULL) {
-                alloc_rdata(me, t);
-            } else {
-                assert(t->rdata->shepherd_ptr != NULL);
-                if (t->rdata->shepherd_ptr != me) {
-                    t->rdata->shepherd_ptr = me;
-                }
+            assert(t->rdata->shepherd_ptr != NULL);
+            if (t->rdata->shepherd_ptr != me) {
+                t->rdata->shepherd_ptr = me;
             }
+        }
 
-            if ((t->target_shepherd != NO_SHEPHERD) && (t->target_shepherd != my_id) &&
-                QTHREAD_CASLOCK_READ_UI(qlib->shepherds[t->target_shepherd].active)) {
-                /* send this thread home */
+        if ((t->target_shepherd != NO_SHEPHERD) && (t->target_shepherd != my_id) &&
+            QTHREAD_CASLOCK_READ_UI(qlib->shepherds[t->target_shepherd].active)) {
+            /* send this thread home */
+            qthread_debug(THREAD_DETAILS,
+                          "id(%u): thread %u going back home to shep %u\n",
+                          my_id, t->thread_id, t->target_shepherd);
+            t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
+            assert(t->rdata->shepherd_ptr->ready != NULL);
+            qt_threadqueue_enqueue(qlib->shepherds[t->target_shepherd].ready, t);
+        } else if (!QTHREAD_CASLOCK_READ_UI(me->active)) {
+            qthread_debug(THREAD_DETAILS,
+                          "id(%u): skipping thread exec because I've been disabled!\n",
+                          my_id);
+            if ((t->target_shepherd == NO_SHEPHERD) || (t->target_shepherd == my_id)) {
+                /* send to the closest shepherd */
+                assert(me->sorted_sheplist);
+                assert(me->shep_dists);
+                t->rdata->shepherd_ptr = qthread_find_active_shepherd(me->sorted_sheplist, me->shep_dists);
+            } else {
+                /* find a shepherd somewhere near the preferred shepherd
+                 *
+                 * Note: if the preferred shep was active, we would have sent
+                 * this thread home above */
+                t->rdata->shepherd_ptr = qthread_find_active_shepherd(qlib->shepherds[t->target_shepherd].sorted_sheplist, qlib->shepherds[t->target_shepherd].shep_dists);
+            }
+            assert(t->rdata->shepherd_ptr);
+            if (t->rdata->shepherd_ptr == NULL) {
                 qthread_debug(THREAD_DETAILS,
-                              "id(%u): thread %u going back home to shep %u\n",
-                              my_id, t->thread_id, t->target_shepherd);
-                t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
-                assert(t->rdata->shepherd_ptr->ready != NULL);
-                qt_threadqueue_enqueue(qlib->shepherds[t->target_shepherd].ready, t);
-            } else if (!QTHREAD_CASLOCK_READ_UI(me->active)) {
-                qthread_debug(THREAD_DETAILS,
-                              "id(%u): skipping thread exec because I've been disabled!\n",
-                              my_id);
-                if ((t->target_shepherd == NO_SHEPHERD) || (t->target_shepherd == my_id)) {
-                    /* send to the closest shepherd */
-                    assert(me->sorted_sheplist);
-                    assert(me->shep_dists);
-                    t->rdata->shepherd_ptr = qthread_find_active_shepherd(me->sorted_sheplist, me->shep_dists);
-                } else {
-                    /* find a shepherd somewhere near the preferred shepherd
-                     *
-                     * Note: if the preferred shep was active, we would have sent
-                     * this thread home above */
-                    t->rdata->shepherd_ptr = qthread_find_active_shepherd(qlib->shepherds[t->target_shepherd].sorted_sheplist, qlib->shepherds[t->target_shepherd].shep_dists);
-                }
-                assert(t->rdata->shepherd_ptr);
-                if (t->rdata->shepherd_ptr == NULL) {
-                    qthread_debug(THREAD_DETAILS,
-                                  "id(%u): a new home for thread %i could not be found!\n",
-                                  my_id, t->thread_id);
-                    t->rdata->shepherd_ptr = me;
-                }
-                qthread_debug(THREAD_DETAILS,
-                              "id(%u): rescheduling thread %i on %i\n",
-                              my_id, t->thread_id, t->rdata->shepherd_ptr->shepherd_id);
-                assert(t->rdata->shepherd_ptr->ready != NULL);
-                qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
-            } else {           /* me->active */
+                              "id(%u): a new home for thread %i could not be found!\n",
+                              my_id, t->thread_id);
+                t->rdata->shepherd_ptr = me;
+            }
+            qthread_debug(THREAD_DETAILS,
+                          "id(%u): rescheduling thread %i on %i\n",
+                          my_id, t->thread_id, t->rdata->shepherd_ptr->shepherd_id);
+            assert(t->rdata->shepherd_ptr->ready != NULL);
+            qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
+        } else {           /* me->active */
 #ifdef QTHREAD_SHEPHERD_PROFILING
-                if (t->thread_state == QTHREAD_STATE_NEW) {
-                    me->num_threads++;
-                }
+            if (t->thread_state == QTHREAD_STATE_NEW) {
+                me->num_threads++;
+            }
 #endif
 
-                *current = t;
+            *current = t;
 
 #ifdef HAVE_NATIVE_MAKECONTEXT
-                getcontext(&my_context);
+            getcontext(&my_context);
 #endif
-                qthread_debug(THREAD_DETAILS, "id(%u): about to exec thread. shepherd context is %p\n", my_id, &my_context);
-                qthread_exec(t, &my_context);
+            qthread_debug(THREAD_DETAILS, "id(%u): about to exec thread. shepherd context is %p\n", my_id, &my_context);
+            qthread_exec(t, &my_context);
 
-                t = *current; // necessary for direct-swap sanity
-                *current = NULL; // neessary for "queue sanity"
+            t = *current; // necessary for direct-swap sanity
+            *current = NULL; // neessary for "queue sanity"
 #ifdef QTHREAD_USE_EUREKAS
-                *current = NULL; // necessary for eureka sanity
+            *current = NULL; // necessary for eureka sanity
 #endif /* QTHREAD_USE_EUREKAS */
 
-                qthread_debug(THREAD_DETAILS, "id(%u): back from qthread_exec, state is %i\n", my_id, t->thread_state);
-                /* now clean up, based on the thread's state */
-                switch (t->thread_state) {
-                    case QTHREAD_STATE_MIGRATING:
-                        qthread_debug(THREAD_DETAILS | AFFINITY_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %u migrating to shep %u\n",
-                                      my_id, t->thread_id,
-                                      t->target_shepherd);
-                        t->thread_state        = QTHREAD_STATE_RUNNING;
-                        t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
+            qthread_debug(THREAD_DETAILS, "id(%u): back from qthread_exec, state is %i\n", my_id, t->thread_state);
+            /* now clean up, based on the thread's state */
+            switch (t->thread_state) {
+            case QTHREAD_STATE_MIGRATING:
+                qthread_debug(THREAD_DETAILS | AFFINITY_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread %u migrating to shep %u\n",
+                              my_id, t->thread_id,
+                              t->target_shepherd);
+                t->thread_state        = QTHREAD_STATE_RUNNING;
+                t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
 #ifdef QTHREAD_PERFORMANCE
-                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
 #endif /* ifdef QTHREAD_PERFORMANCE */
-                        assert(t->rdata->shepherd_ptr->ready != NULL);
-                        qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
-                        break;
-                    default:
-                        qthread_debug(ALWAYS_OUTPUT, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
-                        assert(0);
-                        break;
+                assert(t->rdata->shepherd_ptr->ready != NULL);
+                qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
+                break;
+            default:
+                qthread_debug(ALWAYS_OUTPUT, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
+                assert(0);
+                break;
 
-                    case QTHREAD_STATE_YIELDED_NEAR: /* reschedule it */
-                        t->thread_state = QTHREAD_STATE_RUNNING;
+            case QTHREAD_STATE_YIELDED_NEAR: /* reschedule it */
+                t->thread_state = QTHREAD_STATE_RUNNING;
 #ifdef QTHREAD_PERFORMANCE
-                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
 #endif /*  ifdef QTHREAD_PERFORMANCE */
-                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i yielded near; rescheduling\n",
-                                      my_id, t->thread_id);
+                qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread %i yielded near; rescheduling\n",
+                              my_id, t->thread_id);
 #ifdef QTHREAD_USE_SPAWNCACHE
-                        if (!qt_spawncache_yield(t))
+                if (!qt_spawncache_yield(t))
 #endif
-                        {
+                {
 #ifdef QTHREAD_LOCAL_PRIORITY
-                            qthread_t *f = qt_scheduler_get_thread(threadqueue, localpriorityqueue, NULL, 
-                                                                   QTHREAD_CASLOCK_READ_UI(me->active));
+                    qthread_t *f = qt_scheduler_get_thread(threadqueue, localpriorityqueue, NULL, 
+                                                           QTHREAD_CASLOCK_READ_UI(me->active));
 #else
-                            qthread_t *f = qt_scheduler_get_thread(threadqueue, NULL, 
-                                                                   QTHREAD_CASLOCK_READ_UI(me->active));
+                    qthread_t *f = qt_scheduler_get_thread(threadqueue, NULL, 
+                                                           QTHREAD_CASLOCK_READ_UI(me->active));
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */                          
-                            qt_threadqueue_enqueue(me->ready, t);
-                            qt_threadqueue_enqueue(me->ready, f);
-                        }
-                        break;
-                    case QTHREAD_STATE_YIELDED: /* reschedule it */
-                        t->thread_state = QTHREAD_STATE_RUNNING;
-#ifdef QTHREAD_PERFORMANCE
-                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
-#endif /* ifdef QTHREAD_PERFORMANCE */
-                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i yielded; rescheduling\n",
-                                      my_id, t->thread_id);
-                        assert(me->ready != NULL);
-                        qt_threadqueue_enqueue_yielded(me->ready, t);
-                        break;
-
-                    case QTHREAD_STATE_QUEUE:
-                        {
-                            qthread_queue_t q = t->rdata->blockedon.queue;
-                            qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
-                                    "id(%u): thread tid=%i(%p) entering user queue (q=%p, type=%u)\n",
-                                    my_id, t->thread_id, t, q, q->type);
-                            assert(q);
-                            qthread_queue_internal_enqueue(q, t);
-                            break;
-                        }
-                    case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
-                    {
-                        qthread_addrstat_t *m = t->rdata->blockedon.addr;
-                        qthread_debug(THREAD_DETAILS | FEB_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread tid=%i(%p) blocked on FEB (m=%p, EFQ=%p)\n",
-                                      my_id, t->thread_id, t, m, m->EFQ);
-                        QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
-                        break;
-                    }
-
-                    case QTHREAD_STATE_PARENT_YIELD:
-                        t->thread_state = QTHREAD_STATE_PARENT_BLOCKED;
-#ifdef QTHREAD_PERFORMANCE
-                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_PARENT_BLOCKED);
-#endif /* ifdef QTHREAD_PERFORMANCE */
-                        break;
-
-                    case QTHREAD_STATE_PARENT_BLOCKED:
-                        qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
-                        assert(0);
-                        break;
-
-                    case QTHREAD_STATE_PARENT_UNBLOCKED:
-                        qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
-                        assert(0);
-                        break;
-                    case QTHREAD_STATE_SYSCALL:
-                        t->thread_state = QTHREAD_STATE_RUNNING;
-#ifdef QTHREAD_PERFORMANCE
-                        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
-                        qthread_debug(THREAD_DETAILS | IO_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i made a syscall\n",
-                                      my_id, t->thread_id);
-                        qt_blocking_subsystem_enqueue(t->rdata->blockedon.io);
-                        break;
-#ifdef QTHREAD_USE_EUREKAS
-                    case QTHREAD_STATE_ASSASSINATED:
-                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i assassinated\n",
-                                      my_id, t->thread_id);
-                        qthread_internal_assassinate(t);
-                        /* now, we're done cleaning, so we can unblock the assassination signal */
-                        {
-                            sigset_t iset;
-                            qassert(sigemptyset(&iset), 0);
-                            qassert(sigaddset(&iset, QT_ASSASSINATE_SIGNAL), 0);
-                            qassert(sigaddset(&iset, QT_EUREKA_SIGNAL), 0);
-                            qassert(sigprocmask(SIG_UNBLOCK, &iset, NULL), 0);
-                        }
-                        break;
-#endif /* QTHREAD_USE_EUREKAS */
-                    case QTHREAD_STATE_TERMINATED:
-                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i terminated\n",
-                                      my_id, t->thread_id);
-                        /* we can remove the stack etc. */
-                        Q_PREFETCH(threadqueue);
-                        qthread_thread_free(t);
-                        break;
+                    qt_threadqueue_enqueue(me->ready, t);
+                    qt_threadqueue_enqueue(me->ready, f);
                 }
+                break;
+            case QTHREAD_STATE_YIELDED: /* reschedule it */
+                t->thread_state = QTHREAD_STATE_RUNNING;
+#ifdef QTHREAD_PERFORMANCE
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
+#endif /* ifdef QTHREAD_PERFORMANCE */
+                qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread %i yielded; rescheduling\n",
+                              my_id, t->thread_id);
+                assert(me->ready != NULL);
+                qt_threadqueue_enqueue_yielded(me->ready, t);
+                break;
+
+            case QTHREAD_STATE_QUEUE:
+            {
+                qthread_queue_t q = t->rdata->blockedon.queue;
+                qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread tid=%i(%p) entering user queue (q=%p, type=%u)\n",
+                              my_id, t->thread_id, t, q, q->type);
+                assert(q);
+                qthread_queue_internal_enqueue(q, t);
+                break;
+            }
+            case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
+            {
+                qthread_addrstat_t *m = t->rdata->blockedon.addr;
+                qthread_debug(THREAD_DETAILS | FEB_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread tid=%i(%p) blocked on FEB (m=%p, EFQ=%p)\n",
+                              my_id, t->thread_id, t, m, m->EFQ);
+                QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
+                break;
+            }
+
+            case QTHREAD_STATE_PARENT_YIELD:
+                t->thread_state = QTHREAD_STATE_PARENT_BLOCKED;
+#ifdef QTHREAD_PERFORMANCE
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_PARENT_BLOCKED);
+#endif /* ifdef QTHREAD_PERFORMANCE */
+                break;
+
+            case QTHREAD_STATE_PARENT_BLOCKED:
+                qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
+                assert(0);
+                break;
+
+            case QTHREAD_STATE_PARENT_UNBLOCKED:
+                qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
+                assert(0);
+                break;
+            case QTHREAD_STATE_SYSCALL:
+                t->thread_state = QTHREAD_STATE_RUNNING;
+#ifdef QTHREAD_PERFORMANCE
+                QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_RUNNING);
+#endif /*  ifdef QTHREAD_PERFORMANCE */
+                qthread_debug(THREAD_DETAILS | IO_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread %i made a syscall\n",
+                              my_id, t->thread_id);
+                qt_blocking_subsystem_enqueue(t->rdata->blockedon.io);
+                break;
+#ifdef QTHREAD_USE_EUREKAS
+            case QTHREAD_STATE_ASSASSINATED:
+                qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread %i assassinated\n",
+                              my_id, t->thread_id);
+                qthread_internal_assassinate(t);
+                /* now, we're done cleaning, so we can unblock the assassination signal */
+                {
+                    sigset_t iset;
+                    qassert(sigemptyset(&iset), 0);
+                    qassert(sigaddset(&iset, QT_ASSASSINATE_SIGNAL), 0);
+                    qassert(sigaddset(&iset, QT_EUREKA_SIGNAL), 0);
+                    qassert(sigprocmask(SIG_UNBLOCK, &iset, NULL), 0);
+                }
+                break;
+#endif /* QTHREAD_USE_EUREKAS */
+            case QTHREAD_STATE_TERMINATED:
+                qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                              "id(%u): thread %i terminated\n",
+                              my_id, t->thread_id);
+                /* we can remove the stack etc. */
+                Q_PREFETCH(threadqueue);
+                qthread_thread_free(t);
+                break;
             }
         }
     }
