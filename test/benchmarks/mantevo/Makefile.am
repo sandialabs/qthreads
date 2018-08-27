@@ -20,6 +20,9 @@ hpccg/hpccg:
 miniGhost/minighost:
 	$(MAKE) -C miniGhost buildall
 
+hpccg_rose/hpccg:
+	$(MAKE) -C hpccg_rose buildall
+
 AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la
 
