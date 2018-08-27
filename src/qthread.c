@@ -79,7 +79,7 @@
 #ifdef QTHREAD_MULTINODE
 # include "qt_multinode_innards.h"
 #endif
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_teams.h"
 #ifdef QTHREAD_USE_EUREKAS
 # include "qt_eurekas.h"
@@ -891,7 +891,7 @@ int API_FUNC qthread_initialize(void)
     }
 #endif
 
-    qthread_internal_alignment_init();
+    qt_internal_alignment_init();
     qt_hash_initialize_subsystem();
 
     qt_topology_init(&nshepherds,
@@ -918,7 +918,7 @@ int API_FUNC qthread_initialize(void)
 
 #ifdef CAS_STEAL_PROFILE
     qlib->cas_steal_profile =
-        qthread_internal_aligned_alloc(sizeof(uint64_strip_t) * nshepherds * nworkerspershep, 64);
+        qt_internal_aligned_alloc(sizeof(uint64_strip_t) * nshepherds * nworkerspershep, 64);
 #endif
 
     /* initialize the kernel threads and scheduler */
@@ -1087,7 +1087,7 @@ int API_FUNC qthread_initialize(void)
 
     qthread_debug(CORE_DETAILS, "master_context = %p\n", &(qlib->master_context));
     qthread_debug(CORE_DETAILS, "master_stack_size = %u\n", (unsigned)(qlib->master_stack_size));
-    qlib->master_stack = qthread_internal_aligned_alloc(qlib->master_stack_size, QTHREAD_STACK_ALIGNMENT);
+    qlib->master_stack = qt_internal_aligned_alloc(qlib->master_stack_size, QTHREAD_STACK_ALIGNMENT);
     qassert_ret(qlib->master_stack, QTHREAD_MALLOC_ERROR);
     qthread_debug(CORE_DETAILS, "master_stack = %p\n", qlib->master_stack);
 #ifdef QTHREAD_USE_VALGRIND
