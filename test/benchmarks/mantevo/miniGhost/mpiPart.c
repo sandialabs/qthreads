@@ -4,7 +4,12 @@
 //#include <cstdarg>
 //#include <omp.h>
 #include <stdlib.h>
+#ifdef MPIQ
 #include <mpiq.h>
+#else
+#include <mpi.h>
+#endif
+#include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
 #include "mpiPart.h"
@@ -52,6 +57,8 @@ struct Info {
   MPI_Comm comm;
   int isSend;
 };
+
+/* so this is interesting. you have the info, where is it set up? */
 typedef struct Info Info;
 #ifdef MPICH
 
@@ -71,7 +78,7 @@ static inline void clearReq( MPI_Request* req ) {
 #else
 static inline void setRequest( MPI_Request* req, Info* info ) {
   *req = (struct ompi_request_t*)info;
-}
+
 static inline Info* getInfo( MPI_Request* req ) {
   return (Info*)*req;
 }

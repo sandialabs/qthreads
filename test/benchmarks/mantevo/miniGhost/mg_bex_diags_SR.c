@@ -38,7 +38,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
    // This is a coordinated exchange so that elements from diagonal neighbors automatically
    // propagates to the gathered halo. This requires completion of NORTH/SOUTH exchange,
    // then EAST/WEST, then FRONT/BACK.
- 
+
    // ------------------
    // Local Declarations
    // ------------------
@@ -61,7 +61,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       time_start;
 
    MG_REAL
-      *recvbuffer, 
+      *recvbuffer,
       *sendbuffer;
 
    MPI_Status
@@ -75,7 +75,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
 
    int gd = params.ghostdepth;
 
-   ierr = MG_Set_diag_comm ( params, blk, count, 
+   ierr = MG_Set_diag_comm ( params, blk, count,
                              &bfd_xstart, &bfd_xend, &bfd_ystart, &bfd_yend, &ewd_start, &ewd_end );
    MG_Assert ( !ierr, "MG_Boundary_exchange_diags_SR:MG_Set_diag_comm" );
 
@@ -97,19 +97,23 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
    //MG_Barrier ( );
    //printf ( "[pe %d] len = %d \n", mgpp.mype, len );
    //MG_Barrier ( );
-    
+
+#ifdef _MG_MPIF
+   recvbuffer = (MG_REAL*)MG_SLALLOC ( len, sizeof(MG_REAL) );
+#else
    recvbuffer = (MG_REAL*)MG_CALLOC ( len, sizeof(MG_REAL) );
+#endif
    MG_Assert ( recvbuffer != NULL, "MG_Boundary_exchange_diags : MG_CALLOC ( recvbuffer )" );
 
    sendbuffer = (MG_REAL*)MG_CALLOC ( len, sizeof(MG_REAL) );
    MG_Assert ( sendbuffer != NULL, "MG_Boundary_exchange_diags : MG_CALLOC ( sendbuffer )" );
 
    //MG_Barrier ( );
-   //printf ( "[pe %d] MG_BEX_DIAGS: blk.neighbors=(%d,%d) (%d,%d) (%d,%d) \n\n", mgpp.mype, 
-            //blk.neighbors[NORTH], blk.neighbors[SOUTH], blk.neighbors[EAST], 
+   //printf ( "[pe %d] MG_BEX_DIAGS: blk.neighbors=(%d,%d) (%d,%d) (%d,%d) \n\n", mgpp.mype,
+            //blk.neighbors[NORTH], blk.neighbors[SOUTH], blk.neighbors[EAST],
             //blk.neighbors[WEST], blk.neighbors[BACK], blk.neighbors[FRONT] );
    //MG_Barrier ( );
-   
+
           //printf ( "[pe %d] HERE 1 (%d=%d,%d=%d) \n", mgpp.mype, blk.xstart-bfd_xstart,blk.yend+bfd_yend,blk.ystart-bfd_ystart,blk.yend+bfd_yend );
 
    // --------------------
@@ -121,12 +125,12 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
    //MG_Barrier ( );
    //if ( mm==mgpp.mype ) {
 
-   if ( blk.neighbors[NORTH] != -1 ) { 
+   if ( blk.neighbors[NORTH] != -1 ) {
 
       //printf ( "[pe %d] Have NORTH neighbor %d \n", mgpp.mype, blk.neighbors[NORTH] );
       MG_Time_start_l1(time_start);
 
-      offset = 0; 
+      offset = 0;
       for ( k=blk.zstart; k<=blk.zend; k++ ) {
          for ( i=blk.xstart; i<=blk.xend; i++ ) {
             sendbuffer[offset++] = grid_in(i, blk.yend, k);
@@ -136,14 +140,14 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.pack_north[thread_id]);
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Send ( sendbuffer, count[NS], MG_COMM_REAL, blk.neighbors[NORTH], 
+      ierr = CALL_MPI_Send ( sendbuffer, count[NS], MG_COMM_REAL, blk.neighbors[NORTH],
                             msgtag[sNrS], MPI_COMM_MG );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Send(NORTH)" );
 
       MG_Time_accum_l1(time_start,timings.send_north[thread_id]);
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Recv ( recvbuffer, count[NS], MG_COMM_REAL, blk.neighbors[NORTH], 
+      ierr = CALL_MPI_Recv ( recvbuffer, count[NS], MG_COMM_REAL, blk.neighbors[NORTH],
                              msgtag[sSrN], MPI_COMM_MG, &recv_status );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Recv(NORTH)" );
 
@@ -158,7 +162,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
          }
       }
       MG_Time_accum_l1(time_start,timings.unpack_north[thread_id]);
-   } 
+   }
    if ( blk.neighbors[SOUTH] != -1 ) {
 
       //printf ( "[pe %d] Have SOUTH neighbor %d \n", mgpp.mype, blk.neighbors[SOUTH] );
@@ -166,7 +170,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
 
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Recv ( recvbuffer, count[NS], MG_COMM_REAL, blk.neighbors[SOUTH], 
+      ierr = CALL_MPI_Recv ( recvbuffer, count[NS], MG_COMM_REAL, blk.neighbors[SOUTH],
                              msgtag[sNrS], MPI_COMM_MG, &recv_status );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Recv(SOUTH)" );
 
@@ -183,7 +187,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.unpack_south[thread_id]);
       MG_Time_start_l1(time_start);
 
-      offset = 0; 
+      offset = 0;
       for ( k=blk.zstart; k<=blk.zend; k++ ) {
          for ( i=blk.xstart; i<=blk.xend; i++ ) {
             sendbuffer[offset++] = grid_in(i, gd, k);
@@ -198,26 +202,26 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Send(SOUTH)" );
 
       MG_Time_accum_l1(time_start,timings.send_south[thread_id]);
-   } 
+   }
 
    //MG_Barrier ( );
    //printf ( "[pe %d] ************** Passed NS exchange. *********** \n", mgpp.mype );
    //MG_Barrier ( );
-   
+
    // ------------------
    // East-west exchange
    // ------------------
-   
+
    //for ( mm=0; mm<mgpp.numpes; mm++ ) {
    //MG_Barrier ( );
    //if ( mm==mgpp.mype ) {
-   if ( blk.neighbors[EAST] != -1 ) { 
+   if ( blk.neighbors[EAST] != -1 ) {
 
       //printf ( "[pe %d] Have EAST neighbor %d \n", mgpp.mype, blk.neighbors[EAST] );
 
       MG_Time_start_l1(time_start);
 
-      offset = 0; 
+      offset = 0;
       for ( k=blk.zstart; k<=blk.zend; k++ ) {
          for ( j=ewd_start; j<=ewd_end; j++ ) {
             sendbuffer[offset++] = grid_in(blk.xend, j, k);
@@ -227,14 +231,14 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.pack_east[thread_id]);
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Send ( sendbuffer, count[EW], MG_COMM_REAL, blk.neighbors[EAST], 
+      ierr = CALL_MPI_Send ( sendbuffer, count[EW], MG_COMM_REAL, blk.neighbors[EAST],
                             msgtag[sErW], MPI_COMM_MG );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Send(EAST)" );
 
       MG_Time_accum_l1(time_start,timings.send_east[thread_id]);
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Recv ( recvbuffer, count[EW], MG_COMM_REAL, blk.neighbors[EAST], 
+      ierr = CALL_MPI_Recv ( recvbuffer, count[EW], MG_COMM_REAL, blk.neighbors[EAST],
                              msgtag[sWrE], MPI_COMM_MG, &recv_status );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Recv(EAST)" );
 
@@ -249,15 +253,15 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
          }
       }
       MG_Time_accum_l1(time_start,timings.unpack_east[thread_id]);
-   } 
-   
-   if ( blk.neighbors[WEST] != -1 ) { 
+   }
+
+   if ( blk.neighbors[WEST] != -1 ) {
 
       //printf ( "[pe %d] Have WEST neighbor %d \n", mgpp.mype, blk.neighbors[WEST] );
 
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Recv ( recvbuffer, count[EW], MG_COMM_REAL, blk.neighbors[WEST], 
+      ierr = CALL_MPI_Recv ( recvbuffer, count[EW], MG_COMM_REAL, blk.neighbors[WEST],
                              msgtag[sErW], MPI_COMM_MG, &recv_status );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Recv(WEST)" );
 
@@ -274,7 +278,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.unpack_west[thread_id]);
       MG_Time_start_l1(time_start);
 
-      offset = 0; 
+      offset = 0;
       for ( k=blk.zstart; k<=blk.zend; k++ ) {
          for ( j=ewd_start; j<=ewd_end; j++ ) {
             sendbuffer[offset++] = grid_in(gd, j, k);
@@ -289,7 +293,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Send(WEST)" );
 
       MG_Time_accum_l1(time_start,timings.send_west[thread_id]);
-   } 
+   }
    //MG_Barrier ( );
    //printf ( "[pe %d] ************** Passed EW exchange. *********** \n", mgpp.mype );
    //MG_Barrier ( );
@@ -297,19 +301,19 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
    // -------------------
    // Back-front exchange
    // -------------------
-   
+
     //printf ( "[pe %d] HERE 3 (%d=%d,%d=%d) \n", mgpp.mype, blk.xstart-bfd_xstart,blk.yend+bfd_yend,blk.ystart-bfd_ystart,blk.yend+bfd_yend );
 
    //for ( mm=0; mm<mgpp.numpes; mm++ ) {
    //MG_Barrier ( );
    //if ( mm==mgpp.mype ) {
-   if ( blk.neighbors[BACK] != -1 ) { 
+   if ( blk.neighbors[BACK] != -1 ) {
 
       //printf ( "[pe %d] Have BACK neighbor %d \n", mgpp.mype, blk.neighbors[BACK] );
 
       MG_Time_start_l1(time_start);
 
-      offset = 0; 
+      offset = 0;
       for ( j=bfd_ystart; j<=bfd_yend; j++ ) {
          for ( i=bfd_xstart; i<=bfd_xend; i++ )  {
             sendbuffer[offset++] = grid_in(i, j, blk.zend);
@@ -326,7 +330,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.send_back[thread_id]);
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Recv ( recvbuffer, count[FB], MG_COMM_REAL, blk.neighbors[BACK], 
+      ierr = CALL_MPI_Recv ( recvbuffer, count[FB], MG_COMM_REAL, blk.neighbors[BACK],
                              msgtag[sFrB], MPI_COMM_MG, &recv_status );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Recv(BACK)" );
 
@@ -341,15 +345,15 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
          }
       }
       MG_Time_accum_l1(time_start,timings.unpack_back[thread_id]);
-   } 
+   }
 
-   if ( blk.neighbors[FRONT] != -1 ) { 
+   if ( blk.neighbors[FRONT] != -1 ) {
 
       //printf ( "[pe %d] Have FRONT neighbor %d \n", mgpp.mype, blk.neighbors[FRONT] );
 
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Recv ( recvbuffer, count[FB], MG_COMM_REAL, blk.neighbors[FRONT], 
+      ierr = CALL_MPI_Recv ( recvbuffer, count[FB], MG_COMM_REAL, blk.neighbors[FRONT],
                              msgtag[sBrF], MPI_COMM_MG, &recv_status );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Recv(FRONT)" );
 
@@ -367,7 +371,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.unpack_front[thread_id]);
       MG_Time_start_l1(time_start);
 
-      offset = 0; 
+      offset = 0;
       for ( j=bfd_ystart; j<=bfd_yend; j++ ) {
          for ( i=bfd_xstart; i<=bfd_xend; i++ ) {
             sendbuffer[offset++] = grid_in(i, j, gd);
@@ -377,12 +381,12 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
       MG_Time_accum_l1(time_start,timings.pack_front[thread_id]);
       MG_Time_start_l1(time_start);
 
-      ierr = CALL_MPI_Send ( sendbuffer, count[FB], MG_COMM_REAL, blk.neighbors[FRONT], 
+      ierr = CALL_MPI_Send ( sendbuffer, count[FB], MG_COMM_REAL, blk.neighbors[FRONT],
                             msgtag[sFrB], MPI_COMM_MG );
       MG_Assert ( MPI_SUCCESS == ierr, "MG_Boundary_exchange_diags:CALL_MPI_Send(FRONT)" );
 
       MG_Time_accum_l1(time_start,timings.send_front[thread_id]);
-   } 
+   }
    //}}
    //for ( mm=0; mm<mgpp.numpes; mm++ ) {
    //MG_Barrier ( );
@@ -393,7 +397,7 @@ int MG_Boundary_exchange_diags_SR ( InputParams params, MG_REAL *grid_in, BlockI
    //MG_Barrier ( );
 
    // Boundary exchange complete, release workspace.
-      
+
    if ( recvbuffer )
       free ( recvbuffer );
 

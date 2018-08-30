@@ -1093,7 +1093,7 @@ int MG_Print_header ( InputParams params )
 
 //  ===================================================================================
 
-int MG_Barrier ( )
+int MG_Barrier ( InputParams *params )
 {
    // ------------------
    // Local Declarations
@@ -1115,8 +1115,25 @@ int MG_Barrier ( )
 } // End MG_Barrier
 
 //  ===================================================================================
+#ifdef _MG_MPIF
 
-void *MG_CALLOC ( int count, size_t size_of_count )
+char *slab_ptr, *end;
+/* slab allocator for finepoints */
+void *MG_SLALLOC_INIT(InputParams *params, size_t slab_size) {
+  /* needs to be the size of the block */
+  /* also needs to attach the slab */
+  slab_ptr = malloc(params->numblks*slab_size);
+}
+
+void *MG_SLALLOC(size_t count, size_t size_of_count) {
+  char *ret_ptr;
+  ret_ptr = slab_ptr;
+  slab_ptr += count*size_of_count;
+  return (void*)ret_ptr;
+}
+#endif
+
+void *MG_CALLOC ( size_t count, size_t size_of_count )
 {
    // ---------------
    // Local Variables
@@ -1129,7 +1146,9 @@ void *MG_CALLOC ( int count, size_t size_of_count )
    // ---------------------
 
    //printf ( "****                    calloc len %d of size %d \n", count, (int)size_of_count );
-   ptr = calloc( (size_t)count, size_of_count );
+   /* so we need to turn this into a slab allocator */
+   /* but we also need to be able to differentiate by block */
+   ptr = calloc( count, size_of_count );
    //printf ( "****                    ptr = %p \n", ptr );
    if ( ptr == NULL )
       return ( ptr );

@@ -36,7 +36,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#if defined _MPIF
+#if defined _MG_MPIF
 #  if !defined(_MG_QT)
 #  error MPIF requires Qthreads; rebuild with `-D_MG_QT`
 #  endif
@@ -44,20 +44,21 @@
 #  error MPIF requires MPI; rebuild with `-D_MG_MPI`
 #  endif
 
-#  define CALL_MPI_Init           MPIF_Init
+#  define CALL_MPI_Init(argc, argv) MPIF_Init(params, argc, argv)
 #  define CALL_MPI_Finalize       MPI_Finalize
 #  define CALL_MPI_Comm_dup       MPI_Comm_dup
 #  define CALL_MPI_Errhandler_set MPI_Errhandler_set
 #  define CALL_MPI_Comm_rank      MPI_Comm_rank
 #  define CALL_MPI_Comm_size      MPI_Comm_size
 #  define CALL_MPI_Comm_get_attr  MPI_Comm_get_attr
-#  define CALL_MPI_Barrier        MPI_Barrier
+//#  define CALL_MPI_Barrier(comm)        MPIF_Barrier(params, comm)
+#  define CALL_MPI_Barrier        MPIF_Barrier
 #  define CALL_MPI_Bcast          MPI_Bcast
 #  define CALL_MPI_Abort          MPI_Abort
 #  define CALL_MPI_Isend          MPI_Isend
 #  define CALL_MPI_Irecv          MPI_Irecv
-#  define CALL_MPI_Send           MPIF_Send
-#  define CALL_MPI_Recv           MPIF_Recv
+#  define CALL_MPI_Send(buf,count,datatype,dest,tag,comm)           MPIF_Send(params, buf,count, dest, tag, comm)
+#  define CALL_MPI_Recv(buf, count, datatype, source, tag, comm, status) MPIF_Recv(params, buf, count, datatype, source, tag, comm, status)
 #  define CALL_MPI_Wait           MPI_Wait
 #  define CALL_MPI_Waitany        MPI_Waitany
 #  define CALL_MPI_Waitall        MPI_Waitall
@@ -683,7 +684,7 @@ void MG_Assert ( int ierr, const char *error_msg );
 
 int MG_Terminate ( );
 
-void *MG_CALLOC ( int count, size_t size_of_count );
+void *MG_CALLOC ( size_t count, size_t size_of_count );
 
 double *MG_DCALLOC_INIT ( int count );
 

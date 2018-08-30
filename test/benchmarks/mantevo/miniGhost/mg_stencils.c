@@ -29,11 +29,11 @@
 
 int MG_Stencil ( InputParams params, StateVar **g, BlockInfo blk, int ivar )
 {
-   // Gateway to the selected stencil. 
+   // Gateway to the selected stencil.
    // FIXME rfbarre: this could be changed to use function pointers.
 
-   // Control function for stencils. 
-   // 
+   // Control function for stencils.
+   //
    // 1) Inter-process boundary exchange: MG_Boundary_exchange
    // 2) Apply/manage boundary conditions: MG_Boundary_conditions
    // 3) Apply stencil computation: MG_Stencil_xDypt.
@@ -60,16 +60,16 @@ int MG_Stencil ( InputParams params, StateVar **g, BlockInfo blk, int ivar )
 
    thread_id = mg_get_os_thread_num();
 
-   switch ( g[ivar]->toggle ) 
+   switch ( g[ivar]->toggle )
    {
-      case ( 0 ) : 
+      case ( 0 ) :
 
          grid_in  = g[ivar]->values1;
          grid_out = g[ivar]->values2;
 
          break;
 
-      case ( 1 ) : 
+      case ( 1 ) :
 
          grid_in  = g[ivar]->values2;
          grid_out = g[ivar]->values1;
@@ -82,7 +82,7 @@ int MG_Stencil ( InputParams params, StateVar **g, BlockInfo blk, int ivar )
 
    } // End switch ( g->toggle )
 
-#if defined _MG_MPI 
+#if defined _MG_MPI
 
    // Boundary exhange.
 
@@ -93,7 +93,7 @@ int MG_Stencil ( InputParams params, StateVar **g, BlockInfo blk, int ivar )
 
    MG_Time_accum(time_start,timings.bex[thread_id]);
 
-#endif // _MG_MPI 
+#endif // _MG_MPI
 
    // Apply boundary condition.
 
@@ -171,7 +171,7 @@ int MG_Stencil_2d5pt ( InputParams params, MG_REAL *grid_in, MG_REAL *grid_out, 
    for ( i=blk.xstart; i<=blk.xend; i++ ) {
 
       grid_out(i,j,k) = (
-                              grid_in(i-1,j,k) + 
+                              grid_in(i-1,j,k) +
            grid_in(i,j-1,k) + grid_in(i,  j,k) + grid_in(i,j+1,k) +
                               grid_in(i+1,j,k)
         )
@@ -199,17 +199,17 @@ int MG_Stencil_2d9pt ( InputParams params, MG_REAL *grid_in, MG_REAL *grid_out, 
    for ( k=blk.zstart; k<=blk.zend; k++ ) {
    for ( j=blk.ystart; j<=blk.yend; j++ ) {
    for ( i=blk.xstart; i<=blk.xend; i++ ) {
- 
+
       grid_out(i,j,k) = (
-                               
+
          grid_in(i-1,j-1,k) + grid_in(i-1,j,k) + grid_in(i-1,j+1,k) +
          grid_in(i,  j-1,k) + grid_in(i,  j,k) + grid_in(i,  j+1,k) +
          grid_in(i+1,j-1,k) + grid_in(i+1,j,k) + grid_in(i+1,j+1,k)
-                     
+
         )
-            
+
         / NINE;
-            
+
 #if defined _MG_DEBUG
         printf ( "grid_out(%d,%d,%d)=%2.2e \n", i,j,k,grid_out(i,j,k) );
 #endif
@@ -249,7 +249,7 @@ int MG_Stencil_3d7pt ( InputParams params, MG_REAL *grid_in, MG_REAL *grid_out, 
            grid_in(i,j-1,k) + grid_in(i,  j,k) + grid_in(i,j+1,k) +
                               grid_in(i+1,j,k) +
 
-                           grid_in(i,j,k+1)   
+                           grid_in(i,j,k+1)
         )
 
         / SEVEN;

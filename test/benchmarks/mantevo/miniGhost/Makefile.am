@@ -40,15 +40,16 @@ mg_profiling.c \
 mg_spikes.c \
 mg_stencils.c \
 mg_sum_grid.c \
-mg_utils.c
+mg_utils.c \
+mpiPart.c \
+mg_finepoints.c
 
 # integrate these later
 # mg_bex_SR_omp.c
 # mpiPart.c
-# mg_finepoints.c
 
 # TODO(npe) allow selecting mpiq or not
-minighost_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS -D_MG_TIMING_L0 -D_MG_DOUBLE -D_MG_INT8 -DWALL -D_MG_MPI
+minighost_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS -D_MG_QT -D_MG_MPIF -D_MG_TIMING_L0 -D_MG_DOUBLE -D_MG_INT8 -DWALL -D_MG_MPI
 minighost_CFLAGS = $(AM_CFLAGS) $(CFLAGS) $(MPI_CFLAGS)
 minighost_LDFLAGS = $(MPI_CLDFLAGS)
 
