@@ -3139,6 +3139,17 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}}*/
 
+int API_FUNC qthread_fork_once(qthread_f   f,
+                          const void *arg,
+                          aligned_t  *ret)
+{    /*{{{*/
+
+  if(qthread_empty(ret)) {
+    qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+    return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
+  }
+} /*}}}*/
+
 void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
     assert((t->flags & QTHREAD_SIMPLE) == 0);
