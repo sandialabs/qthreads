@@ -1,4 +1,6 @@
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 int MPI_Partitioned_Send_create(const void *buf, int count, MPI_Datatype datatype, int numThreads,
                                          int dest, int tag, MPI_Comm comm,
                                                                           MPI_Request *request);
@@ -12,3 +14,7 @@ int MPI_Partitioned_free( MPI_Request* );
 int MPI_Wait_part(MPI_Request *request, MPI_Status *status);
 
 int MPI_Start_part(MPI_Request *request);
+
+#ifdef __cplusplus
+}
+#endif

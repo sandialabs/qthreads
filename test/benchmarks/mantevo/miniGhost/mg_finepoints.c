@@ -94,9 +94,11 @@ start_part(void *arg) {
 
 
 int
-MPIF_Init(InputParams *params)
+MPIF_Init(InputParams *params, int *argc, char ***argv)
 {
+  qthread_initialize();
   tab = malloc(sizeof(fp_params)*params->numblks);
+  MPI_Init(argc,argv);
 }
 
 int

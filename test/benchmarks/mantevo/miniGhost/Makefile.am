@@ -8,12 +8,12 @@ EXTRA_PROGRAMS = minighost
 CLEANFILES = minighost
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
-qthreadlib = $(top_builddir)/src/libqthread.la
+#qthreadlib = $(top_builddir)/src/libqthread.la
 
-LDADD = $(qthreadlib)
+#LDADD = $(qthreadlib)
 
 $(qthreadlib):
-	$(MAKE) -C $(top_builddir)/src libqthread.la
+	$(MAKE) -C $(top_builddir)/src #libqthread.la
 
 minighost_SOURCES = main.c \
 mg_bc.c \
@@ -41,7 +41,7 @@ mg_spikes.c \
 mg_stencils.c \
 mg_sum_grid.c \
 mg_utils.c \
-mpiPart.c \
+mpiPart.cc \
 mg_finepoints.c
 
 # integrate these later
@@ -51,5 +51,5 @@ mg_finepoints.c
 # TODO(npe) allow selecting mpiq or not
 minighost_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS -D_MG_QT -D_MG_MPIF -D_MG_TIMING_L0 -D_MG_DOUBLE -D_MG_INT8 -DWALL -D_MG_MPI
 minighost_CFLAGS = $(AM_CFLAGS) $(CFLAGS) $(MPI_CFLAGS)
-minighost_LDFLAGS = $(MPI_CLDFLAGS)
+minighost_LDFLAGS = $(MPI_CLDFLAGS) -L../../../../src/.libs #-lqthread
 
