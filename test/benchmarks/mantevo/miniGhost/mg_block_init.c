@@ -131,7 +131,7 @@ int MG_Block_init ( InputParams *params, BlockInfo **blk )
    }
 
 #if defined _MG_MPI
-
+   MG_SLALLOC_INIT(params, sizeof(MG_REAL));
    gd = params->ghostdepth;
 
    // Over-ride default 

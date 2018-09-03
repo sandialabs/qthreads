@@ -44,7 +44,7 @@
 #  error MPIF requires MPI; rebuild with `-D_MG_MPI`
 #  endif
 
-#  define CALL_MPI_Init(argc, argv) MPIF_Init(params, argc, argv)
+#  define CALL_MPI_Init(argc, argv) MPIF_Init(argc, argv, &params)
 #  define CALL_MPI_Finalize       MPI_Finalize
 #  define CALL_MPI_Comm_dup       MPI_Comm_dup
 #  define CALL_MPI_Errhandler_set MPI_Errhandler_set
@@ -57,8 +57,8 @@
 #  define CALL_MPI_Abort          MPI_Abort
 #  define CALL_MPI_Isend          MPI_Isend
 #  define CALL_MPI_Irecv          MPI_Irecv
-#  define CALL_MPI_Send(buf,count,datatype,dest,tag,comm)           MPIF_Send(params, buf,count, dest, tag, comm)
-#  define CALL_MPI_Recv(buf, count, datatype, source, tag, comm, status) MPIF_Recv(params, buf, count, datatype, source, tag, comm, status)
+#  define CALL_MPI_Send(buf,count,datatype,dest,tag,comm)           MPIF_Send(buf,count,datatype, dest, tag, comm, &params)
+#  define CALL_MPI_Recv(buf, count, datatype, source, tag, comm, status) MPIF_Recv(buf, count, datatype, source, tag, comm, status, &params)
 #  define CALL_MPI_Wait           MPI_Wait
 #  define CALL_MPI_Waitany        MPI_Waitany
 #  define CALL_MPI_Waitall        MPI_Waitall

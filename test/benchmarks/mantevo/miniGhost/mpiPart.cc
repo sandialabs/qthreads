@@ -22,8 +22,8 @@ int idx;
 
 pthread_mutex_t lock;
 
-//#define PRINTF(args,...)  printf( args, ##__VA_ARGS__ )
-#define PRINTF(args,...)
+#define PRINTF(args,...)  printf( args, ##__VA_ARGS__ )
+//#define PRINTF(args,...)
 
 static inline int getMyIndex()
 {
@@ -121,7 +121,7 @@ int MPI_Partitioned_Send_create(const void *buf, int count, MPI_Datatype datatyp
 
   assert( 0 ==  (dataTypeSize * count) % numThreads );
 
-  PRINTF("%s():%d: rank=%d leave\n",__func__,__LINE__,info->myRank);
+  PRINTF("%s():%d: rank=%d win=%p leave\n",__func__,__LINE__,info->myRank, info->win);
   return MPI_SUCCESS;
 }
 
@@ -147,7 +147,7 @@ int MPI_Partitioned_Recv_create(void *buf, int count, MPI_Datatype datatype, int
   MPI_Type_size(datatype,&dataTypeSize);
   rc = MPI_Comm_rank( MPI_COMM_WORLD, &info->myRank );
 
-  PRINTF("%s():%d: rank=%d count=%d dataTypeSize=%d enter \n",__func__,__LINE__,info->myRank,count,dataTypeSize);
+  PRINTF("%s():%d: rank=%d buf=%p count=%d dataTypeSize=%d enter \n",__func__,__LINE__,info->myRank,buf,count,dataTypeSize);
 
   setRequest( request, info );
   info->buf = buf;
@@ -164,7 +164,7 @@ int MPI_Partitioned_Recv_create(void *buf, int count, MPI_Datatype datatype, int
   assert( rc == MPI_SUCCESS );
 
 
-  PRINTF("%s():%d: rank=%d leave\n",__func__,__LINE__,info->myRank);
+  PRINTF("%s():%d: rank=%d win=%p leave\n",__func__,__LINE__,info->myRank, info->win);
   return MPI_SUCCESS;
 }
 
@@ -178,9 +178,8 @@ int MPI_Partitioned_Add_to_buffer( MPI_Request* request, const void* send_buf,
   struct Info* info = getInfo(request);
   int index = getMyIndex();
   MPI_Aint displacement = index * info->chunkSize;
-
-  PRINTF("%s():%d: rank=%d tid=%d count=%d displacement=%lu\n",
-         __func__,__LINE__,info->myRank, index, count, displacement);
+  PRINTF("%s():%d: request %p send_buf=%p rank=%d tid=%d count=%d displacement=%lu info->win %p\n",
+         __func__,__LINE__, request, send_buf, info->myRank, index, count, displacement, info->win);
 
   rc = MPI_Put( send_buf, count, datatype, 1, displacement, count, datatype, info->win );
   assert( rc == MPI_SUCCESS );

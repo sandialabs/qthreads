@@ -1123,6 +1123,11 @@ void *MG_SLALLOC_INIT(InputParams *params, size_t slab_size) {
   /* needs to be the size of the block */
   /* also needs to attach the slab */
   slab_ptr = malloc(params->numblks*slab_size);
+  if(slab_ptr == NULL) {
+     fprintf(stderr, "couldn't allocate slab params->numblks %ld slab_size %ld\n", params->numblks, slab_size);
+     exit(-1);
+  }
+  printf("%s: got slab_ptr %p\n", __func__, slab_ptr);
 }
 
 void *MG_SLALLOC(size_t count, size_t size_of_count) {

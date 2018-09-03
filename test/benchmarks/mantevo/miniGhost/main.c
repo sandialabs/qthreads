@@ -100,6 +100,8 @@ int main ( int argc, char* argv[] )
    memory_stats.count     = 0;
    memory_stats.bytes     = 0;
 
+   /* DEBUG, stop buffering to catch output before crashes */
+   setbuf(stdout, NULL);
    ierr = MG_Init ( argc, argv, &params );
    MG_Assert ( !ierr, "main:MG_Init" );
 
@@ -113,11 +115,9 @@ int main ( int argc, char* argv[] )
    ierr = MG_Print_header ( params );
 
    // Allocate and configure sub-blocks.
-
    params.numblks = ( params.nx / params.blkxlen ) *
                     ( params.ny / params.blkylen ) *
                     ( params.nz / params.blkzlen );
-
    blk = (BlockInfo**)MG_CALLOC ( params.numblks, sizeof(BlockInfo*) );
    MG_Assert ( !ierr, "main: Allocation of **blk" );
 
