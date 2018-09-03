@@ -3140,14 +3140,20 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
 } /*}}}*/
 
 int API_FUNC qthread_fork_once(qthread_f   f,
-                          const void *arg,
-                          aligned_t  *ret)
+                               const void *arg,
+                               aligned_t  *ret,
+                               QTHREAD_TRYLOCK_TYPE *trylock)
 {    /*{{{*/
-
-  if(qthread_empty(ret)) {
-    qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
-  }
+    int rc = QTHREAD_SUCCESS;
+    //if(qthread_empty(ret) &&
+    if(QTHREAD_TRYLOCK_TRY(trylock)) {
+        qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+        return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
+        rc = qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
+        QTHREAD_TRYLOCK_UNLOCK(trylock);
+    }
+    qthread_readFF(NULL, ret);
+    return rc;
 } /*}}}*/
 
 void INTERNAL qthread_back_to_master(qthread_t *t)
