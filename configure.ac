@@ -293,7 +293,7 @@ AC_ARG_ENABLE([64bit-alignment],
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
-                             interfaces include hwloc, hwloc_v2, binders, lgrp, libnuma,
+                             interfaces include no, hwloc, hwloc_v2, binders, lgrp, libnuma,
                              libnumaV2, mach, plpa, sys, and, tilera.])],
             [AS_IF([test "x$with_topology" = xyes],
                    [with_topology=none_specified])
