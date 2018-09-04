@@ -1,4 +1,6 @@
 --- 1.14-tentative --
+New Features:
+ - Added a new thread feature flag for "network tasks", allowing schedulers to treat communication tasks differently.
 Improvements:
  - Removed deprecated ROSE support
  - Removed deprecated RCRtool support
