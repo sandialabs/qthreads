@@ -2,6 +2,7 @@
 New Features:
  - Added a new thread feature flag for "network tasks", allowing schedulers to treat communication tasks differently.
 Improvements:
+ - Updated SINC implementations to use modern Qthreads APIs
  - Removed deprecated ROSE support
  - Removed deprecated RCRtool support
 --- 1.13 ---
