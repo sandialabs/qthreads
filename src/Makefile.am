@@ -112,11 +112,11 @@ EXTRA_DIST += \
 			 affinity/hwloc.c \
 			 affinity/binders.c \
 			 affinity/hwloc_v2.c \
+			 affinity/no.c \
 			 affinity/sys.c \
 			 affinity/libnuma.c \
 			 affinity/libnumaV2.c \
 			 affinity/mach.c \
-			 affinity/no.c \
 			 affinity/tilera.c \
 			 affinity/plpa.c \
 			 affinity/lgrp.c \
