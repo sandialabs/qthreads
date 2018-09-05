@@ -33,3 +33,5 @@ activate.sh
 *.trs
 *.log
 *.test
+*.tar.bz2
+*.tar.gz
