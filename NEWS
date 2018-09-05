@@ -1,7 +1,9 @@
 --- 1.14-tentative --
 New Features:
- - Added a new thread feature flag for "network tasks", allowing schedulers to treat communication tasks differently.
+ - Added a new thread feature flag for "network tasks", allowing schedulers to treat communication tasks differently
+ - Added a RUNTIME_DATA_SIZE flag to qthread_readstate (Courtesy of the Chapel team)
 Improvements:
+ - Readd the "no" topology (fix proposed by the Chapel team)
  - Updated SINC implementations to use modern Qthreads APIs
  - Removed deprecated ROSE support
  - Removed deprecated RCRtool support
