@@ -1,8 +1,8 @@
-SUBDIRS = mantevo
+SUBDIRS = mantevo finepoints
 
 .PHONY: buildall buildtests buildextra benchmarks
 
-DIST_SUBDIRS = mantevo
+DIST_SUBDIRS = mantevo finepoints
 
 generic_benchmarks = \
                      time_gcd \

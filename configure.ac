@@ -1084,7 +1084,9 @@ AC_CONFIG_FILES([Makefile
                  test/stress/Makefile
                  test/benchmarks/Makefile
                  test/benchmarks/mantevo/Makefile
-                 test/benchmarks/mantevo/hpccg/Makefile])
+                 test/benchmarks/mantevo/hpccg/Makefile
+                 test/benchmarks/finepoints/Makefile
+                 test/benchmarks/finepoints/partSendPrototype/Makefile])
 AC_OUTPUT
 
 case "$qthread_cv_stack_size" in
