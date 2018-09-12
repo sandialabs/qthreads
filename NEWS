@@ -1,5 +1,6 @@
---- 1.14-tentative --
+--- 1.14 --
 New Features:
+ - Incorporate minor features requested by Chapel team
  - Add experimental supports for the MPI finepoints interface in test/benchmarks/finepoints
  - Added a new thread feature flag for "network tasks", allowing schedulers to treat communication tasks differently
  - Added a RUNTIME_DATA_SIZE flag to qthread_readstate (Courtesy of the Chapel team)
