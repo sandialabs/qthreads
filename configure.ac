@@ -11,7 +11,7 @@ AC_PREREQ(2.59)
 ## ---------------------------------- ##
 ## Autoconf / Automake Initialization ##
 ## ---------------------------------- ##
-AC_INIT([qthread],
+AC_INIT([qthreads],
         [m4_esyscmd([config/version-gen])],
         [wg-qthread@sandia.gov])
 AC_CONFIG_AUX_DIR([config])
