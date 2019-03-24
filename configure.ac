@@ -1128,7 +1128,7 @@ AC_CONFIG_FILES([Makefile
                  test/benchmarks/mantevo/Makefile
                  test/benchmarks/mantevo/hpccg/Makefile
                  test/benchmarks/finepoints/Makefile
-                 test/benchmarks/finepoints/partSendPrototype/Makefile])
+                 test/benchmarks/finepoints/partSendPrototype/Makefile
                  test/benchmarks/mantevo/miniGhost/Makefile
                  test/benchmarks/mantevo/hpccg/Makefile])
 AC_OUTPUT
