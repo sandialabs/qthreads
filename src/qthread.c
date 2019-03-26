@@ -1812,6 +1812,7 @@ void API_FUNC *qthread_get_tasklocal(unsigned int size)
             if (0 == tl_sz) {
                 qthread_debug(THREAD_DETAILS, "Allocate space and copy old data\n");
                 void *tmp_data = MALLOC(size);
+                memset(tmp_data, 0, size);
                 assert(NULL != tmp_data);
 
                 memcpy(tmp_data, data_blob, qlib->qthread_tasklocal_size);
