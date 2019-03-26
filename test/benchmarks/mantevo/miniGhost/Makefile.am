@@ -48,7 +48,7 @@ mg_utils.c
 # mg_finepoints.c
 
 # TODO(npe) allow selecting mpiq or not
-minighost_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS -D_MG_TIMING_L0 -D_MG_DOUBLE -D_MG_INT8 -DWALL -D_MG_MPI
+minighost_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS -D_MG_TIMING_L0 -D_MG_DOUBLE -D_MG_INT8 -DWALL -D_MG_MPI -D_MG_QT
 minighost_CFLAGS = $(AM_CFLAGS) $(CFLAGS) $(MPI_CFLAGS)
 minighost_LDFLAGS = $(MPI_CLDFLAGS)
 

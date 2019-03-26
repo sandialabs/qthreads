@@ -100,6 +100,10 @@ int main ( int argc, char* argv[] )
    memory_stats.count     = 0;
    memory_stats.bytes     = 0;
 
+#if defined (_MG_QT) && !defined (_MG_MPIQ)
+            qthread_initialize();
+#endif
+
    ierr = MG_Init ( argc, argv, &params );
    MG_Assert ( !ierr, "main:MG_Init" );
 
@@ -200,7 +204,6 @@ int main ( int argc, char* argv[] )
 
 #if defined _MG_QT
             compute_block_args_t compute_block_args;
-
             qt_sinc_t sinc;
             qt_sinc_init(&sinc, 0, NULL, NULL, params.numvars * params.numblks);
 #endif
@@ -216,7 +219,7 @@ int main ( int argc, char* argv[] )
             for ( iblk=0; iblk<params.numblks; iblk++ ) {
 
 #if defined _MG_SERIAL || defined _MG_MPI
-#  if defined _MG_MPIQ // {
+#  if defined _MG_QT // {
                 //compute_block_args_t const compute_block_args = { ivar, iblk, g[ivar], blk[iblk], params};
                 compute_block_args.ivar     = ivar;
                 compute_block_args.g        = g;
@@ -234,7 +237,7 @@ int main ( int argc, char* argv[] )
                     } else {
                         target_shep = 0;
                     }
-
+ 		    fprintf(stderr, "spawning %d\n", compute_block);
                     qthread_spawn ( compute_block, 
                             &compute_block_args, 
                             sizeof(compute_block_args_t), 
