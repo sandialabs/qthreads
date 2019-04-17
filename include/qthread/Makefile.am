@@ -22,7 +22,6 @@ pkginclude_HEADERS = \
 	qpool.h \
 	sinc.h \
 	qt_syscalls.h \
-	qt_yield.h \
 	qthread.h \
 	qthread.hpp \
 	qtimer.h \
