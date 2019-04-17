@@ -6,6 +6,7 @@
 #include <limits.h>                    /* for UINT_MAX (C89) */
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
 #include <qthread/common.h>            /* important configuration options */
+#include <qt_yield.h>
 
 #include <string.h>                    /* for memcpy() */
 
