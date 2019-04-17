@@ -30,4 +30,6 @@ if QTHREAD_TIMER_TYPE_GETTIME
 libqthread_mpiq_la_SOURCES += qtimer/gettime.c
 endif
 
+libqthread_mpiq_la_SOURCES += alloc/base.c
+
 include_HEADERS = interfaces/mpiq/mpiq.h
