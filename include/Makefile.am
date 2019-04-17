@@ -5,6 +5,8 @@
 
 SUBDIRS = qthread
 
+include_HEADERS = qt_yield.h
+
 noinst_HEADERS = \
     56reader-rwlock.h \
 	fastcontext/taskimpl.h \
