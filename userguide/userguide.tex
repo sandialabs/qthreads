@@ -8,6 +8,7 @@
 \usepackage{times}
 \usepackage{listings}
 \usepackage{amsfonts}
+\usepackage{graphicx}
 \title{The Sandia Qthreads Application Programming Interface User Guide}
 \begin{document}
 \lstset{language=C,basicstyle=\ttfamily\footnotesize,frame=single}
@@ -68,6 +69,11 @@ As a library-based API, Qthreads does not require any special compiler support. 
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world.c}}
 \\
 {\footnotesize{\tt ./hello}}
+\\
+\begin{figure}
+\includegraphics{images/hello_world.png}
+\end{figure}
+
 \subsection{A safer hello, world}
 
 In the following example, the original qthreads "hello, world" program is supplemented with some safety checking added:
@@ -77,6 +83,12 @@ In the following example, the original qthreads "hello, world" program is supple
 As shown above, each qthreads API call returns an integer indicating the success or failure of the call. In this version of the example, the value returned from the qthread execution is also printed.
 \\ \\
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_safe.c}}
+\\
+{\footnotesize{\tt ./hello}}
+\begin{figure}
+\includegraphics{images/hello_world_safe.png}
+\end{figure}
+
 
 \subsection{Hello, World with multiple qthreads}
 
@@ -89,6 +101,10 @@ In this example, each qthread prefaces its ``hello, world" message with the valu
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_multiple.c}}
 \\
 {\footnotesize{\tt ./hello}}
+\begin{figure}
+\includegraphics{images/hello_world_multiple.png}
+\end{figure}
+
 
 \subsection{Hello, world with Qthreads parallel loop}
 
@@ -101,6 +117,9 @@ The {\tt qt\_loop} API call takes four arguments.  The first two arguments speci
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_loop.c}}
 \\
 {\footnotesize{\tt ./hello}}
+\begin{figure}
+\includegraphics{images/hello_world_loop.png}
+\end{figure}
 
 \subsection{Optimizing loop execution}
 
@@ -113,6 +132,9 @@ The only change to the code from the previous example is that the call has been 
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_loop\_optimized.c}}
 \\
 {\footnotesize{\tt ./hello}}
+\begin{figure}
+\includegraphics{images/hello_world_optimized.png}
+\end{figure}
 \section{Calculating a Fibonacci number}
 
 The following example illustrates naive brute-force calculation of the {\it n}-th Fibonacci number using recursive task parallelism. The program begins by generating a single qthread to execute the {\tt fib} function with the argument indicating which Fibonacci number ({\tt n}) to calculate.  The {\tt fib} function then calls itself recursively with arguments {\tt n-1} and {\tt n-2} until the base case of the recursion is satisfied.
@@ -125,16 +147,24 @@ The following example illustrates naive brute-force calculation of the {\it n}-t
 \newpage
 \lstinputlisting{examples/fib.c}
 
+\begin{figure}
+\includegraphics{images/fib.png}
+\end{figure}
+
 \subsection{A faster Fibonacci}
 The program in the previous example generates a single qthread to execute each addition in the Fibonacci calculation.  Since the generation and execution of each qthread has an associated overhead cost, it is not recommended to perform so little computational work in each qthread.  In the following example program, a sequential calculation is introduced below a certain threshold. Because far fewer qthreads are created to solve a given problem, time spent on overhead costs is greatly reduced compared to the previous example program.
 \\  \\
-{\footnotesize{\tt cc -o fib -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread fib.c}}
+{\footnotesize{\tt cc -o fib -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread fib\_fast.c}}
 \\
 {\footnotesize{\tt time ./fib}}
 \\
 {\footnotesize{\tt time ./fib 24}}
 \newpage
 \lstinputlisting{examples/fib_fast.c}
+
+\begin{figure}
+\includegraphics{images/fib_fast.png}
+\end{figure}
 
 \subsection{Fibonacci by preconditioned tasks}
 
@@ -147,6 +177,19 @@ The code first defines two structure types, {\tt f\_arg\_t} and {\tt fr\_arg\_t}
 The {\tt qthread\_fork\_precond} API call generates a qthread to execute the {\tt fib\_result} function only when its preconditions are fulfilled.  The first three arguments to the call are the same as those of {\tt qthread\_fork}: the function, the pointer to the argument data to be passed to the function, and a pointer to the return value.  This example program collects the results through pointers in the argument structures, and thus does not use the third argument.  The fourth argument specifies the the number of preconditions that must be fulfilled before the run time will schedule for execution.  The remaining arguments specify those preconditions, in this case, the completion of the two recursive calls to {\tt fib}.  The {\tt qthread\_fork\_precond} call is followed by the two calls to {\tt qthread\_fork} that generate those recursive calls to {\tt fib}.  At this point, the function returns.  Thus the qthread executing {\tt fib} at run time does not wait for the recursive calls to complete.  Instead, the qthread generated to execute {\tt fib\_result} waits on the recursive calls, only beginning execution once they are finished.
 
 Finally, we have the code for the {\tt main} function of the program, which is similar to that of the previous program.  The primary difference is that an argument structure is initialized for the first {\tt fib} task.  The {\tt n} field takes the Fibonacci number to be calculated, as specified by the command line argument.  The {\tt result} field is initially zero, and at the completion of all the qthreads generated, it contains the final result.
+\\ \\
+{\footnotesize{\tt cc -o fib -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread fib\_preconditioned.c}}
+\\
+{\footnotesize{\tt time ./fib}}
+\\
+{\footnotesize{\tt time ./fib 24}}
+\newpage
+\lstinputlisting{examples/fib_preconditioned.c}
+
+\begin{figure}
+\includegraphics{images/fib_preconditioned.png}
+\end{figure}
+
 
 \section{Accumulators and Reductions}
 One common design pattern is that of an \emph{accumulator} or a

@@ -23,4 +23,8 @@ cscope.out
 *.lo
 .libs
 .dirstamp
-bob
+*.aux
+*.log
+*.gz
+.DS_Store
+*.pdf
