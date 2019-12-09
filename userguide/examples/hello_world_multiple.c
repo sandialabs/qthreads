@@ -3,8 +3,7 @@
 
 static aligned_t greeter(void *arg)
 {
-    printf("#%lu: Hello, world!\n", 
-           (unsigned long)(uintptr_t)arg);
+    printf("#%lu: Hello, world!\n", (unsigned long)(uintptr_t)arg);
 
     return 0;
 }
