@@ -23,6 +23,11 @@ cscope.out
 *.lo
 .libs
 .dirstamp
+*.aux
+*.log
+*.gz
+.DS_Store
+*.pdf
 GPATH
 GRTAGS
 GTAGS
