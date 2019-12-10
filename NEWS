@@ -1,4 +1,7 @@
---- 1.15 ---
+--- 1.16 (anticipated 2020) ---
+Documentation:
+ - User guide for basic Qthreads usage (see userguide subdirectory for LaTex and included code source files)
+--- 1.15 (current) ---
 New Features:
  - Add experimental support for Thread Local Storage and new Condition variable initializers
  - Non-blocking FEB functions are now exposed (e.g. qthread_readFF_nb), other runtimes (e.g. MPI) require access.
