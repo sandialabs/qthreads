@@ -28,3 +28,15 @@ cscope.out
 *.gz
 .DS_Store
 *.pdf
+GPATH
+GRTAGS
+GTAGS
+*.trs
+*.log
+*~
+activate.sh
+*.trs
+*.log
+*.test
+*.tar.bz2
+*.tar.gz

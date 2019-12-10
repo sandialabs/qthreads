@@ -71,7 +71,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
     qt_stack_free(&q->stack);
-    free((void *)q);
+    qt_free((void *)q);
 } /*}}}*/
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)

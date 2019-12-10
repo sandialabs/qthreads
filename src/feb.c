@@ -1,7 +1,7 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-
+#include<qthread/performance.h>
 /* The API */
 #include "qthread/qthread.h"
 
@@ -16,6 +16,7 @@
 /* Internal Headers */
 #include "qt_subsystems.h"
 #include "qt_hash.h"
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
 #include "qt_initialized.h"  // for qthread_library_initialized
@@ -46,9 +47,11 @@ QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
  * Local Types
  *********************************************************************/
 typedef enum bt {
+    PURGE,
     WRITEEF,
     WRITEEF_NB,
     WRITEF,
+    WRITEFF,
     READFF,
     READFF_NB,
     READFE,
@@ -172,6 +175,7 @@ static inline void qt_feb_schedule(qthread_t          *waiter,
 {
     qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): setting waiter to 'RUNNING'\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id);
     waiter->thread_state = QTHREAD_STATE_RUNNING;
+    QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
     if ((waiter->flags & QTHREAD_UNSTEALABLE) && (waiter->rdata->shepherd_ptr != shep)) {
         qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): enqueueing waiter in target_shep's ready queue (%p:%i)\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id, waiter->rdata->shepherd_ptr, waiter->rdata->shepherd_ptr->shepherd_id);
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
@@ -204,6 +208,9 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
         case READFF_NB:
             a->retval = qthread_readFF_nb(a->a, a->b);
             break;
+        case PURGE:
+            a->retval = qthread_purge_to(a->a, a->b);
+            break;
         case WRITEEF:
             a->retval = qthread_writeEF(a->a, a->b);
             break;
@@ -212,6 +219,9 @@ static aligned_t qthread_feb_blocker_thread(void *arg)
             break;
         case WRITEF:
             a->retval = qthread_writeF(a->a, a->b);
+            break;
+        case WRITEFF:
+            a->retval = qthread_writeFF(a->a, a->b);
             break;
         case FILL:
             a->retval = qthread_fill(a->a);
@@ -327,7 +337,7 @@ got_m:
             qthread_debug(FEB_DETAILS, "maddr=%p: addrstat invalid; someone else invalidated it!\n", maddr);
             return;
         }
-        if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) &&
+        if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL) &&
             (m->full == 1)) {
             qthread_debug(FEB_DETAILS, "maddr=%p: lists are empty, status is full; invalidating and removing (m:%p)\n", maddr, m);
             m->valid = 0;
@@ -343,7 +353,7 @@ got_m:
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], maddr);
         if (m) {
             QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) &&
+            if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL) &&
                 (m->full == 1)) {
                 qthread_debug(FEB_DETAILS, "maddr=%p: lists are empty, status is full; invalidating and removing\n", maddr);
                 qassertnot(qt_hash_remove_locked(FEBs[lockbin], maddr), 0);
@@ -420,7 +430,7 @@ static QINLINE void qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
         FREE_ADDRRES(X);
         qthread_gotlock_fill_inner(shep, m, maddr, 1, precond_tasks);
     }
-    if ((m->full == 1) && (m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL)) {
+    if ((m->full == 1) && (m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL)) {
         removeable = 1;
     } else {
         removeable = 0;
@@ -459,19 +469,20 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
     assert(maddr);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
-    /* dequeue all FFQ, do their operation, and schedule them */
-    while (m->FFQ != NULL) {
+    /* dequeue all FFWQ, do their operation, and schedule them */
+    // TODO could be optimized to only perform the last operation
+    while (m->FFWQ != NULL) {
         /* dQ */
-        X      = m->FFQ;
-        m->FFQ = X->next;
+        X       = m->FFWQ;
+        m->FFWQ = X->next;
         /* op */
-        if (X->addr && (X->addr != maddr)) {
-            *(aligned_t *)(X->addr) = *(aligned_t *)maddr;
+        if (maddr && (maddr != X->addr)) {
+            *(aligned_t *)maddr = *(X->addr);
             MACHINE_FENCE;
         }
         /* schedule */
         qthread_t *waiter = X->waiter;
-        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFWQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
         if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
             if (*precond_tasks == NULL) {
                 /* create empty head to avoid later checks/branches; use the waiter to find the tail */
@@ -491,6 +502,32 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
              * thus avoiding a possible dead-lock but having to launch all
              * sequentially after releasing the lock. On the plus side,
              * all tasks present in the ready queue (or cache) are ready to run.*/
+            ((qthread_addrres_t *)((*precond_tasks)->waiter))->next = X;
+            (*precond_tasks)->waiter                                = (void *)X;
+        } else {
+            qt_feb_schedule(waiter, shep);
+            FREE_ADDRRES(X);
+        }
+    }
+    /* dequeue all FFQ, do their operation, and schedule them */
+    while (m->FFQ != NULL) {
+        /* dQ */
+        X      = m->FFQ;
+        m->FFQ = X->next;
+        /* op */
+        if (X->addr && (X->addr != maddr)) {
+            *(aligned_t *)(X->addr) = *(aligned_t *)maddr;
+            MACHINE_FENCE;
+        }
+        /* schedule */
+        qthread_t *waiter = X->waiter;
+        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
+            if (*precond_tasks == NULL) {
+                /* create empty head to avoid later checks/branches; use the waiter to find the tail */
+                *precond_tasks           = ALLOC_ADDRRES();
+                (*precond_tasks)->waiter = (void *)(*precond_tasks);
+            }
             ((qthread_addrres_t *)((*precond_tasks)->waiter))->next = X;
             (*precond_tasks)->waiter                                = (void *)X;
         } else {
@@ -755,6 +792,116 @@ int API_FUNC qthread_writeF_const(aligned_t *dest,
 }                      /*}}} */
 
 /* the way this works is that:
+ * 1 - data is copies from src to destination
+ * 2 - the destination's FEB state gets set to empty
+ */
+
+int API_FUNC qthread_purge_to(aligned_t *restrict       dest,
+                              const aligned_t *restrict src)
+{                      /*{{{ */
+    const aligned_t *alignedaddr;
+
+    qthread_addrstat_t *m;
+    qt_hash             FEBbin;
+    qthread_shepherd_t *shep = qthread_internal_getshep();
+
+    assert(qthread_library_initialized);
+
+    if (!shep) {
+        return qthread_feb_blocker_func(dest, (void *)src, PURGE);
+    }
+    QALIGN(dest, alignedaddr);
+    QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
+    {
+        const int lockbin = QTHREAD_CHOOSE_STRIPE2(alignedaddr);
+        FEBbin = FEBs[lockbin];
+        qthread_debug(FEB_CALLS, "dest=%p src=%p (tid=%i lockbin=%u)\n", dest, src, qthread_id(), lockbin);
+
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+    }
+#ifdef LOCK_FREE_FEBS
+    do {
+        m = qt_hash_get(FEBbin, (void *)alignedaddr);
+        if (!m) {
+            /* currently full, and must be added to the hash to empty */
+            m = qthread_addrstat_new();
+            if (!m) { return QTHREAD_MALLOC_ERROR; }
+            m->full = 0;
+            MACHINE_FENCE;
+            QTHREAD_EMPTY_TIMER_START(m);
+            if (!qt_hash_put(FEBbin, (void *)alignedaddr, m)) {
+                qthread_addrstat_delete(m);
+                continue;
+            }
+            m = NULL;
+            break;
+        } else {
+            /* it could be either full or not, don't know */
+            hazardous_ptr(0, m);
+            if (m != qt_hash_get(FEBbin, (void *)alignedaddr)) { continue; }
+            if (!m->valid) { continue; }
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+            if (!m->valid) {
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                continue;
+            }
+            if (!m->full) {
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                m = NULL;
+            }
+            break;
+        }
+    } while (1);
+#else  /* ifdef LOCK_FREE_FEBS */
+    qt_hash_lock(FEBbin);
+    {                      /* BEGIN CRITICAL SECTION */
+        m = (qthread_addrstat_t *)qt_hash_get_locked(FEBbin, (void *)alignedaddr);
+        if (!m) {
+            /* currently full, and must be added to the hash to empty */
+            m = qthread_addrstat_new();
+            if (!m) {
+                qt_hash_unlock(FEBbin);
+                return QTHREAD_MALLOC_ERROR;
+            }
+            m->full = 0;
+            QTHREAD_EMPTY_TIMER_START(m);
+            COMPILER_FENCE;
+            qassertnot(qt_hash_put_locked(FEBbin, (void *)alignedaddr, m), 0);
+            qthread_debug(FEB_DETAILS, "dest=%p src=%p (tid=%i): inserted m=%p\n", dest, src, qthread_id(), m);
+            m = NULL;
+        } else {
+            /* it could be either full or not, don't know */
+            qthread_debug(FEB_DETAILS, "dest=%p src=%p (tid=%i): found m=%p\n", dest, src, qthread_id(), m);
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+        }
+    }                      /* END CRITICAL SECTION */
+    qt_hash_unlock(FEBbin);
+#endif  /* ifdef LOCK_FREE_FEBS */
+    if (dest && (dest != src)) {
+	*(aligned_t *)dest = *(aligned_t *)src;
+	MACHINE_FENCE;
+    }
+    if (m) {
+        qthread_debug(FEB_BEHAVIOR, "dest=%p src=%p (tid=%i): waking waiters\n", dest, src, qthread_id());
+        qthread_gotlock_empty(shep, m, (void *)alignedaddr);
+    }
+    qthread_debug(FEB_BEHAVIOR, "dest=%p src=%p (tid=%i): success\n", dest, src, qthread_id());
+    return QTHREAD_SUCCESS;
+}                      /*}}} */
+
+int API_FUNC qthread_purge_to_const(aligned_t *dest,
+                                    aligned_t  src)
+{                      /*{{{ */
+    return qthread_purge_to(dest, &src);
+}                      /*}}} */
+
+int API_FUNC qthread_purge(aligned_t *dest)
+{                      /*{{{ */
+    return qthread_purge_to_const(dest, 0);
+}                      /*}}} */
+
+
+/* the way this works is that:
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state gets changed from empty to full
@@ -883,7 +1030,7 @@ int API_FUNC qthread_writeEF_const(aligned_t *dest,
     return qthread_writeEF(dest, &src);
 }                      /*}}} */
 
-int INTERNAL qthread_writeEF_nb(aligned_t *restrict       dest,
+int API_FUNC qthread_writeEF_nb(aligned_t *restrict       dest,
                                 const aligned_t *restrict src)
 {                      /*{{{ */
     aligned_t *alignedaddr;
@@ -944,10 +1091,109 @@ int INTERNAL qthread_writeEF_nb(aligned_t *restrict       dest,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int INTERNAL qthread_writeEF_const_nb(aligned_t *dest,
+int API_FUNC qthread_writeEF_const_nb(aligned_t *dest,
                                       aligned_t  src)
 {                      /*{{{ */
     return qthread_writeEF_nb(dest, &src);
+}                      /*}}} */
+
+
+/* the way this works is that:
+ * 1 - destination's FEB state must be "full"
+ * 2 - data is copied from src to destination
+ */
+int API_FUNC qthread_writeFF(aligned_t *restrict       dest,
+                             const aligned_t *restrict src)
+{                      /*{{{ */
+    const aligned_t *alignedaddr;
+
+    qthread_addrstat_t *m       = NULL;
+    qthread_addrres_t  *X       = NULL;
+    const int           lockbin = QTHREAD_CHOOSE_STRIPE2(dest);
+    qthread_t          *me      = qthread_internal_self();
+
+    QTHREAD_FEB_TIMER_DECLARATION(febblock);
+
+    assert(qthread_library_initialized);
+
+    if (!me) {
+        return qthread_feb_blocker_func(dest, (void *)src, WRITEFF);
+    }
+    qthread_debug(FEB_CALLS, "dest=%p, src=%p (tid=%u)\n", dest, src, me->thread_id);
+    QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
+    QTHREAD_FEB_TIMER_START(febblock);
+    QALIGN(dest, alignedaddr);
+    QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+# ifdef LOCK_FREE_FEBS
+    do {
+        m = qt_hash_get(FEBs[lockbin], (void *)alignedaddr);
+        if (!m) { break; }
+        hazardous_ptr(0, m);
+        if (m != qt_hash_get(FEBs[lockbin], (void *)alignedaddr)) { continue; }
+        if (!m->valid) { continue; }
+        QTHREAD_FASTLOCK_LOCK(&m->lock);
+        if (!m->valid) {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            continue;
+        }
+        break;
+    } while(1);
+# else /* ifdef LOCK_FREE_FEBS */
+    qt_hash_lock(FEBs[lockbin]);
+    {
+        m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], (void *)alignedaddr);
+        if (m) {
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+        }
+    }
+    qt_hash_unlock(FEBs[lockbin]);
+# endif /* ifdef LOCK_FREE_FEBS */
+    qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): data structure locked or null (m=%p)\n", dest, src, me->thread_id, m);
+    /* now m, if it exists, is locked - if m is NULL, then we're done! */
+    if (m == NULL) {               /* already full! */
+        if (dest && (dest != src)) {
+            *(aligned_t *)dest = *(aligned_t *)src;
+            MACHINE_FENCE;
+        }
+        qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): non-blocking success!\n", dest, src, me->thread_id);
+    } else if (m->full != 1) {         /* not full... so we must block */
+        QTHREAD_WAIT_TIMER_DECLARATION;
+        X = ALLOC_ADDRRES();
+        if (X == NULL) {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            return QTHREAD_MALLOC_ERROR;
+        }
+        X->addr   = (aligned_t *)src;
+        X->waiter = me;
+        X->next   = m->FFWQ;
+        m->FFWQ   = X;
+        qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): back to parent\n", dest, src, me->thread_id);
+        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        me->rdata->blockedon.addr = m;
+        QTHREAD_WAIT_TIMER_START();
+        qthread_back_to_master(me);
+        QTHREAD_WAIT_TIMER_STOP(me, febwait);
+#ifdef QTHREAD_USE_EUREKAS
+        qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
+        qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded after waiting\n", dest, src, me->thread_id);
+    } else {                   /* exists AND is empty... weird, but that's life */
+        if (dest && (dest != src)) {
+            *(aligned_t *)dest = *(aligned_t *)src;
+            MACHINE_FENCE;
+        }
+        qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded!\n", dest, src, me->thread_id);
+        QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+    }
+    QTHREAD_FEB_TIMER_STOP(febblock, me);
+    return QTHREAD_SUCCESS;
+}                      /*}}} */
+
+
+int API_FUNC qthread_writeFF_const(aligned_t *dest,
+                                   aligned_t  src)
+{                      /*{{{ */
+    return qthread_writeFF(dest, &src);
 }                      /*}}} */
 
 /* the way this works is that:
@@ -1042,7 +1288,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int INTERNAL qthread_readFF_nb(aligned_t *restrict       dest,
+int API_FUNC qthread_readFF_nb(aligned_t *restrict       dest,
                                const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
@@ -1204,6 +1450,7 @@ got_m:
         m->FEQ    = X;
         qthread_debug(FEB_DETAILS, "back to parent\n");
         me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
+        QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         /* so that the shepherd will unlock it */
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -1225,8 +1472,24 @@ got_m:
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
+/* the way this works is that:
+ * 1 - src's FEB state is ignored
+ * 2 - data is copied from src to destination
+ */
+
+int API_FUNC qthread_readXX(aligned_t *restrict       dest,
+                            const aligned_t *restrict src)
+{                      /*{{{ */
+    qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
+
+    if (dest && (dest != src)) {
+        *(aligned_t *)dest = *(aligned_t *)src;
+    }
+    return QTHREAD_SUCCESS;
+}                      /*}}} */
+
 /* This is the non-blocking version of the previous one */
-int INTERNAL qthread_readFE_nb(aligned_t *restrict       dest,
+int API_FUNC qthread_readFE_nb(aligned_t *restrict       dest,
                                const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
@@ -1390,6 +1653,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
             X->next         = m->FFQ;
             m->FFQ          = X;
             t->thread_state = QTHREAD_STATE_NASCENT;
+            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NASCENT);
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             return 1;
         }
@@ -1398,7 +1662,12 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
 
     // All input preconds are full
     t->thread_state = QTHREAD_STATE_NEW;
-    free(t->preconds);
+#ifdef QTHREAD_PERFORMANCE
+    if(t->rdata){
+      QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NEW);
+    }
+#endif
+    qt_free(t->preconds);
     t->preconds = NULL;
 #ifdef QTHREAD_COUNT_THREADS
     QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
@@ -1453,12 +1722,13 @@ static void qt_feb_call_tf(const qt_key_t      addr,
     if (sync) {
         QTHREAD_FASTLOCK_LOCK(&m->lock);
     }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         qthread_addrres_t *curs, **base;
         switch (i) {
-            case 0: curs = m->EFQ; base = &m->EFQ; break;
-            case 1: curs = m->FEQ; base = &m->FEQ; break;
-            case 2: curs = m->FFQ; base = &m->FFQ; break;
+            case 0: curs = m->EFQ;  base = &m->EFQ;  break;
+            case 1: curs = m->FEQ;  base = &m->FEQ;  break;
+            case 2: curs = m->FFQ;  base = &m->FFQ;  break;
+            case 3: curs = m->FFWQ; base = &m->FFWQ; break;
         }
         for (; curs != NULL; curs = curs->next) {
             qthread_t *waiter = curs->waiter;

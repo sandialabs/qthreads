@@ -8,6 +8,11 @@
 TESTS = \
 		hello_world \
 		aligned_prodcons \
+		aligned_readXX_basic \
+		aligned_purge_basic \
+		aligned_purge_wakes \
+		aligned_writeFF_basic \
+		aligned_writeFF_waits \
 		hello_world_multi \
 		syncvar_prodcons \
 		reinitialization \
@@ -17,14 +22,11 @@ TESTS = \
 		qthread_id \
 		qthread_incr qthread_fincr qthread_dincr \
 		qthread_stackleft \
-		qthread_migrate_to \
-		qthread_disable_shepherd \
 		qtimer \
-		queue \
-		qthread_fork_precond \
 		qalloc \
 		arbitrary_blocking_operation \
 		sinc_null \
+		sinc_workers \
 		sinc \
 		tasklocal_data \
 		tasklocal_data_no_default \
@@ -33,7 +35,15 @@ TESTS = \
 		external_syncvar \
 		read \
 		test_teams \
-		test_subteams
+		test_subteams \
+ 		qthread_fork_precond \
+		qthread_migrate_to  \
+		qthread_disable_shepherd 
+
+
+if QTHREAD_PERFORMANCE
+TESTS += performance
+endif
 
 check_PROGRAMS = $(TESTS)
 
@@ -65,6 +75,16 @@ hello_world_SOURCES = hello_world.c
 
 aligned_prodcons_SOURCES = aligned_prodcons.c
 
+aligned_readXX_basic_SOURCES = aligned_readXX_basic.c
+
+aligned_purge_basic_SOURCES = aligned_purge_basic.c
+
+aligned_purge_wakes_SOURCES = aligned_purge_wakes.c
+
+aligned_writeFF_basic_SOURCES = aligned_writeFF_basic.c
+
+aligned_writeFF_waits_SOURCES = aligned_writeFF_waits.c
+
 hello_world_multi_SOURCES = hello_world_multi.c
 
 syncvar_prodcons_SOURCES = syncvar_prodcons.c
@@ -91,7 +111,7 @@ qthread_disable_shepherd_SOURCES = qthread_disable_shepherd.c
 
 qtimer_SOURCES = qtimer.c
 
-queue_SOURCES = queue.c
+#queue_SOURCES = queue.c
 
 qthread_fork_precond_SOURCES = qthread_fork_precond.c
 
@@ -100,6 +120,8 @@ qalloc_SOURCES = qalloc.c
 arbitrary_blocking_operation_SOURCES = arbitrary_blocking_operation.c
 
 sinc_null_SOURCES = sinc_null.c
+
+sinc_workers_SOURCES = sinc_workers.c
 
 sinc_SOURCES = sinc.c
 
@@ -118,3 +140,7 @@ read_SOURCES = read.c
 test_teams_SOURCES = test_teams.c
 
 test_subteams_SOURCES = test_subteams.c
+
+if QTHREAD_PERFORMANCE
+performance_SOURCES = performance.c
+endif
