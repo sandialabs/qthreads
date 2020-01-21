@@ -1,3 +1,6 @@
+qt-install
+hello
+fib
 .deps
 stamp-h1
 Makefile
