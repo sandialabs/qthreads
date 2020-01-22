@@ -19,6 +19,7 @@
 #include "qt_expect.h"
 #include "qt_visibility.h"
 #include "qt_int_ceil.h"
+#include "qt_alloc.h"
 
 typedef aligned_t qt_sinc_count_t;
 
@@ -83,11 +84,11 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
         const size_t         num_lines_per_shep     = QT_CEIL_RATIO(sizeof_shep_values, cacheline);
         const size_t         num_lines              = num_sheps * num_lines_per_shep;
         const size_t         sizeof_shep_value_part = num_lines_per_shep * cacheline;
-        qt_sinc_reduction_t *rdata                  = sinc->rdata = malloc(sizeof(qt_sinc_reduction_t));
+        qt_sinc_reduction_t *rdata                  = sinc->rdata = qt_malloc(sizeof(qt_sinc_reduction_t));
         assert(rdata);
         rdata->op            = op;
         rdata->sizeof_value  = sizeof_value;
-        rdata->initial_value = malloc(2 * sizeof_value);
+        rdata->initial_value = qt_malloc(2 * sizeof_value);
         assert(rdata->initial_value);
         memcpy(rdata->initial_value, initial_value, sizeof_value);
         rdata->result = ((uint8_t *)rdata->initial_value) + sizeof_value;
@@ -95,7 +96,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
+        rdata->values = qt_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
 
         // Initialize values
@@ -109,11 +110,11 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
             }
         }
     }
-    qt_sinc_snzi_t *snzi = sinc->snzi = malloc(sizeof(qt_sinc_snzi_t));
+    qt_sinc_snzi_t *snzi = sinc->snzi = qt_malloc(sizeof(qt_sinc_snzi_t));
     assert(snzi);
 
     assert(sizeof(qt_sinc_cache_count_t) <= cacheline);
-    snzi_counts = qthread_internal_aligned_alloc(num_sheps * cacheline, cacheline);
+    snzi->counts = qt_internal_aligned_alloc(num_sheps * cacheline, cacheline);
     assert(snzi->counts);
     // memset(sinc->counts, 0, num_sheps * cacheline);
     // memset(sinc->counts, 0, QTHREAD_SIZEOF_ALIGNED_T * num_sheps);
@@ -156,7 +157,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           qt_sinc_op_f op,
                           const size_t expect)
 {
-    qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
+    qt_sinc_t *sinc = qt_malloc(sizeof(qt_sinc_t));
 
     assert(sinc);
     qt_sinc_init(sinc, sizeof_value, initial_value, op, expect);
@@ -237,34 +238,34 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         }
     }
 
-    free(sinc->count_incrs);
-    free(sinc->count_locals);
-    free(sinc->count_decrs);
-    free(sinc->count_remaining);
-    free(sinc->count_spawns);
-    free(sinc->dist_max);
-    free(sinc->dist_ttl);
+    qt_free(sinc->count_incrs);
+    qt_free(sinc->count_locals);
+    qt_free(sinc->count_decrs);
+    qt_free(sinc->count_remaining);
+    qt_free(sinc->count_spawns);
+    qt_free(sinc->dist_max);
+    qt_free(sinc->dist_ttl);
 #endif /* defined(SINCS_PROFILE) */
 
     assert(sinc);
     qt_sinc_snzi_t *const restrict snzi = sinc->snzi;
     assert(snzi);
     assert(snzi->counts);
-    qthread_internal_aligned_free(snzi->counts, cacheline);
+    qt_internal_aligned_free(snzi->counts, cacheline);
     if (sinc->rdata) {
         qt_sinc_reduction_t *rdata = sinc->rdata;
         assert(rdata->result);
         assert(rdata->initial_value);
-        free(rdata->initial_value);
+        qt_free(rdata->initial_value);
         assert(rdata->values);
-        qthread_internal_aligned_free(rdata->values, cacheline);
+        qt_internal_aligned_free(rdata->values, cacheline);
     }
 }
 
 void qt_sinc_destroy(qt_sinc_t *sinc_)
 {
     qt_sinc_fini(sinc_);
-    free(sinc_);
+    qt_free(sinc_);
 }
 
 #define SNZI_HALF 1
@@ -350,7 +351,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
 }
 
 void qt_sinc_submit(qt_sinc_t *restrict sinc_,
-                    void *restrict      value)
+                    const void *restrict      value)
 {
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc    = (qt_internal_sinc_t *)sinc_;

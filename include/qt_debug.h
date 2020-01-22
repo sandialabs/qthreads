@@ -2,24 +2,29 @@
 #define QTHREAD_DEBUG_H
 
 #include <stdlib.h> /* for malloc() and friends */
-
+#include "qt_alloc.h"
+#ifndef EXTERNAL_ALLOCATOR
 #ifdef QTHREAD_MEMORY_SCRIBBLING
 #include <string.h> /* for memset(), per C90 */
 # define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
 # define FREE_SCRIBBLE(ptr, sz)  memset((ptr), 0x77, (sz))
 static QINLINE void *MALLOC(size_t sz)
 {
-    void *ret = malloc(sz);
+    void *ret = qt_malloc(sz);
 
     ALLOC_SCRIBBLE(ret, sz);
     return ret;
 }
-# define FREE(ptr, sz) do { FREE_SCRIBBLE(ptr, sz); free(ptr); } while (0)
+# define FREE(ptr, sz) do { FREE_SCRIBBLE(ptr, sz); qt_free(ptr); } while (0)
 #else
 # define ALLOC_SCRIBBLE(ptr, sz) do { } while (0)
 # define FREE_SCRIBBLE(ptr, sz)  do { } while (0)
-# define MALLOC(sz) malloc(sz)
-# define FREE(ptr, sz) free(ptr)
+# define MALLOC(sz) qt_malloc(sz)
+# define FREE(ptr, sz) qt_free(ptr)
+#endif
+#else
+# define ALLOC_SCRIBBLE(ptr, sz) do { } while (0)
+# define FREE_SCRIBBLE(ptr, sz)  do { } while (0)
 #endif
 
 #ifdef QTHREAD_DEBUG
@@ -194,17 +199,6 @@ extern enum qthread_debug_levels debuglevel;
 #  define QARRAY_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define QARRAY_DETAILS   NO_DEBUG_OUTPUT
 # endif
-# ifdef QTHREAD_DEBUG_RCRTOOL
-#  define RCRTOOL_CALLS     DEBUG_CALLS
-#  define RCRTOOL_FUNCTIONS DEBUG_FUNCTIONS
-#  define RCRTOOL_BEHAVIOR  DEBUG_BEHAVIOR
-#  define RCRTOOL_DETAILS   DEBUG_DETAILS
-# else
-#  define RCRTOOL_CALLS     NO_DEBUG_OUTPUT
-#  define RCRTOOL_FUNCTIONS NO_DEBUG_OUTPUT
-#  define RCRTOOL_BEHAVIOR  NO_DEBUG_OUTPUT
-#  define RCRTOOL_DETAILS   NO_DEBUG_OUTPUT
-# endif
 # ifdef QTHREAD_DEBUG_SHEPHERD
 #  define SHEPHERD_CALLS     DEBUG_CALLS
 #  define SHEPHERD_FUNCTIONS DEBUG_FUNCTIONS
@@ -249,47 +243,9 @@ extern enum qthread_debug_levels debuglevel;
 #  define MULTINODE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define MULTINODE_DETAILS   NO_DEBUG_OUTPUT
 # endif
-# ifdef QTHREAD_DEBUG_CHAPEL
-#  define CHAPEL_CALLS     DEBUG_CALLS
-#  define CHAPEL_FUNCTIONS DEBUG_FUNCTIONS
-#  define CHAPEL_BEHAVIOR  DEBUG_BEHAVIOR
-#  define CHAPEL_DETAILS   DEBUG_DETAILS
-# else
-#  define CHAPEL_CALLS     NO_DEBUG_OUTPUT
-#  define CHAPEL_FUNCTIONS NO_DEBUG_OUTPUT
-#  define CHAPEL_BEHAVIOR  NO_DEBUG_OUTPUT
-#  define CHAPEL_DETAILS   NO_DEBUG_OUTPUT
-# endif
 
 extern QTHREAD_FASTLOCK_TYPE output_lock;
 
-# ifdef QTHREAD_RCRTOOL
-#  ifdef HAVE_GNU_VAMACROS
-#   define qthread_debug(level, format, args ...) qthread_debug_(level, debuglevel, "QDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, ## args)
-#   define rcrtool_debug(level, format, args ...) qthread_debug_(level, rcrtoollevel, "RCRDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, ## args)
-static QINLINE void qthread_debug_(int         level,
-                                   int         debuglevel,
-                                   const char *msgPrefix,
-                                   const char *format,
-                                   ...)
-#  elif defined(HAVE_C99_VAMACROS)
-#   define qthread_debug(level, format, ...) qthread_debug_(level, debuglevel, "QDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
-#   define rcrtool_debug(level, format, ...) qthread_debug_(level, rcrtoollevel, "RCRDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
-static QINLINE void qthread_debug_(int         level,
-                                   int         debuglevel,
-                                   const char *msgPrefix,
-                                   const char *format,
-                                   ...)
-#  else // ifdef HAVE_GNU_VAMACROS
-#   define qthread_debug(level, format, ...) qthread_debug_(level, debuglevel, "QDEBUG: ", format, __FUNCTION__, __LINE__, __VA_ARGS__)
-#   define rcrtool_debug(level, format, ...) qthread_debug_(level, rcrtoollevel, "RCRDEBUG: ", format, __FUNCTION__, __LINE__, __VA_ARGS__)
-static QINLINE void qthread_debug_(int         level,
-                                   int         debuglevel,
-                                   const char *msgPrefix,
-                                   const char *format,
-                                   ...)
-#  endif // ifdef HAVE_GNU_VAMACROS
-# else // ifdef QTHREAD_RCRTOOL
 #  ifdef HAVE_GNU_VAMACROS
 #   define qthread_debug(level, format, args ...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, ## args)
 static QINLINE void qthread_debug_(int         level,
@@ -305,7 +261,6 @@ static QINLINE void qthread_debug(int         level,
                                   const char *format,
                                   ...)
 #  endif // ifdef HAVE_GNU_VAMACROS
-# endif  // ifdef QTHREAD_RCRTOOL
 {                                      /*{{{ */
     va_list args;
 
@@ -316,11 +271,7 @@ static QINLINE void qthread_debug(int         level,
 
         QTHREAD_FASTLOCK_LOCK(&output_lock);
 
-# ifdef QTHREAD_RCRTOOL
-        while (WRITE(2, msgPrefix, 8) != 8) ;
-# else
         while (WRITE(2, "QDEBUG: ", 8) != 8) ;
-# endif
 
         va_start(args, format);
         /* avoiding the obvious method, to save on memory

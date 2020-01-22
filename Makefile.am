@@ -10,8 +10,12 @@ EXTRA_DIST = \
 			 config/ac_prog_cc_c99.m4 \
 			 config/ac_prog_sed.m4 \
 			 config/ac_use_system_extensions.m4 \
+			 README.md \
 			 README.affinity \
 			 README.multinode \
+			 README.performance-monitoring.md \
+			 SCHEDULING \
+			 TODO.md \
 			 autogen.sh
 
 SUBDIRS = man include src test

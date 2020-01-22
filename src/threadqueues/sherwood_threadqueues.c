@@ -12,6 +12,7 @@
 #include "qthread/cacheline.h"
 
 /* Internal Headers */
+#include "qt_alloc.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h"           /* for qlib */
 #include "qt_shepherd_innards.h"
@@ -105,8 +106,8 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 #endif /* if AKP_DEBUG */
 
 /*FIXME: Cannot use pools for allcations of variable size */
-#define ALLOC_EXTRA(size) malloc(size)
-#define FREE_EXTRA(t)     free(t)
+#define ALLOC_EXTRA(size) qt_malloc(size)
+#define FREE_EXTRA(t)     qt_free(t)
 #define DIV_FACTOR  4
 #define MAX_ABS_AGG 64
 static void      **agged_tasks_arg = NULL;
@@ -504,11 +505,6 @@ qthread_t INTERNAL *qt_init_agg_task() // partly a duplicate from qthread.c
     t->ret             = 0;
     t->rdata           = NULL;
     t->preconds        = NULL;  // use for list of f and arg
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->task_counter      = 0;
-    t->parent            = NULL;
-    t->prev_thread_state = QTHREAD_STATE_ILLEGAL;
-#endif
     t->flags &= ~QTHREAD_HAS_ARGCOPY;
     t->flags |= QTHREAD_SIMPLE; // will remain a simple task if all tasks it batches are simple.
     t->flags |= QTHREAD_AGGREGATED;

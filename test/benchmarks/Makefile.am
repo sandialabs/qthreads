@@ -1,8 +1,8 @@
-SUBDIRS = mantevo
+SUBDIRS = mantevo finepoints
 
 .PHONY: buildall buildtests buildextra benchmarks
 
-DIST_SUBDIRS = mantevo rose_bots rose_lulesh
+DIST_SUBDIRS = mantevo finepoints
 
 generic_benchmarks = \
                      time_gcd \
@@ -19,7 +19,10 @@ generic_benchmarks = \
                      time_halo_swap_all \
                      time_prodcons_comm \
                      time_qt_loops \
-                     time_qt_loopaccums
+                     time_qt_loopaccums \
+                     time_thread_ring \
+                     time_chpl_spawn
+
 thesis_benchmarks = \
                     time_allpairs \
                     time_wavefront
@@ -146,29 +149,6 @@ utils_rnglib = $(top_builddir)/test/utils/rng/librng.la
 
 LDADD = $(qthreadlib)
 
-if COMPILE_ROSE_EXTENSIONS
-if HAVE_LIBM
-buildall: $(benchmarks)
-	$(MAKE) -C rose_bots buildall
-	$(MAKE) -C rose_lulesh buildall
-	$(MAKE) -C mantevo buildall
-buildextra: $(benchmarks)
-	$(MAKE) -C rose_bots buildextra
-	$(MAKE) -C rose_lulesh buildextra
-	$(MAKE) -C mantevo buildextra
-else
-buildall: $(benchmarks)
-	$(MAKE) -C mantevo buildall
-buildextra: $(benchmarks)
-	$(MAKE) -C mantevo buildextra
-endif
-else
-buildall: $(benchmarks)
-	$(MAKE) -C mantevo buildall
-buildextra: $(benchmarks)
-	$(MAKE) -C mantevo buildextra
-endif
-
 benchmarks: buildextra
 
 $(qthreadlib):
@@ -253,6 +233,10 @@ time_producerconsumer_SOURCES = generic/time_producerconsumer.c
 time_syncvar_producerconsumer_SOURCES = generic/time_syncvar_producerconsumer.c
 
 time_threading_SOURCES = generic/time_threading.c
+
+time_thread_ring_SOURCES = generic/time_thread_ring.c
+
+time_chpl_spawn_SOURCES = generic/time_chpl_spawn.c
 
 if COMPILE_OMP_BENCHMARKS
 time_threading_omp_SOURCES = generic/time_threading.omp.c

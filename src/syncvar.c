@@ -1,6 +1,7 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#include<qthread/performance.h>
 
 /* System Headers */
 #include <limits.h>                    /* for INT_MAX */
@@ -169,7 +170,7 @@ loop_start:
         locked.u.w = addr->u.w; // I locked it, so I can read it
 #else                           /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
         {
-            register syncvar_t tmp;
+            syncvar_t tmp;
 loop_start:
             tmp = *addr;
             do {
@@ -464,6 +465,7 @@ got_m:
         m->FFQ    = X;
         qthread_debug(SYNCVAR_DETAILS, "back to parent\n");
         me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
@@ -484,7 +486,7 @@ locked_full:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_readFF_nb(uint64_t *restrict  dest,
+int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict  dest,
                                        syncvar_t *restrict src)
 {                                      /*{{{ */
     eflags_t   e = { 0, 0, 0, 0, 0 };
@@ -792,6 +794,7 @@ got_m:
         m->FEQ    = X;
         qthread_debug(SYNCVAR_DETAILS, "back to parent\n");
         me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
@@ -863,7 +866,7 @@ locked_full:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict  dest,
+int API_FUNC qthread_syncvar_readFE_nb(uint64_t *restrict  dest,
                                        syncvar_t *restrict src)
 {                                      /*{{{ */
     eflags_t   e = { 0, 0, 0, 0, 0 };
@@ -957,6 +960,7 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
     assert(waiter);
     assert(shep);
     waiter->thread_state = QTHREAD_STATE_RUNNING;
+    QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
     if (waiter->flags & QTHREAD_UNSTEALABLE) {
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
     } else {
@@ -1280,6 +1284,7 @@ got_m:
         m->EFQ    = X;
         qthread_debug(SYNCVAR_DETAILS, ": back to parent\n");
         me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
@@ -1366,7 +1371,7 @@ int API_FUNC qthread_syncvar_writeEF_const(syncvar_t *restrict dest,
     return qthread_syncvar_writeEF(dest, &src);
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict      dest,
+int qthread_syncvar_writeEF_nb(syncvar_t *restrict      dest,
                                         const uint64_t *restrict src)
 {                                      /*{{{ */
     eflags_t   e       = { 0, 0, 0, 0, 0 };
@@ -1452,7 +1457,7 @@ got_m:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_writeEF_const_nb(syncvar_t *restrict dest,
+int API_FUNC qthread_syncvar_writeEF_const_nb(syncvar_t *restrict dest,
                                               const uint64_t      src)
 {                                      /*{{{ */
     return qthread_syncvar_writeEF_nb(dest, &src);

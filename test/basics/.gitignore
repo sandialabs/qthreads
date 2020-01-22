@@ -1,9 +1,15 @@
 aligned_prodcons
+aligned_purge_wakes
+aligned_readXX_basic
+aligned_purge_basic
+aligned_writeFF_basic
+aligned_writeFF_waits
 arbitrary_blocking_operation
 external_fork
 external_syncvar
 hello_world
 hello_world_multi
+performance
 qalloc
 qthread_cacheline
 qthread_cas
@@ -22,6 +28,7 @@ read
 reinitialization
 sinc
 sinc_null
+sinc_workers
 syncvar_prodcons
 tasklocal_data
 tasklocal_data_no_argcopy

@@ -9,6 +9,7 @@
 \usepackage{listings}
 \usepackage{amsfonts}
 \usepackage{graphicx}
+\graphicspath{ {./images/} }
 \title{The Sandia Qthreads Application Programming Interface User Guide}
 \begin{document}
 \lstset{language=C,basicstyle=\ttfamily\footnotesize,frame=single}
@@ -19,15 +20,14 @@ The Qthreads Application Programming Interface (API) supports multithreaded prog
 
 Qthreads are scheduled and executed within control structures called {\it shepherds}.  Each shepherd comprises a queue of qthreads awaiting execution and one or more {\it workers}.  Each worker is a long-lived heavyweight thread, pinned to a core, that executes qthreads from its shepherd's queue.  While a qthreads program may generate thousands of qthreads, the number of worker threads is typically at most the number of cores or hardware threads in the system.  The number of workers in each shepherd and the number of shepherds can be specified through environment variables and their configuration can be mapped to the underlying hardware topology as discovered by run time mechanisms such as the hwloc library.  An example configuration would be one shepherd per socket in a two- or four-socket multicore system, with one worker per hardware thread.  Another configuration would be one shepherd per core.  At the extremes, a configuration could have one shepherd per hardware thread with only one worker per shepherd, or only a single shepherd comprising all the workers in the system.
 
+\newpage
 \section{Installation}
 First, we need to grab the repository:
 {\footnotesize{\tt git clone git://github.com/Qthreads/qthreads.git}}
 \\ \\
-Next, let's change into the qthreads directory and checkout the userguide branch:
+Next, let's change into the qthreads directory:
 \\
 {\footnotesize{\tt cd qthreads}}
-\\
-{\footnotesize{\tt git checkout userguide}}
 \\ \\
 Before compiling the Qthreads library, we need to setup some environment variables:
 \\ \\
@@ -55,6 +55,7 @@ To run the exmples below, please change into the examples directory:
 \\
 {\footnotesize{\tt cd userguide/examples}}
 
+\newpage
 \section{Simple Qthreads Example Programs}
 
 \subsection{Hello, world}
@@ -63,15 +64,13 @@ The following code shows a simple ``hello, world" example program using the qthr
 \lstinputlisting{examples/hello_world.c}
 
 After initializing qthreads using the {\tt qthread\_initialize} API call, the program generates a single qthread through the {\tt qthread\_fork} API call.  The first argument to the call is the function to be executed by the qthread.  The second argument to the call is an argument of type {\tt void*} to be passed to the specified function.  The third argument to the call is a pointer of type {\tt aligned\_t*} to the location into which the return value of the function will be placed upon completion of the qthread.  In the case of this program, the call is to the function called {\tt greeter}, which does not use its argument and simply prints ``Hello, world!'', then returns 0.  The {\tt qthread\_read\_FF} API call waits for the return value produced by the completion of the qthread.  Its two arguments are of type {\tt aligned\_t*}.  The first argument specifies a destination address to store the value that is read (unused in this program), and the second specifies the source address for the value.
-
 As a library-based API, Qthreads does not require any special compiler support.  The following is an example command to compile the program:
 \\ \\
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world.c}}
 \\
 {\footnotesize{\tt ./hello}}
-\\
-\begin{figure}
-\includegraphics{images/hello_world.png}
+\begin{figure}[h]
+\includegraphics{hello_world.png}
 \end{figure}
 
 \subsection{A safer hello, world}
@@ -85,8 +84,8 @@ As shown above, each qthreads API call returns an integer indicating the success
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_safe.c}}
 \\
 {\footnotesize{\tt ./hello}}
-\begin{figure}
-\includegraphics{images/hello_world_safe.png}
+\begin{figure}[h]
+\includegraphics{hello_world_safe.png}
 \end{figure}
 
 
@@ -101,10 +100,9 @@ In this example, each qthread prefaces its ``hello, world" message with the valu
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_multiple.c}}
 \\
 {\footnotesize{\tt ./hello}}
-\begin{figure}
-\includegraphics{images/hello_world_multiple.png}
+\begin{figure}[h]
+\includegraphics{hello_world_multiple.png}
 \end{figure}
-
 
 \subsection{Hello, world with Qthreads parallel loop}
 
@@ -117,8 +115,8 @@ The {\tt qt\_loop} API call takes four arguments.  The first two arguments speci
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_loop.c}}
 \\
 {\footnotesize{\tt ./hello}}
-\begin{figure}
-\includegraphics{images/hello_world_loop.png}
+\begin{figure}[h]
+\includegraphics[scale=0.84]{hello_world_loop.png}
 \end{figure}
 
 \subsection{Optimizing loop execution}
@@ -132,9 +130,12 @@ The only change to the code from the previous example is that the call has been 
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_loop\_optimized.c}}
 \\
 {\footnotesize{\tt ./hello}}
-\begin{figure}
-\includegraphics{images/hello_world_optimized.png}
+\begin{figure}[h]
+\includegraphics[scale=0.99]{hello_world_optimized.png}
 \end{figure}
+
+
+\newpage
 \section{Calculating a Fibonacci number}
 
 The following example illustrates naive brute-force calculation of the {\it n}-th Fibonacci number using recursive task parallelism. The program begins by generating a single qthread to execute the {\tt fib} function with the argument indicating which Fibonacci number ({\tt n}) to calculate.  The {\tt fib} function then calls itself recursively with arguments {\tt n-1} and {\tt n-2} until the base case of the recursion is satisfied.
@@ -144,11 +145,9 @@ The following example illustrates naive brute-force calculation of the {\it n}-t
 {\footnotesize{\tt time ./fib}}
 \\
 {\footnotesize{\tt time ./fib 24}}
-\newpage
 \lstinputlisting{examples/fib.c}
-
-\begin{figure}
-\includegraphics{images/fib.png}
+\begin{figure}[h]
+\includegraphics[scale=0.96]{fib.png}
 \end{figure}
 
 \subsection{A faster Fibonacci}
@@ -159,12 +158,12 @@ The program in the previous example generates a single qthread to execute each a
 {\footnotesize{\tt time ./fib}}
 \\
 {\footnotesize{\tt time ./fib 24}}
-\newpage
-\lstinputlisting{examples/fib_fast.c}
 
-\begin{figure}
+\begin{figure}[h]
 \includegraphics{images/fib_fast.png}
 \end{figure}
+\newpage
+\lstinputlisting{examples/fib_fast.c}
 
 \subsection{Fibonacci by preconditioned tasks}
 
@@ -177,6 +176,7 @@ The code first defines two structure types, {\tt f\_arg\_t} and {\tt fr\_arg\_t}
 The {\tt qthread\_fork\_precond} API call generates a qthread to execute the {\tt fib\_result} function only when its preconditions are fulfilled.  The first three arguments to the call are the same as those of {\tt qthread\_fork}: the function, the pointer to the argument data to be passed to the function, and a pointer to the return value.  This example program collects the results through pointers in the argument structures, and thus does not use the third argument.  The fourth argument specifies the the number of preconditions that must be fulfilled before the run time will schedule for execution.  The remaining arguments specify those preconditions, in this case, the completion of the two recursive calls to {\tt fib}.  The {\tt qthread\_fork\_precond} call is followed by the two calls to {\tt qthread\_fork} that generate those recursive calls to {\tt fib}.  At this point, the function returns.  Thus the qthread executing {\tt fib} at run time does not wait for the recursive calls to complete.  Instead, the qthread generated to execute {\tt fib\_result} waits on the recursive calls, only beginning execution once they are finished.
 
 Finally, we have the code for the {\tt main} function of the program, which is similar to that of the previous program.  The primary difference is that an argument structure is initialized for the first {\tt fib} task.  The {\tt n} field takes the Fibonacci number to be calculated, as specified by the command line argument.  The {\tt result} field is initially zero, and at the completion of all the qthreads generated, it contains the final result.
+%:
 \\ \\
 {\footnotesize{\tt cc -o fib -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread fib\_preconditioned.c}}
 \\

@@ -38,9 +38,6 @@
 /* The size of `void*', as computed by sizeof. */
 #undef SIZEOF_VOIDP
 
-/* support ROSE extensions */
-#undef QTHREAD_USE_ROSE_EXTENSIONS
-
 /* alignment of aligned_t */
 #undef QTHREAD_ALIGNMENT_ALIGNED_T
 
@@ -83,7 +80,9 @@
 /* Define to the equivalent of the C99 'restrict' keyword, or to
    nothing if this is not supported.  Do not define if restrict is
    supported directly.  */
+#ifndef restrict
 #undef restrict
+#endif
 /* Work around a bug in Sun C++: it does not support _Restrict or
    __restrict__, even though the corresponding Sun C compiler ends up with
    "#define restrict _Restrict" or "#define restrict __restrict__" in the

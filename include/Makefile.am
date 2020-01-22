@@ -19,7 +19,7 @@ noinst_HEADERS = \
 	qt_prefetch.h \
 	qt_addrstat.h \
 	qt_affinity.h \
-	qt_aligned_alloc.h \
+	qt_alloc.h \
 	qt_arrive_first.h \
 	qt_atomics.h \
 	qt_barrier.h \
@@ -55,10 +55,6 @@ noinst_HEADERS = \
 	qt_threadstate.h \
 	qt_touch.h \
 	qt_visibility.h \
-	rose_extensions.h \
-	rose_log_arrivaldetector.h \
-	rose_sinc_barrier.h \
-	rose_xomp.h \
 	spr_innards.h
 
 if COMPILE_EUREKAS

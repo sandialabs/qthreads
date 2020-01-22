@@ -11,12 +11,12 @@ SUBDIRS =
 noinst_HEADERS = affinity/shufflesheps.h
 
 libqthread_la_SOURCES = \
-	aligned_alloc.c \
 	cacheline.c \
 	envariables.c \
 	feb.c \
 	hazardptrs.c \
 	io.c \
+	performance.c \
 	locks.c \
 	qalloc.c \
 	qloop.c \
@@ -30,9 +30,11 @@ libqthread_la_SOURCES = \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
+	alloc/@with_alloc@.c \
 	affinity/common.c \
 	affinity/@qthread_topo@.c \
 	touch.c \
+	tls.c \
 	teams.c
 
 EXTRA_DIST = 
@@ -59,15 +61,6 @@ include qtimer/Makefile.inc
 include ds/Makefile.inc
 include patterns/Makefile.inc
 include syscalls/Makefile.inc
-include rcrtool/Makefile.inc
-
-if COMPILE_CHAPEL_INTERFACE
-include interfaces/chapel/Makefile.inc
-endif
-
-if COMPILE_ROSE_EXTENSIONS
-include interfaces/rose/Makefile.inc
-endif
 
 if COMPILE_MULTINODE
 libqthread_la_SOURCES += spr.c
@@ -100,6 +93,7 @@ include fastcontext/Makefile.inc
 endif
 
 EXTRA_DIST += \
+			 threadqueues/distrib_threadqueues.c \
 			 threadqueues/lifo_threadqueues.c \
 			 threadqueues/nemesis_threadqueues.c \
 			 threadqueues/mutexfifo_threadqueues.c \
@@ -113,9 +107,14 @@ EXTRA_DIST += \
 			 barrier/array.c \
 			 barrier/log.c \
 			 barrier/sinc.c \
+			 alloc/base.c \
+			 alloc/chapel.c \
 			 affinity/common.c \
 			 affinity/hwloc.c \
+			 affinity/hwloc_via_chapel.c \
+			 affinity/binders.c \
 			 affinity/hwloc_v2.c \
+			 affinity/no.c \
 			 affinity/sys.c \
 			 affinity/libnuma.c \
 			 affinity/libnumaV2.c \

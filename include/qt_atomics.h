@@ -1,6 +1,8 @@
 #ifndef QT_ATOMICS_H
 #define QT_ATOMICS_H
 
+#include <sys/time.h>
+
 #include <qthread/common.h>
 #include <qthread/qthread.h>
 
@@ -184,6 +186,32 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 #include <pthread.h>
 #define QTHREAD_COND_DECL(c)   pthread_cond_t c; pthread_mutex_t c ## _lock
+#define QTHREAD_COND_INIT_SOLO(c) do { \
+    { \
+	pthread_mutexattr_t tmp_attr; \
+	qassert(pthread_mutexattr_init(&tmp_attr), 0); \
+	qassert(pthread_mutexattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), 0); \
+	qassert(pthread_mutexattr_destroy(&tmp_attr), 0); \
+    } { \
+	pthread_condattr_t tmp_attr; \
+	qassert(pthread_condattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), 0); \
+	qassert(pthread_cond_init(&(c), &tmp_attr), 0); \
+	qassert(pthread_condattr_destroy(&tmp_attr), 0); \
+    } \
+} while (0)
+#define QTHREAD_COND_INIT_SOLO_PTR(c) do { \
+    { \
+	pthread_mutexattr_t tmp_attr; \
+	qassert(pthread_mutexattr_init(&tmp_attr), 0); \
+	qassert(pthread_mutexattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), 0); \
+	qassert(pthread_mutexattr_destroy(&tmp_attr), 0); \
+    } { \
+	pthread_condattr_t tmp_attr; \
+	qassert(pthread_condattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), 0); \
+	qassert(pthread_cond_init((c), &tmp_attr), 0); \
+	qassert(pthread_condattr_destroy(&tmp_attr), 0); \
+    } \
+} while (0)
 #define QTHREAD_COND_INIT(c) do { \
     { \
 	pthread_mutexattr_t tmp_attr; \
@@ -220,7 +248,15 @@ extern pthread_mutexattr_t _fastlock_attr;
     t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); \
     qassert(pthread_cond_timedwait(&(c), &(c ## _lock), &t), 0); \
 } while (0)
-
+#define QTHREAD_COND_WAIT_DUO(c, m) do { \
+    struct timespec t; \
+    struct timeval n; \
+    gettimeofday(&n, NULL); \
+    t.tv_nsec = (n.tv_usec * 1000) + 500000000; \
+    t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); \
+    t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); \
+    qassert(pthread_cond_timedwait(&(c), &(m), &t), 0); \
+} while (0)
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)                var; QTHREAD_FASTLOCK_TYPE var ## _caslock
 # define QTHREAD_CASLOCK_STATIC(var)         var; static QTHREAD_FASTLOCK_TYPE var ## _caslock
@@ -431,7 +467,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
     aligned_t retval;
 
 #if QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 4)
-    register uint32_t oldval, newval;
+    uint32_t oldval, newval;
 
     newval = *operand;
     do {
@@ -442,7 +478,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
         newval = __sync_val_compare_and_swap((uint32_t *)operand, oldval, newval);
     } while (oldval != newval);
 #elif QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 8)
-    register uint64_t oldval, newval;
+    uint64_t oldval, newval;
 
     newval = *operand;
     do {
@@ -456,8 +492,8 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
-    register unsigned int incrd = incrd;        /* these don't need to be initialized */
-    register unsigned int compd = compd;        /* they're just tmp variables */
+    unsigned int incrd = incrd;        /* these don't need to be initialized */
+    unsigned int compd = compd;        /* they're just tmp variables */
 
     /* the minus in bne- means "this bne is unlikely to be taken" */
     asm volatile ("A_%=:\n\t"             /* local label */
@@ -479,8 +515,8 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
                   : "cc", "memory");
 
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-    register uint64_t incrd = incrd;
-    register uint64_t compd = compd;
+    uint64_t incrd = incrd;
+    uint64_t compd = compd;
 
     asm volatile ("A_%=:\n\t"             /* local label */
                   "ldarx  %0,0,%3\n\t"    /* load operand */
@@ -499,7 +535,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
     ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
-    register uint32_t oldval, newval;
+    uint32_t oldval, newval;
 
     /* newval = *operand; */
     do {
@@ -527,7 +563,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
     } while (oldval != newval);
 
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-    register aligned_t oldval, newval;
+    aligned_t oldval, newval;
 
     /* newval = *operand; */
     do {
@@ -616,7 +652,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
             uint32_t h;
         } s;
     } oldval, newval;
-    register char test;
+    char test;
 
     do {
 #  ifdef __PIC__

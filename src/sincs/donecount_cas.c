@@ -17,7 +17,7 @@
 #include "qt_shepherd_innards.h"
 #include "qt_expect.h"
 #include "qt_visibility.h"
-#include "qt_aligned_alloc.h"
+#include "qt_alloc.h"
 #include "qt_debug.h"
 #include "qt_int_ceil.h"
 
@@ -51,7 +51,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
                   qt_sinc_op_f         op,
                   size_t               expect)
 {   /*{{{*/
-    assert(sinc);
+    assert(sinc_);
     assert((0 == sizeof_value && NULL == initial_value) ||
            (0 != sizeof_value && NULL != initial_value));
     qt_internal_sinc_t *const restrict sinc = (struct qt_sinc_s *)sinc_;
@@ -82,9 +82,9 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
+        rdata->values = qt_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
-        ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline, cacheline);
+        ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline);
 
         // Initialize values
         for (size_t s = 0; s < num_sheps; s++) {
@@ -159,7 +159,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         assert(rdata->initial_value);
         FREE(rdata->initial_value, rdata->sizeof_value);
         assert(rdata->values);
-        qthread_internal_aligned_free(rdata->values, cacheline);
+        qt_internal_aligned_free(rdata->values, cacheline);
     }
 } /*}}}*/
 
@@ -224,7 +224,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
 } /*}}}*/
 
 void qt_sinc_submit(qt_sinc_t *restrict sinc_,
-                    void *restrict      value)
+                    const void *restrict      value)
 {   /*{{{*/
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
