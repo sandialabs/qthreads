@@ -10,6 +10,8 @@
 \usepackage{amsfonts}
 \usepackage{graphicx}
 \graphicspath{ {./images/} }
+\usepackage{caption}
+\captionsetup{justification   = raggedright,singlelinecheck = false}
 \title{The Sandia Qthreads Application Programming Interface User Guide}
 \begin{document}
 \lstset{language=C,basicstyle=\ttfamily\footnotesize,frame=single}
@@ -71,6 +73,8 @@ As a library-based API, Qthreads does not require any special compiler support. 
 {\footnotesize{\tt ./hello}}
 \begin{figure}[h]
 \includegraphics{hello_world.png}
+\caption{Hello world program with a single qthread}
+\label{fig:hello_world}
 \end{figure}
 
 \subsection{A safer hello, world}
@@ -86,6 +90,8 @@ As shown above, each qthreads API call returns an integer indicating the success
 {\footnotesize{\tt ./hello}}
 \begin{figure}[h]
 \includegraphics{hello_world_safe.png}
+\caption{A safer hello world}
+\label{fig:hello_world_safe}
 \end{figure}
 
 
@@ -101,7 +107,9 @@ In this example, each qthread prefaces its ``hello, world" message with the valu
 \\
 {\footnotesize{\tt ./hello}}
 \begin{figure}[h]
-\includegraphics{hello_world_multiple.png}
+\includegraphics[scale=0.89]{hello_world_multiple.png}
+\caption{Hello world with multiple qthreads}
+\label{fig:hello_world_multiple}
 \end{figure}
 
 \subsection{Hello, world with Qthreads parallel loop}
@@ -116,7 +124,9 @@ The {\tt qt\_loop} API call takes four arguments.  The first two arguments speci
 \\
 {\footnotesize{\tt ./hello}}
 \begin{figure}[h]
-\includegraphics[scale=0.84]{hello_world_loop.png}
+\includegraphics[scale=0.7]{hello_world_qt_loop.png}
+\caption{Hello world with qt\_loop}
+\label{fig:hello_world_qt_loop}
 \end{figure}
 
 \subsection{Optimizing loop execution}
@@ -131,15 +141,56 @@ The only change to the code from the previous example is that the call has been 
 \\
 {\footnotesize{\tt ./hello}}
 \begin{figure}[h]
-\includegraphics[scale=0.99]{hello_world_optimized.png}
+\includegraphics[scale=0.85]{hello_world_optimized.png}
+\caption{Hello world with qt\_loop\_balance}
 \end{figure}
 
+\section{Atomics and Blocking}
+
+Qthreads has a number of tools for doing atomic and blocking operations. An
+illustrative example of a non-blocking atomic operation is the {\tt
+qthread\_incr} function. The increment function is a thread-safe version of
+{\tt *operand += incr;}
+In the following program we have a number of tasks that all increment a single
+variable, with the desired property that the variable is incremented {\tt n}
+times.
+\\
+\lstinputlisting{examples/incr.c}
+{\footnotesize{\tt cc -o incr -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread incr.c}}
+\\
+{\footnotesize{\tt ./incr}}
+\begin{figure}[h]
+\includegraphics[scale=0.85]{incr.png}
+\caption{Code showing usage of atomic function qthread\_incr}
+\end{figure}
+
+\newpage
+\subsection{Barriers}
+
+Qthreads has a number of mechanisms for creating barriers as well. For example,
+we could implement the above incrementer using a barrier instead of the {\tt
+readFF} function calls.
+
+Instead of the parent task blocking on each full empty bit in order, each task
+is blocked until all tasks have entered the barrier. Then each is allowed to
+continue, including the parent task. Note because we want the parent task to
+wait on the barrier as well, the first argument (which is the number of tasks we
+want to wait on) is {\tt n+1}.
+\\
+\lstinputlisting{examples/barrier.c}
+{\footnotesize{\tt cc -o barrier -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread barrier.c}}
+\\
+{\footnotesize{\tt ./barrier}}
+\begin{figure}[h]
+\includegraphics[scale=0.85]{barrier.png}
+\caption{Code showing usage of barrier function}
+\end{figure}
 
 \newpage
 \section{Calculating a Fibonacci number}
 
-The following example illustrates naive brute-force calculation of the {\it n}-th Fibonacci number using recursive task parallelism. The program begins by generating a single qthread to execute the {\tt fib} function with the argument indicating which Fibonacci number ({\tt n}) to calculate.  The {\tt fib} function then calls itself recursively with arguments {\tt n-1} and {\tt n-2} until the base case of the recursion is satisfied.
-\\ \\
+The following example illustrates naive brute-force calculation of the {\it n}-th Fibonacci number using recursive task parallelism. The program begins by generating a single qthread to execute the {\tt fib} function with the argument indicating which Fibonacci number ({\tt n}) to calculate.  The {\tt fib} function then calls itself recursively with arguments {\tt n-1} and {\tt n-2} until the base case of the recursion is satisfied. The program keeps track of the total number of created
+\\
 {\footnotesize{\tt cc -o fib -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread fib.c}}
 \\
 {\footnotesize{\tt time ./fib}}
@@ -228,6 +279,7 @@ Note we create a new sinc at each node in the tree, waiting on its children. The
 correct number of submissions have been made (in this case {\tt n}), any threads
 waiting on the sinc (in this case only one) can continue.
 
+\newpage
 \section{Workers and Shepherds}
 
 As described in the introduction, the workers are usually bound one per core,
@@ -251,36 +303,8 @@ workers, and assigning each worker to a subset of the array to be summed.
 
 \lstinputlisting{examples/worker_id.c}
 
-\section{Atomics and Blocking}
-
-Qthreads has a number of tools for doing atomic and blocking operations. An
-illustrative example of a non-blocking atomic operation is the {\tt
-qthread\_incr} function. The increment function is a thread-safe version of
-{\tt *operand += incr;}
-
-In the following program we have a number of tasks that all increment a single
-variable, with the desired property that the variable is incremented {\tt n}
-times.
-\\
-
-\lstinputlisting{examples/incr.c}
-
-
-\subsection{Barriers}
-
-Qthreads has a number of mechanisms for creating barriers as well. For example,
-we could implement the above incrementer using a barrier instead of the {\tt
-readFF} function calls.
-
-\lstinputlisting{examples/barrier.c}
-
-Instead of the parent task blocking on each full empty bit in order, each task
-is blocked until all tasks have entered the barrier. Then each is allowed to
-continue, including the parent task. Note because we want the parent task to
-wait on the barrier as well, the first argument (which is the number of tasks we
-want to wait on) is {\tt n+1}.
-
-\subsection{High Performance Asyncronous Behaviour}
+\newpage
+\section{High Performance Asyncronous Behaviour}
 
 One application of lightweight threads is low overhead asynchronous behaviour.
 For example, if we want a server to do some expensive computation
