@@ -23,6 +23,8 @@ static aligned_t fib(void *arg)
     aligned_t x = 0, y = 0;
     unsigned long n = (unsigned long)(uintptr_t) arg;
 
+    qthread_incr(&total,1);
+
     if (n < THRESHOLD)
        return (aligned_t ) fib_serial(n);
 
@@ -31,8 +33,6 @@ static aligned_t fib(void *arg)
 
     qthread_readFF(NULL, &x);
     qthread_readFF(NULL, &y);
-    
-   qthread_incr(&total,2);
 
     return (x + y);
 }

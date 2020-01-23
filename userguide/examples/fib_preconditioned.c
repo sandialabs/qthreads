@@ -12,6 +12,8 @@ typedef struct {
     aligned_t *target;
 } fr_arg_t;
 
+unsigned int total = 0;
+
 static aligned_t fib_result(void *arg)
 {
     aligned_t *target = ((fr_arg_t *)arg)->target;
@@ -22,6 +24,8 @@ static aligned_t fib_result(void *arg)
     qthread_writeEF(target, &r0);
     free(arg);
 
+    qthread_incr(&total,1);
+
     return 0;
 }
 
@@ -29,6 +33,8 @@ static aligned_t fib(void *arg)
 {
     aligned_t  n      = ((f_arg_t *)arg)->n;
     aligned_t *result = &((f_arg_t *)arg)->result;
+
+    qthread_incr(&total,1);
 
     if (n < 2) {
         qthread_writeEF_const(result, n);
@@ -75,7 +81,7 @@ int main(int argc, char *argv[])
 
     qthread_readFF(NULL, &args.result);
 
-    printf("fib(%lu) = %lu\n", n, args.result);
+    printf("fib(%lu) = %lu\nTotal = %d\n", n, args.result,total+1);
 
     return 0;
 }

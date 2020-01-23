@@ -10,6 +10,7 @@ static aligned_t fib(void *arg)
     unsigned long n = (unsigned long)(uintptr_t) arg;
 
     //printf("Inside fib with arg = %d\n",n);
+    qthread_incr(&total,1);
 
     if (n < 2) return n;
 
@@ -19,7 +20,6 @@ static aligned_t fib(void *arg)
     qthread_readFF(NULL, &x);
     qthread_readFF(NULL, &y);
 
-    qthread_incr(&total,2);
     return (x + y);
 }
 
