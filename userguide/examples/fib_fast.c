@@ -4,6 +4,8 @@
 
 #define THRESHOLD 20
 
+unsigned int total = 0;
+
 unsigned long fib_serial(unsigned long n)
 {
     int x, y;
@@ -29,6 +31,8 @@ static aligned_t fib(void *arg)
 
     qthread_readFF(NULL, &x);
     qthread_readFF(NULL, &y);
+    
+   qthread_incr(&total,2);
 
     return (x + y);
 }
@@ -47,7 +51,7 @@ int main(int argc, char *argv[])
 
     qthread_readFF(NULL, &return_value);
 
-    printf("fib(%ld) = %ld\n", n, return_value);
+    printf("fib(%ld) = %ld\nTotal = %d\n", n, return_value,total+1);
 
     return 0;
 }

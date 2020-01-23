@@ -1,5 +1,7 @@
 qt-install
 hello
+barrier
+incr
 fib
 .deps
 stamp-h1
