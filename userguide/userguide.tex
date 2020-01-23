@@ -199,6 +199,7 @@ The following example illustrates naive brute-force calculation of the {\it n}-t
 \lstinputlisting{examples/fib.c}
 \begin{figure}[h]
 \includegraphics[scale=0.96]{fib.png}
+\caption{Code showing Fibonacci calculation}
 \end{figure}
 
 \subsection{A faster Fibonacci}
@@ -211,8 +212,10 @@ The program in the previous example generates a single qthread to execute each a
 {\footnotesize{\tt time ./fib 24}}
 
 \begin{figure}[h]
-\includegraphics{images/fib_fast.png}
+\includegraphics[scale=0.90]{images/fib_fast.png}
+\caption{Faster version of the Fibonacci calculation}
 \end{figure}
+
 \newpage
 \lstinputlisting{examples/fib_fast.c}
 
@@ -220,9 +223,8 @@ The program in the previous example generates a single qthread to execute each a
 
 Many algorithms can be structured as a set of qthreads partially ordered by dependence relationships.  Qthreads represents dependences between qthreads in terms of {\it preconditions}.  The following example program demonstrates their use.
 \\
-\lstinputlisting{examples/fib_preconditioned.c}
 
-The code first defines two structure types, {\tt f\_arg\_t} and {\tt fr\_arg\_t}.  Pointers to structures of these types will be passed as arguments to the two functions {\tt fib\_result} and {\tt fib}, respectively.  We will examine these functions in reverse order.  The arguments provided to the {\tt fib} function specify the Fibonacci number to calculate ({\tt n}) and a location where the result will be placed ({\tt result}).   These arguments are unpacked from the {\tt arg} structure into local variables.  Unless {\tt n} is trivial, the remaining code in the function sets up and generates new qthreads to recursively call the {\tt fib} function and to combine the results using the {\tt fib\_result} function.  A new argument structure {\tt fibs} is allocated for the call to {\tt fib\_result}, and that structure contains within it an array of two argument structures for calls to {\tt fib}.  Pointers to these two structures are saved, their input fields are set to {\tt n-1} and {\tt n-2}, and the result fields are set to empty.  The second field of the {\tt fibs} argument structure is the target location where the sum of the combined results will be placed.  This is set to the {\tt result} field of {\tt fib}.
+The code first defines two structure types, {\tt f\_arg\_t} and {\tt fr\_arg\_t}.  Pointers to structures of these types will be passed as arguments to the two functions {\tt fib} and {\tt fib\_result}, respectively.  We will examine these functions in reverse order.  The arguments provided to the {\tt fib} function specify the Fibonacci number to calculate ({\tt n}) and a location where the result will be placed ({\tt result}).   These arguments are unpacked from the {\tt arg} structure into local variables.  Unless {\tt n} is trivial, the remaining code in the function sets up and generates new qthreads to recursively call the {\tt fib} function and to combine the results using the {\tt fib\_result} function.  A new argument structure {\tt fibs} is allocated for the call to {\tt fib\_result}, and that structure contains within it an array of two argument structures for calls to {\tt fib}.  Pointers to these two structures are saved, their input fields are set to {\tt n-1} and {\tt n-2}, and the result fields are set to empty.  The second field of the {\tt fibs} argument structure is the target location where the sum of the combined results will be placed.  This is set to the {\tt result} field of {\tt fib}.
 
 The {\tt qthread\_fork\_precond} API call generates a qthread to execute the {\tt fib\_result} function only when its preconditions are fulfilled.  The first three arguments to the call are the same as those of {\tt qthread\_fork}: the function, the pointer to the argument data to be passed to the function, and a pointer to the return value.  This example program collects the results through pointers in the argument structures, and thus does not use the third argument.  The fourth argument specifies the the number of preconditions that must be fulfilled before the run time will schedule for execution.  The remaining arguments specify those preconditions, in this case, the completion of the two recursive calls to {\tt fib}.  The {\tt qthread\_fork\_precond} call is followed by the two calls to {\tt qthread\_fork} that generate those recursive calls to {\tt fib}.  At this point, the function returns.  Thus the qthread executing {\tt fib} at run time does not wait for the recursive calls to complete.  Instead, the qthread generated to execute {\tt fib\_result} waits on the recursive calls, only beginning execution once they are finished.
 
@@ -235,13 +237,15 @@ Finally, we have the code for the {\tt main} function of the program, which is s
 \\
 {\footnotesize{\tt time ./fib 24}}
 \newpage
-\lstinputlisting{examples/fib_preconditioned.c}
 
 \begin{figure}
-\includegraphics{images/fib_preconditioned.png}
+\includegraphics[scale=0.95]{images/fib_preconditioned.png}
+\caption{Precondition version of Fibonacci calculation}
 \end{figure}
 
+\lstinputlisting{examples/fib_preconditioned.c}
 
+\newpage
 \section{Accumulators and Reductions}
 One common design pattern is that of an \emph{accumulator} or a
 \emph{reduction}. These are used when we want to reduce a large amount of data
