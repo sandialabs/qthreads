@@ -20,7 +20,9 @@
 \section{Introduction}
 The Qthreads Application Programming Interface (API) supports multithreaded programming using the lightweight threading model.  The API supports the expression of task parallelism through the creation and synchronization of lightweight threads, called {\it qthreads}, as well as parallel loops that are implemented as qthreads.  The qthreads are lightweight threads in that their stack space is minimal -- containing only the minimum state required to execute the task -- and context switching is inexpensive compared to pthreads and other heavyweight threads.
 
-Qthreads are scheduled and executed within control structures called {\it shepherds}.  Each shepherd comprises a queue of qthreads awaiting execution and one or more {\it workers}.  Each worker is a long-lived heavyweight thread, pinned to a core, that executes qthreads from its shepherd's queue.  While a qthreads program may generate thousands of qthreads, the number of worker threads is typically at most the number of cores or hardware threads in the system.  The number of workers in each shepherd and the number of shepherds can be specified through environment variables and their configuration can be mapped to the underlying hardware topology as discovered by run time mechanisms such as the hwloc library.  An example configuration would be one shepherd per socket in a two- or four-socket multicore system, with one worker per hardware thread.  Another configuration would be one shepherd per core.  At the extremes, a configuration could have one shepherd per hardware thread with only one worker per shepherd, or only a single shepherd comprising all the workers in the system.
+Qthreads are scheduled and executed within control structures called {\it shepherds}.  Each shepherd comprises a queue of qthreads awaiting execution and one or more {\it workers}.  Each worker is a long-lived heavyweight thread (e.g. pthread), pinned to a core, that executes qthreads from its shepherd's queue.  While a qthreads program may generate thousands of qthreads, the number of worker threads is typically at most the number of cores or hardware threads in the system.  The number of workers in each shepherd and the number of shepherds can be specified through environment variables and their configuration can be mapped to the underlying hardware topology as discovered by run time mechanisms such as the hwloc library.  
+
+An example configuration would be one shepherd per socket in a two- or four-socket multicore system, with one worker per hardware thread.  Another configuration would be one shepherd per core.  At the extremes, a configuration could have one shepherd per hardware thread with only one worker per shepherd, or only a single shepherd comprising all the workers in the system.
 
 \newpage
 \section{Installation}
@@ -164,7 +166,6 @@ times.
 \caption{Code showing usage of atomic function qthread\_incr}
 \end{figure}
 
-\newpage
 \subsection{Barriers}
 
 Qthreads has a number of mechanisms for creating barriers as well. For example,
@@ -176,7 +177,8 @@ is blocked until all tasks have entered the barrier. Then each is allowed to
 continue, including the parent task. Note because we want the parent task to
 wait on the barrier as well, the first argument (which is the number of tasks we
 want to wait on) is {\tt n+1}.
-\\
+
+\newpage
 \lstinputlisting{examples/barrier.c}
 {\footnotesize{\tt cc -o barrier -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread barrier.c}}
 \\
@@ -185,6 +187,93 @@ want to wait on) is {\tt n+1}.
 \includegraphics[scale=0.85]{barrier.png}
 \caption{Code showing usage of barrier function}
 \end{figure}
+
+\newpage
+\section{Accumulators and Reductions}
+One common design pattern is that of an \emph{accumulator} or a
+\emph{reduction}. These are used when we want to reduce a large amount of data
+to a value. For example, one might want to compute the maximum value from a
+large number array. There is a function for this kind of approach in qthreads
+called {\tt qt\_loopaccum\_balance}. A simple example of using {\tt
+qt\_loopaccum\_balance} is given below, which computes the sum of an array.
+
+The work is broken up into chunks, then each chunk is summed in the {\tt
+qtds\_worker} function, and then the sums are reduced using {\tt qtds\_acc}.
+Both the worker and the accumulator functions will be assigned to workers
+automically by the qthreads runtime. Note the types of the arguments for the
+worker. The second argument is {\tt const}, to make it clear that the value must
+be accumulated in the location pointed to by the first argument. 
+
+\lstinputlisting{examples/loopaccum_balance.c}
+{\footnotesize{\tt cc -o loop -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread loopaccum\_balance.c}}
+\\
+{\footnotesize{\tt ./loop}}
+\\
+\begin{figure}[h]
+\includegraphics[scale=0.95]{loopaccum_balance.png}
+\caption{Code showing usage of accumulator functionality}
+\end{figure}
+
+
+
+\subsection{Sincs}
+There may be use cases when you want to write your own reduction. For example,
+perhaps you might need some sort of tree-reduction. One tool in the qthreads
+toolbox that can be helpful for this sort of application is the sinc. In the
+following example, we use sincs to build an {\tt n}-ary tree of deth {\tt d}
+and sum the leaves in parallel.
+
+The sinc structure contains a function that works similarly to the function
+bound in the loopaccum example. The first argument is a pointer to the
+accumulator, and the second is a pointer to the value we want to accumulate.
+Note we create a new sinc at each node in the tree, waiting on its children. The
+{\tt qt\_sinc\_submit} function applies the accumulator function, in this case,
+{\tt incr} and adjusts the semaphore in the sinc structure such that when the
+correct number of submissions have been made (in this case {\tt n}), any threads
+waiting on the sinc (in this case only one) can continue.
+\\
+{\footnotesize{\tt cc -o loop -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread sinc.c}}
+\\
+{\footnotesize{\tt ./sinc}}
+\begin{figure}[h]
+\includegraphics[scale=1.0]{sinc.png}
+\caption{Code showing usage of sinc functionality}
+\end{figure}
+\newpage
+\lstinputlisting{examples/sinc.c}
+
+\newpage
+\section{Workers and Shepherds}
+
+As described in the introduction, the workers are usually bound one per core,
+while the shepherds (shared work queues) are often bound somewhere higher in the
+memory hierarchy. While qthreads will try and do The Right Thing$^{\circledR}$,
+there may be times where the user needs to set the number of workers or
+shepherds. The recommended way to do this is with environment variables. For
+example: running with {\tt QT\_NUM\_SHEPHERDS=8
+QT\_NUM\_WORKERS\_PER\_SHEPHERD=2} will yield 8 shepherds and 16 workers. You
+can check the number of workers and shepherds with the api calls {\tt
+qt\_num\_workers()} and {\tt qt\_num\_shepherds()}. For example:
+
+\lstinputlisting{examples/numworksheps.c}
+{\footnotesize{\tt cc -o num -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread numworksheps.c}}
+\\
+{\footnotesize{\tt ./num}}
+\begin{figure}[h]
+\includegraphics[scale=1.0]{num.png}
+\caption{Code showing usage of sinc functionality}
+\end{figure}
+
+\subsection{Worker ID}
+
+While not recommended for most use cases, there may be situations where one
+would want to use worker id explicitly. In the following example, we again do a
+simple sum reduction, this time explicitly taking into account the number of
+workers, and assigning each worker to a subset of the array to be summed.
+
+
+
+\lstinputlisting{examples/worker_id.c}
 
 \newpage
 \section{Calculating a Fibonacci number}
@@ -244,68 +333,6 @@ Finally, we have the code for the {\tt main} function of the program, which is s
 \end{figure}
 
 \lstinputlisting{examples/fib_preconditioned.c}
-
-\newpage
-\section{Accumulators and Reductions}
-One common design pattern is that of an \emph{accumulator} or a
-\emph{reduction}. These are used when we want to reduce a large amount of data
-to a value. For example, one might want to compute the maximum value from a
-large number array. There is a function for this kind of approach in qthreads
-called {\tt qt\_loopaccum\_balance}. A simple example of using {\tt
-qt\_loopaccum\_balance} is given below, which computes the sum of an array.
-\\
-
-\lstinputlisting{examples/loopaccum_balance.c}
-
-The work is broken up into chunks, then each chunk is summed in the {\tt
-qtds\_worker} function, and then the sums are reduced using {\tt qtds\_acc}.
-Both the worker and the accumulator functions will be assigned to workers
-automically by the qthreads runtime. Note the types of the arguments for the
-worker. The second argument is {\tt const}, to make it clear that the value must
-be accumulated in the location pointed to by the first argument. 
-
-\subsection{Sincs}
-There may be use cases when you want to write your own reduction. For example,
-perhaps you might need some sort of tree-reduction. One tool in the qthreads
-toolbox that can be helpful for this sort of application is the sinc. In the
-following example, we use sincs to build an {\tt n}-ary tree of deth {\tt d}
-and sum the leaves in parallel.
-\\
-
-\lstinputlisting{examples/sinc.c}
-
-The sinc structure contains a function that works similarly to the function
-bound in the loopaccum example. The first argument is a pointer to the
-accumulator, and the second is a pointer to the value we want to accumulate.
-Note we create a new sinc at each node in the tree, waiting on its children. The
-{\tt qt\_sinc\_submit} function applies the accumulator function, in this case,
-{\tt incr} and adjusts the semaphore in the sinc structure such that when the
-correct number of submissions have been made (in this case {\tt n}), any threads
-waiting on the sinc (in this case only one) can continue.
-
-\newpage
-\section{Workers and Shepherds}
-
-As described in the introduction, the workers are usually bound one per core,
-while the shepherds (shared work queues) are often bound somewhere higher in the
-memory hierarchy. While qthreads will try and do The Right Thing$^{\circledR}$,
-there may be times where the user needs to set the number of workers or
-shepherds. The recommended way to do this is with environment variables. For
-example: running with {\tt QT\_NUM\_SHEPHERDS=8
-QT\_NUM\_WORKERS\_PER\_SHEPHERD=2} will yield 8 shepherds and 16 workers. You
-can check the number of workers and shepherds with the api calls {\tt
-qt\_num\_workers()} and {\tt qt\_num\_shepherds()}. For example:
-
-\lstinputlisting{examples/numworksheps.c}
-
-\subsection{Worker ID}
-
-While not recommended for most use cases, there may be situations where one
-would want to use worker id explicitly. In the following example, we again do a
-simple sum reduction, this time explicitly taking into account the number of
-workers, and assigning each worker to a subset of the array to be summed.
-
-\lstinputlisting{examples/worker_id.c}
 
 \newpage
 \section{High Performance Asyncronous Behaviour}
