@@ -1,4 +1,8 @@
 qt-install
+num
+sinc
+worker
+loop
 hello
 barrier
 incr
