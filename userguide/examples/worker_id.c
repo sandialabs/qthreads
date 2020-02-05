@@ -5,17 +5,21 @@
 typedef struct Vector {
     int n;
     int *array;
+    int elems;
 } Vector;
 
 static aligned_t sum(void *arg){
     int i;
     int *array = ((Vector*) arg)->array;
     int n = ((Vector*)arg)->n;
+    int elems = ((Vector*)arg)->elems;
     int result = 0;
     qthread_worker_id_t id = qthread_worker(NULL);
 
-    for(i=0; i<n; i++)
+    for(i=0; i<elems; i++)
         result += array[id * n + i];
+
+    //printf("Id: %d\tindex: %d\n",(int)id,id*n+i);
 
     return result;
 }
@@ -26,15 +30,17 @@ int main(int argc, char *argv[]){
     qthread_initialize();
     int n = qthread_num_workers();
     int* array = malloc(n * elems_per_worker * sizeof(int));
-    aligned_t* return_value = malloc(n * elems_per_worker * sizeof(int)); 
+    aligned_t* return_value = malloc(n * sizeof(aligned_t)); 
     int i, results=0;
 
     printf("Number of workers: %d\n", n);
-    printf("Number of array elements: %d\n", n * elems_per_worker);
+    printf("Number of array elements: %d\n", n * elems_per_worker); 
+    //printf("Size of aligned_t: %d\n",sizeof(aligned_t));
 
     Vector input;
     input.n = n;
     input.array = array;
+    input.elems = elems_per_worker;
 
     for(i=0; i<n*elems_per_worker; i++)
         array[i] = rand(); 
@@ -46,6 +52,9 @@ int main(int argc, char *argv[]){
         qthread_readFF(NULL, return_value + i);
         results += return_value[i];
     }
+
+    //printf("Address of last return values: %d\n",return_value);
+    //printf("Address of last return values: %d\n",&return_value[i]);
 
     printf("Result: %d\n", results);
 
