@@ -55,9 +55,49 @@ Now, let's build the library:
 \\ \\
 If the above instructions worked, inside the qt-install directory you will have 3 directories: include, lib, and share.
 \\ \\ 
-To run the exmples below, please change into the examples directory:
+To run the examples in this userguide, please change into the examples directory:
 \\
 {\footnotesize{\tt cd userguide/examples}}
+
+\newpage
+\section{Workers and Shepherds}
+
+As described in the introduction, the workers are usually bound one per core,
+while the shepherds (shared work queues) are often bound somewhere higher in the
+memory hierarchy. While qthreads will try and do The Right Thing$^{\circledR}$,
+there may be times where the user needs to set the number of workers or
+shepherds. The recommended way to do this is with environment variables. For
+example: running with {\tt QT\_NUM\_SHEPHERDS=8
+QT\_NUM\_WORKERS\_PER\_SHEPHERD=2} will yield 8 shepherds and 16 workers. You
+can check the number of workers and shepherds with the api calls {\tt
+qtthread\_num\_workers()} and {\tt qthread\_num\_shepherds()}. For example:
+
+\lstinputlisting{examples/numworksheps.c}
+{\footnotesize{\tt cc -o num -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread numworksheps.c}}
+\\
+{\footnotesize{\tt ./num}}
+\begin{figure}[h]
+\includegraphics[scale=0.9]{num.png}
+\caption{Code showing number of workers and shepherds}
+\end{figure}
+
+\subsection{Worker ID}
+
+While not recommended for most use cases, there may be situations where one
+would want to use worker id explicitly. In the following example, we again do a
+simple sum reduction, this time explicitly taking into account the number of
+workers, and assigning each worker to a subset of the array to be summed.
+\\
+{\footnotesize{\tt cc -o num -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread worker\_id.c}}
+\\
+{\footnotesize{\tt ./worker}}
+\begin{figure}[h]
+\includegraphics[scale=0.88]{worker.png}
+\caption{Code showing usage of worker\_id}
+\end{figure}
+\newpage
+\lstinputlisting{examples/worker_id.c}
+
 
 \newpage
 \section{Simple Qthreads Example Programs}
@@ -67,7 +107,9 @@ To run the exmples below, please change into the examples directory:
 The following code shows a simple ``hello, world" example program using the qthreads API:
 \lstinputlisting{examples/hello_world.c}
 
-After initializing qthreads using the {\tt qthread\_initialize} API call, the program generates a single qthread through the {\tt qthread\_fork} API call.  The first argument to the call is the function to be executed by the qthread.  The second argument to the call is an argument of type {\tt void*} to be passed to the specified function.  The third argument to the call is a pointer of type {\tt aligned\_t*} to the location into which the return value of the function will be placed upon completion of the qthread.  In the case of this program, the call is to the function called {\tt greeter}, which does not use its argument and simply prints ``Hello, world!'', then returns 0.  The {\tt qthread\_read\_FF} API call waits for the return value produced by the completion of the qthread.  Its two arguments are of type {\tt aligned\_t*}.  The first argument specifies a destination address to store the value that is read (unused in this program), and the second specifies the source address for the value.
+After initializing qthreads using the {\tt qthread\_initialize} API call, the program generates a single qthread through the {\tt qthread\_fork} API call.  The first argument to the call is the function to be executed by the qthread.  The second argument to the call is an argument of type {\tt void*} to be passed to the specified function.  The third argument to the call is a pointer of type {\tt aligned\_t*} to the location into which the return value of the function will be placed upon completion of the qthread.  In the case of this program, the call is to the function called {\tt greeter}, which does not use its argument and simply prints ``Hello, world!'', then returns 0.  
+
+The {\tt qthread\_read\_FF} API call waits for the return value produced by the completion of the qthread.  Its two arguments are of type {\tt aligned\_t*}.  The first argument specifies a destination address to store the value that is read (unused in this program), and the second specifies the source address for the value.
 As a library-based API, Qthreads does not require any special compiler support.  The following is an example command to compile the program:
 \\ \\
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world.c}}
@@ -103,7 +145,7 @@ Now consider a more interesting variation on the ``hello, world" example.  The f
 \\
 \lstinputlisting{examples/hello_world_multiple.c}
 
-In this example, each qthread prefaces its ``hello, world" message with the value of its argument.  Note that the messages may be printed in any order, since all the qthreads are generated before waiting on any of the return values.  Calling {\tt qthread\_readFF} immediately after generating each qthread would guarantee that they execute in order, but would also serialize the execution.
+In this example, each qthread prefaces its ``hello, world" message with the value of its argument.  Note that the messages may be printed in any order, since all the qthreads are generated before waiting on any of the return values.  Calling {\tt qthread\_readFF}, which is a blocking function, immediately after generating each qthread would guarantee that they execute in order, but would also serialize the execution.
 \\ \\
 {\footnotesize{\tt cc -o hello -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread hello\_world\_multiple.c}}
 \\
@@ -243,39 +285,6 @@ waiting on the sinc (in this case only one) can continue.
 \lstinputlisting{examples/sinc.c}
 
 \newpage
-\section{Workers and Shepherds}
-
-As described in the introduction, the workers are usually bound one per core,
-while the shepherds (shared work queues) are often bound somewhere higher in the
-memory hierarchy. While qthreads will try and do The Right Thing$^{\circledR}$,
-there may be times where the user needs to set the number of workers or
-shepherds. The recommended way to do this is with environment variables. For
-example: running with {\tt QT\_NUM\_SHEPHERDS=8
-QT\_NUM\_WORKERS\_PER\_SHEPHERD=2} will yield 8 shepherds and 16 workers. You
-can check the number of workers and shepherds with the api calls {\tt
-qt\_num\_workers()} and {\tt qt\_num\_shepherds()}. For example:
-
-\lstinputlisting{examples/numworksheps.c}
-{\footnotesize{\tt cc -o num -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread numworksheps.c}}
-\\
-{\footnotesize{\tt ./num}}
-\begin{figure}[h]
-\includegraphics[scale=1.0]{num.png}
-\caption{Code showing usage of sinc functionality}
-\end{figure}
-
-\subsection{Worker ID}
-
-While not recommended for most use cases, there may be situations where one
-would want to use worker id explicitly. In the following example, we again do a
-simple sum reduction, this time explicitly taking into account the number of
-workers, and assigning each worker to a subset of the array to be summed.
-
-
-
-\lstinputlisting{examples/worker_id.c}
-
-\newpage
 \section{Calculating a Fibonacci number}
 
 The following example illustrates naive brute-force calculation of the {\it n}-th Fibonacci number using recursive task parallelism. The program begins by generating a single qthread to execute the {\tt fib} function with the argument indicating which Fibonacci number ({\tt n}) to calculate.  The {\tt fib} function then calls itself recursively with arguments {\tt n-1} and {\tt n-2} until the base case of the recursion is satisfied. The program keeps track of the total number of created
@@ -301,7 +310,7 @@ The program in the previous example generates a single qthread to execute each a
 {\footnotesize{\tt time ./fib 24}}
 
 \begin{figure}[h]
-\includegraphics[scale=0.90]{images/fib_fast.png}
+\includegraphics[scale=0.90]{fib_fast.png}
 \caption{Faster version of the Fibonacci calculation}
 \end{figure}
 
@@ -327,8 +336,8 @@ Finally, we have the code for the {\tt main} function of the program, which is s
 {\footnotesize{\tt time ./fib 24}}
 \newpage
 
-\begin{figure}
-\includegraphics[scale=0.95]{images/fib_preconditioned.png}
+\begin{figure}[h]
+\includegraphics[scale=0.95]{fib_preconditioned.png}
 \caption{Precondition version of Fibonacci calculation}
 \end{figure}
 
@@ -344,7 +353,6 @@ tcp server that reads in an integer and computes the fibonacci sequence at that
 index. While this could be done with a fork or pthread, this approach will allow
 significantly higher throughput by reducing the overhead of spawning the task.  
 
-\lstinputlisting{examples/tcpserver.c}
 
 Note there is an unfamiliar API call here as well: {\tt qthread\_flushsc}. The
 current default behaviour is to buffer tasks before moving them into the queue.
@@ -353,7 +361,25 @@ To test this example, simply telnet or netcat to localhost port 5000 and
 enter some numbers (remember it's naive fibonacci, so don't enter large numbers
 if you want a result!). To get interesting asynchronous behaviour, responses will
 likely start slowing down around {\tt n = 40}.
+\\
+{\footnotesize{\tt cc -o tcp -I\$QTHREAD\_INC -L\$QTHREAD\_LIB -lqthread tcpserver.c}}
+\\
+{\footnotesize{\tt ./tcp \&}}
+\\
+{\footnotesize{\tt telnet localhost 5000}}
+\\
+{\footnotesize{\tt 1}}
+\\
+{\footnotesize{\tt 24}}
 
+\begin{figure}[h]
+\includegraphics[scale=0.75]{tcp.png}
+\caption{Precondition version of Fibonacci calculation}
+\end{figure}
+
+\lstinputlisting{examples/tcpserver.c}
 % TODO: yield, spawn cache
+%\section {Yield}
+%\section {Spawn Cache}
 
 \end{document}
