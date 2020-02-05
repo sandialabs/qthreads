@@ -35,7 +35,6 @@ int main(int argc, char *argv[]){
 
     printf("Number of workers: %d\n", n);
     printf("Number of array elements: %d\n", n * elems_per_worker); 
-    //printf("Size of aligned_t: %d\n",sizeof(aligned_t));
 
     Vector input;
     input.n = n;
@@ -52,9 +51,6 @@ int main(int argc, char *argv[]){
         qthread_readFF(NULL, return_value + i);
         results += return_value[i];
     }
-
-    //printf("Address of last return values: %d\n",return_value);
-    //printf("Address of last return values: %d\n",&return_value[i]);
 
     printf("Result: %d\n", results);
 
