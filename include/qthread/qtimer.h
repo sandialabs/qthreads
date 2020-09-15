@@ -1,7 +1,7 @@
 #ifndef QTHREAD_TIMER
 #define QTHREAD_TIMER
 
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX /* */
 

@@ -1,8 +1,8 @@
 #ifndef QTHREAD_ALLPAIRS_H
 #define QTHREAD_ALLPAIRS_H
 
-#include <qthread/macros.h>
-#include <qthread/qarray.h>
+#include "macros.h"
+#include "qarray.h"
 
 Q_STARTCXX                             /* */
 typedef void (*dist_f)(const void *unit1, const void *unit2);

@@ -1,9 +1,9 @@
 #ifndef QTHREAD_HASH_H
 #define QTHREAD_HASH_H
 
-#include <qthread/macros.h>
-#include <qthread/common.h>            /* important configuration options */
-#include <qthread/qthread.h>           /* for uint64_t, uint8_t, and aligned_t types */
+#include "macros.h"
+#include "common.h"            /* important configuration options */
+#include "qthread.h"           /* for uint64_t, uint8_t, and aligned_t types */
 
 Q_STARTCXX /* */
 

@@ -1,9 +1,9 @@
 #ifndef QTHREAD_QARRAY_H
 #define QTHREAD_QARRAY_H
 
-#include <qthread/qthread-int.h>
-#include <qthread/macros.h>
-#include <qthread/qloop.h>
+#include "qthread-int.h"
+#include "macros.h"
+#include "qloop.h"
 
 Q_STARTCXX                             /* */
 typedef enum {

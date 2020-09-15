@@ -7,7 +7,7 @@
 #include <sys/resource.h> /* for struct rusage */
 #include <poll.h>         /* for struct pollfd and nfds_t */
 
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX /* */
 
