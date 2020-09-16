@@ -1,7 +1,7 @@
 #ifndef QTHREAD_QUTIL_H
 #define QTHREAD_QUTIL_H
 
-#include <qthread/qthread.h>
+#include "qthread.h"
 
 Q_STARTCXX /* */
 

@@ -3,7 +3,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX /* */
 

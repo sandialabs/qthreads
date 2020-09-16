@@ -3,7 +3,7 @@
 
 #include <stddef.h>                    /* for size_t (according to C89) */
 
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX /* */
 

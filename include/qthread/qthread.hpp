@@ -8,8 +8,8 @@
 
 #include <limits>
 
-#include <qthread/qthread.h>
-#include <qthread/syncvar.hpp>
+#include "qthread.h"
+#include "syncvar.hpp"
 
 template <bool> class OnlyTrue;
 template <> class OnlyTrue<true>

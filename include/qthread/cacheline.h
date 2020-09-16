@@ -1,7 +1,7 @@
 #ifndef QTHREAD_CACHELINE_H
 #define QTHREAD_CACHELINE_H
 
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX                             /* */
 int qthread_cacheline(void);

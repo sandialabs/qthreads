@@ -1,6 +1,6 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX /* */
 

@@ -1,7 +1,7 @@
 #ifndef QTHREAD_WAVEFRONT_H
 #define QTHREAD_WAVEFRONT_H
 
-#include <qthread/qarray.h>
+#include "qarray.h"
 
 Q_STARTCXX                             /* */
 typedef void (*wave_comp_f)(const void *restrict left,

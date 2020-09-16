@@ -1,7 +1,7 @@
 #ifndef QTHREAD_QLFQUEUE_H
 #define QTHREAD_QLFQUEUE_H
 
-#include <qthread/macros.h>
+#include "macros.h"
 
 Q_STARTCXX /* */
 

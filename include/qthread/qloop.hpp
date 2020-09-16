@@ -1,7 +1,7 @@
 #ifndef QLOOP_HPP
 #define QLOOP_HPP
 
-#include <qthread/qloop.h>
+#include "qloop.h"
 
 template <typename T>
 void qloop_cpp_wrapper(size_t startat,

@@ -2,7 +2,7 @@
 #define QTHREAD_SYNCVAR_HPP
 
 #include <assert.h>
-#include <qthread/qthread.h>
+#include "qthread.h"
 
 class syncvar;
 

@@ -1,7 +1,7 @@
 #ifndef QTHREAD_QLOOP
 #define QTHREAD_QLOOP
 
-#include <qthread/qthread.h>
+#include "qthread.h"
 
 Q_STARTCXX                             /* */
 /* for convenient arguments to qt_loop */

@@ -1,8 +1,8 @@
 #ifndef QTHREAD_LOG_BARRIER_H
 #define QTHREAD_LOG_BARRIER_H
 
-#include <qthread/macros.h>
-#include <qthread/qthread.h>
+#include "macros.h"
+#include "qthread.h"
 
 Q_STARTCXX
 /************************************************************/
