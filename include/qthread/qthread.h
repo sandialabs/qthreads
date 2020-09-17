@@ -447,8 +447,12 @@ int qthread_syncvar_fill(syncvar_t *restrict dest);
  */
 int qthread_writeEF(aligned_t *restrict       dest,
                     const aligned_t *restrict src);
+int qthread_writeEF_nb(aligned_t *restrict const       dest,
+                    const aligned_t *restrict const src);
 int qthread_writeEF_const(aligned_t      *dest,
                           const aligned_t src);
+int qthread_writeEF_const_nb(aligned_t *const dest,
+                            const aligned_t  src);
 int qthread_syncvar_writeEF(syncvar_t *restrict      dest,
                             const uint64_t *restrict src);
 int qthread_syncvar_writeEF_const(syncvar_t *restrict dest,
@@ -517,6 +521,8 @@ int qthread_writeFF_const(aligned_t *dest,
  */
 int qthread_readFF(aligned_t       *dest,
                    const aligned_t *src);
+int qthread_readFF_nb(aligned_t *restrict const       dest,
+                    const aligned_t *restrict const src);
 int qthread_syncvar_readFF(uint64_t *restrict  dest,
                            syncvar_t *restrict src);
 
@@ -531,6 +537,8 @@ int qthread_syncvar_readFF(uint64_t *restrict  dest,
  */
 int qthread_readFE(aligned_t       *dest,
                    const aligned_t *src);
+int qthread_readFE_nb(aligned_t *restrict const       dest,
+                    const aligned_t *restrict const src);
 int qthread_syncvar_readFE(uint64_t *restrict  dest,
                            syncvar_t *restrict src);
 
