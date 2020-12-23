@@ -333,7 +333,7 @@ void INTERNAL qt_affinity_mem_tonode(void  *addr,
 
     DEBUG_ONLY(hwloc_topology_check(topology));
     hwloc_bitmap_set(nodeset, node);
-    hwloc_set_area_membind_nodeset(topology, addr, bytes, nodeset,
+    hwloc_set_area_membind(topology, addr, bytes, nodeset,
                                    HWLOC_MEMBIND_BIND,
                                    HWLOC_MEMBIND_NOCPUBIND);
     hwloc_bitmap_free(nodeset);
@@ -354,7 +354,7 @@ void INTERNAL *qt_affinity_alloc_onnode(size_t bytes,
     DEBUG_ONLY(hwloc_topology_check(topology));
     nodeset = hwloc_bitmap_alloc();
     hwloc_bitmap_set(nodeset, node);
-    ret = hwloc_alloc_membind_nodeset(topology, bytes, nodeset,
+    ret = hwloc_alloc_membind(topology, bytes, nodeset,
                                       HWLOC_MEMBIND_BIND,
                                       HWLOC_MEMBIND_NOCPUBIND);
     hwloc_bitmap_free(nodeset);
