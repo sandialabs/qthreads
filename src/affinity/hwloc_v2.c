@@ -683,7 +683,7 @@ void INTERNAL qt_affinity_mem_tonode(void  *addr,
 
     DEBUG_ONLY(hwloc_topology_check(sys_topo));
     hwloc_bitmap_set(nodeset, node);
-    hwloc_set_area_membind_nodeset(sys_topo, addr, bytes, nodeset,
+    hwloc_set_area_membind(sys_topo, addr, bytes, nodeset,
                                    HWLOC_MEMBIND_BIND,
                                    HWLOC_MEMBIND_NOCPUBIND);
     hwloc_bitmap_free(nodeset);
