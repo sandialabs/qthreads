@@ -2,10 +2,7 @@
 
 Improvements:
  - Add support for Spack testing (spack test run qthreads)
-
-Bugfixes:
- - Fix compilation error when using HWLOC2.x
- - Remove use of deprecated hwloc APIs (minimal required version is hwloc1.15)
+ - Add support for hwloc2.x (minimal required version is hwloc1.5)
 
 Documentation:
  - User guide for basic Qthreads usage (see userguide subdirectory for LaTex and included code source files)
