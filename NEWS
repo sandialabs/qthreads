@@ -1,9 +1,13 @@
---- 1.16 (anticipated 2020) ---
+--- 1.16 (current) ---
+
+Improvements:
+ - Add support for Spack testing (spack test run qthreads)
+ - Add support for hwloc2.x (minimal required version is hwloc1.5)
 
 Documentation:
  - User guide for basic Qthreads usage (see userguide subdirectory for LaTex and included code source files)
  
---- 1.15 (current) ---
+--- 1.15 ---
 
 New Features:
  - Add experimental support for Thread Local Storage and new Condition variable initializers
