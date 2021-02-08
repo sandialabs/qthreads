@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  linux_make_check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scheduler: [nemesis, sherwood]
+        topology: [hwloc, no]
+    steps:
+    - uses: actions/checkout@v2
+    - name: install hwloc
+      run: |
+        sudo apt-get install hwloc libhwloc-dev
+        hwloc-ls --version
+    - name: build qthreads
+      run: |
+        ./autogen.sh
+        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
+        make
+    - name: make check
+      run: |
+        make check
+
+  mac_build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install deps
+      run: |
+        brew install autoconf automake libtool
+    - name: install hwloc
+      run: |
+        brew install hwloc
+        hwloc-ls --version
+    - name: build qthreads
+      run: |
+        ./autogen.sh
+        ./configure --enable-picky
+        make
+## Currently hangs on OSX -- https://github.com/Qthreads/qthreads/issues/59
+#    - name: make check
+#      run: |
+#        make check
