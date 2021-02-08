@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         scheduler: [nemesis, sherwood]
-        topology: [hwloc, no]
+        topology: [hwloc, binders, no]
     steps:
     - uses: actions/checkout@v2
     - name: install hwloc
