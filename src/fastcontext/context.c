@@ -150,6 +150,29 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     ucp->mc.first    = 1;
 }
 
+#elif defined(NEEDARMM64AKECONTEXT)
+/* This function is entirely copyright Sandia National Laboratories */
+void INTERNAL qt_makectxt(uctxt_t *ucp,
+                          void     (*func)(void),
+                          int      argc,
+                          ...)
+{
+    va_list arg;
+    //set stack segment
+    uint64_t top_of_stack = ucp->uc_stack.ss_sp;
+    top_of_stack += ucp->uc_stack.ss_size / sizeof(void *);
+
+    /* now copy from my arg list to the function's arglist and put into registers */
+    va_start(arg, argc);
+    for (int i = 0; i < argc; i++) {
+        ucp->mc.regs[i] = va_arg(arg, uint64_t);
+    }
+    va_end(arg);
+
+    ucp->mc.regs[30] = (uintptr_t)func;         // LR so that swapcontext returns into it
+    ucp->mc.regs[31] = (uintptr_t)top_of_stack; // SP
+    ucp->mc.first    = 1;
+
 #endif /* ifdef NEEDPOWERMAKECONTEXT */
 
 #ifdef NEEDSWAPCONTEXT

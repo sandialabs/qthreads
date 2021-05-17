@@ -50,6 +50,10 @@
 #  define NEEDARMCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+#  define NEEDARMA64CONTEXT 1
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
 #  define NEEDTILEPROCONTEXT 1
 #  define SET _qt_setmctxt
@@ -782,6 +786,73 @@ SET:
         blr
 #endif
 
+#ifdef NEEDARMA64CONTEXT
+#warning NEEDARMA64CONTEXT
+#warning GET SET
+/* Register Usage:
+ * X0 - holds pointer to context
+ * X1 - X30 - GP registers
+ */
+.globl GET
+.global GET
+.type GET, %function
+GET:
+        stp     X1, X2, [X0,#8]
+        stp     X3, X4, [X0,#24]
+        stp     X5, X6, [X0,#40]
+        stp     X7, X8, [X0,#56]
+        stp     X9, X10, [X0,#72]
+        stp     X11, X12, [X0,#88]
+        stp     X13, X14, [X0,#104]
+        stp     X15, X16, [X0,#120]
+        stp     X17, X18, [X0,#136]
+        stp     X19, X20, [X0,#152]
+        stp     X21, X22, [X0,#168]  
+        stp     X23, X24, [X0,#184]  
+        stp     X25, X26, [X0,#200]  
+        stp     X27, X28, [X0,#216]
+        stp     X29, X30, [X0,#232]     (/* X30 is LR) */)
+        str     SP, [X0,#248]           _(/* sp */)
+        _(/*) store 1 as X0-to-restore */)
+        mov     X1, #1
+        str     X1, [X0]                _(/* arg 1 / RET 1 */)
+        _(/*) return 0 */)
+        mov     X0, #0
+	bx      lr
+/*
+ * TODO: add vector registers for both NEON and SVE
+ * https://developer.arm.com/documentation/102374/0101/Loads-and-stores---using-floating-point-registers
+ */
+
+.globl SET
+.global SET
+.type SET, %function
+SET:
+        ldp     X1, X2, [X0,#8]
+        ldp     X3, X4, [X0,#24]
+        ldp     X5, X6, [X0,#40]
+        ldp     X7, X8, [X0,#56]
+        ldp     X9, X10, [X0,#72]
+        ldp     X11, X12, [X0,#88]
+        ldp     X13, X14, [X0,#104]
+        ldp     X15, X16, [X0,#120]
+        ldp     X17, X18, [X0,#136]
+        ldp     X19, X20, [X0,#152]
+        ldp     X21, X22, [X0,#168]  
+        ldp     X23, X24, [X0,#184]  
+        ldp     X25, X26, [X0,#200]  
+        ldp     X27, X28, [X0,#216]
+        ldp     X29, X30, [X0,#232]  (/* X30 is LR) */)
+        ldr     SP, [X0,#248]      _(/* sp */)
+        ldr     X0, [X0]
+	bx      lr
+#endif
+
+#if defined(__ELF__) && !defined(__SUNPRO_C)
+.section .note.GNU-stack,"",%progbits
+#endif
+
+
 #ifdef NEEDARMCONTEXT
 #warning NEEDARMCONTEXT
 #warning GET SET
@@ -854,4 +925,3 @@ SET:
 #if defined(__ELF__) && !defined(__SUNPRO_C)
 .section .note.GNU-stack,"",%progbits
 #endif
-
