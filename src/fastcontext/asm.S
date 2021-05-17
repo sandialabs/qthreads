@@ -818,7 +818,7 @@ GET:
         str     X1, [X0]                _(/* arg 1 / RET 1 */)
         _(/*) return 0 */)
         mov     X0, #0
-	bx      lr
+	ret
 /*
  * TODO: add vector registers for both NEON and SVE
  * https://developer.arm.com/documentation/102374/0101/Loads-and-stores---using-floating-point-registers
@@ -845,7 +845,7 @@ SET:
         ldp     X29, X30, [X0,#232]  (/* X30 is LR) */)
         ldr     SP, [X0,#248]      _(/* sp */)
         ldr     X0, [X0]
-	bx      lr
+	ret
 #endif
 
 #if defined(__ELF__) && !defined(__SUNPRO_C)
