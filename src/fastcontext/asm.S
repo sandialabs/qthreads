@@ -797,6 +797,7 @@ SET:
 .global GET
 .type GET, %function
 GET:
+        /* Store GP registers */
         stp     X1, X2, [X0,#8]
         stp     X3, X4, [X0,#24]
         stp     X5, X6, [X0,#40]
@@ -811,12 +812,34 @@ GET:
         stp     X23, X24, [X0,#184]  
         stp     X25, X26, [X0,#200]  
         stp     X27, X28, [X0,#216]
-        stp     X29, X30, [X0,#232]     (/* X30 is LR) */)
-        str     SP, [X0,#248]           _(/* sp */)
-        _(/*) store 1 as X0-to-restore */)
+        stp     X29, X30, [X0,#232]     /* X30 is LR */
+        str     SP, [X0,#248]           /* sp */
+
+        /* Store vector registers */
+        add     X0, X0, #256            /* Update pointer to avoid immediate growing to large for STP/LDP instruction */
+        stp     Q0, Q1, [X0]
+        stp     Q2, Q3, [X0,#32]
+        stp     Q4, Q5, [X0,#64]
+        stp     Q6, Q7, [X0,#96]
+        stp     Q8, Q9, [X0,#128]
+        stp     Q10, Q11, [X0,#160]
+        stp     Q12, Q13, [X0,#192]
+        stp     Q14, Q15, [X0,#224]
+        stp     Q16, Q17, [X0,#256]
+        stp     Q18, Q19, [X0,#288]
+        stp     Q20, Q21, [X0,#320]
+        stp     Q22, Q23, [X0,#352]
+        stp     Q24, Q25, [X0,#384]
+        stp     Q26, Q27, [X0,#416]
+        stp     Q28, Q29, [X0,#448]
+        stp     Q30, Q31, [X0,#480]
+        sub     X0, X0, #256
+
+        /* Store 1 as X0-to-restore */
         mov     X1, #1
-        str     X1, [X0]                _(/* arg 1 / RET 1 */)
-        _(/*) return 0 */)
+        str     X1, [X0]                
+        
+        /* return 0 */
         mov     X0, #0
 	ret
 /*
@@ -828,6 +851,7 @@ GET:
 .global SET
 .type SET, %function
 SET:
+        /* Load GP registers */
         ldp     X1, X2, [X0,#8]
         ldp     X3, X4, [X0,#24]
         ldp     X5, X6, [X0,#40]
@@ -842,16 +866,33 @@ SET:
         ldp     X23, X24, [X0,#184]  
         ldp     X25, X26, [X0,#200]  
         ldp     X27, X28, [X0,#216]
-        ldp     X29, X30, [X0,#232]  (/* X30 is LR) */)
-        ldr     SP, [X0,#248]      _(/* sp */)
+        ldp     X29, X30, [X0,#232]
+        ldr     SP, [X0,#248]
+        
+
+        /* Load vector registers */
+        add     X0, X0, #256
+        ldp     Q0, Q1, [X0]
+        ldp     Q2, Q3, [X0,#32]
+        ldp     Q4, Q5, [X0,#64]
+        ldp     Q6, Q7, [X0,#96]
+        ldp     Q8, Q9, [X0,#128]
+        ldp     Q10, Q11, [X0,#160]
+        ldp     Q12, Q13, [X0,#192]
+        ldp     Q14, Q15, [X0,#224]
+        ldp     Q16, Q17, [X0,#256]
+        ldp     Q18, Q19, [X0,#288]
+        ldp     Q20, Q21, [X0,#320]
+        ldp     Q22, Q23, [X0,#352]
+        ldp     Q24, Q25, [X0,#384]
+        ldp     Q26, Q27, [X0,#416]
+        ldp     Q28, Q29, [X0,#448]
+        ldp     Q30, Q31, [X0,#480]
+        sub     X0, X0, #256
+
         ldr     X0, [X0]
 	ret
 #endif
-
-#if defined(__ELF__) && !defined(__SUNPRO_C)
-.section .note.GNU-stack,"",%progbits
-#endif
-
 
 #ifdef NEEDARMCONTEXT
 #warning NEEDARMCONTEXT
@@ -898,7 +939,7 @@ GET:
         str     r1, [r0]           _(/* arg 1 / RET 1 */)
         _(/*) return 0 */)
         mov     r0, #0
-		bx      lr
+	bx      lr
 
 .globl SET
 .global SET
@@ -919,7 +960,7 @@ SET:
         ldr     r13, [r0,#52]
         ldr     r14, [r0,#56]
         ldr     r0, [r0]
-		bx      lr
+	bx      lr
 #endif
 
 #if defined(__ELF__) && !defined(__SUNPRO_C)

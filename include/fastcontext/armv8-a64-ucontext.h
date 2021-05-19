@@ -15,6 +15,7 @@ typedef struct uctxt uctxt_t;
 struct mctxt {
     /* Saved main processor registers. */
     uint64_t regs[32]; /* callee saves x0-x30, SP */
+    uint128_t regs[32]; /* SIMD Neon Registers*/
     char first;
 };
 
