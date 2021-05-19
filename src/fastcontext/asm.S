@@ -815,6 +815,7 @@ GET:
         stp     X29, X30, [X0,#232]     /* X30 is LR */
         str     SP, [X0,#248]           /* sp */
 
+#ifdef ARMA64_CONTEXT_SWITCH_NEON_REGS
         /* Store vector registers */
         add     X0, X0, #256            /* Update pointer to avoid immediate growing to large for STP/LDP instruction */
         stp     Q0, Q1, [X0]
@@ -834,14 +835,14 @@ GET:
         stp     Q28, Q29, [X0,#448]
         stp     Q30, Q31, [X0,#480]
         sub     X0, X0, #256
-
+#endif
         /* Store 1 as X0-to-restore */
         mov     X1, #1
         str     X1, [X0]                
         
         /* return 0 */
         mov     X0, #0
-	ret
+		ret
 /*
  * TODO: add vector registers for both NEON and SVE
  * https://developer.arm.com/documentation/102374/0101/Loads-and-stores---using-floating-point-registers
@@ -869,7 +870,7 @@ SET:
         ldp     X29, X30, [X0,#232]
         ldr     SP, [X0,#248]
         
-
+#ifdef ARMA64_CONTEXT_SWITCH_NEON_REG
         /* Load vector registers */
         add     X0, X0, #256
         ldp     Q0, Q1, [X0]
@@ -889,10 +890,9 @@ SET:
         ldp     Q28, Q29, [X0,#448]
         ldp     Q30, Q31, [X0,#480]
         sub     X0, X0, #256
-
-        ldr     X0, [X0]
-	ret
 #endif
+        ldr     X0, [X0]
+		ret
 
 #ifdef NEEDARMCONTEXT
 #warning NEEDARMCONTEXT
