@@ -21,7 +21,7 @@ struct mctxt {
 	#endif
 #else
     uint32_t regs[16]; /* callee saves r0-r15 */
-#endifs
+#endif
     char first;
 };
 
