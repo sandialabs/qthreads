@@ -40,9 +40,9 @@
 # ifdef HAVE_STDARG_H
 #  include <stdarg.h>
 # endif
-# define NEEDARMA64CONTEXT
+# define NEEDARMA64MAKECONTEXT
 # define NEEDSWAPCONTEXT
-# include "armv8-a64-ucontext.h"
+# include "arm-ucontext.h"
 #else
 # error This platform has no fastcontext support
 #endif

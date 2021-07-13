@@ -9,8 +9,6 @@
 #endif
 #include "qthread/common.h"
 
-#define QTHREAD_ARMV8_A64 5
-
 #define _(x)
 
 #if defined(__FreeBSD__) &&  __FreeBSD__ < 5

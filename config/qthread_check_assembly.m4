@@ -201,6 +201,10 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
 	  qthread_gcc_inline_assign='"movt %0, #5" : "=&r"(ret)'
 	;;
 
+	*aarch64*)
+		qthread_cv_asm_arch="ARMV8_A64"
+	;;
+
     mips-*|mips64-*)
       # Should really find some way to make sure that we are on
       # a MIPS III machine (r4000 and later)

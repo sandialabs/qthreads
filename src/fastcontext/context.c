@@ -150,7 +150,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     ucp->mc.first    = 1;
 }
 
-#elif defined(NEEDARMM64AKECONTEXT)
+#elif defined(NEEDARMA64MAKECONTEXT)
 /* This function is entirely copyright Sandia National Laboratories */
 void INTERNAL qt_makectxt(uctxt_t *ucp,
                           void     (*func)(void),
@@ -172,6 +172,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     ucp->mc.regs[30] = (uintptr_t)func;         // LR so that swapcontext returns into it
     ucp->mc.regs[31] = (uintptr_t)top_of_stack; // SP
     ucp->mc.first    = 1;
+}
 
 #endif /* ifdef NEEDPOWERMAKECONTEXT */
 
