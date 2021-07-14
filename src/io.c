@@ -211,6 +211,7 @@ int INTERNAL qt_process_blocking_call(void)
                                 (const struct sockaddr *)item->args[1],
                                 (socklen_t)item->args[2]);
 #endif      /* if HAVE_DECL_SYS_CONNECT */
+            item->err = errno;
             break;
         }
         case POLL:
