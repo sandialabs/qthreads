@@ -211,7 +211,6 @@ int INTERNAL qt_process_blocking_call(void)
                                 (const struct sockaddr *)item->args[1],
                                 (socklen_t)item->args[2]);
 #endif      /* if HAVE_DECL_SYS_CONNECT */
-            item->err = errno;
             break;
         }
         case POLL:
@@ -358,6 +357,8 @@ int INTERNAL qt_process_blocking_call(void)
             break;
         }
     }
+    /* preserve errno in item */
+    item->err = errno;
     /* and now, re-queue */
     qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread);
     FREE_SYSCALLJOB(item);
