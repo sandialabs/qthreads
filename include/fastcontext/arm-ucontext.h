@@ -2,6 +2,10 @@
 # include <config.h>
 #endif
 
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+  #define NEEDARMA64CONTEXT
+#endif
+
 #include <stddef.h> /* for size_t, per C89 */
 #include "qthread/qthread-int.h" /* for uint32_t */
 
