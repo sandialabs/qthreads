@@ -159,8 +159,9 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
 {
     va_list arg;
     //set stack segment
-    uint64_t top_of_stack = ucp->uc_stack.ss_sp;
-    top_of_stack += ucp->uc_stack.ss_size / sizeof(void *);
+    uint64_t top_of_stack = (uint64_t) (ucp->uc_stack.ss_sp);
+    uint64_t size_of_stack = ucp->uc_stack.ss_size / sizeof(void *);
+    top_of_stack += size_of_stack;
 
     /* now copy from my arg list to the function's arglist and put into registers */
     va_start(arg, argc);
