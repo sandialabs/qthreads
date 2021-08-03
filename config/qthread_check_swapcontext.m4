@@ -65,9 +65,9 @@ AC_CACHE_CHECK([whether swapcontext works properly],
   [qthread_cv_swapcontext_works],
   [
   case "$host" in
-  *-darwin*)
-  qthread_cv_swapcontext_works=no
-  ;;
+#  *-darwin*)
+#  qthread_cv_swapcontext_works=no
+#  ;;
   *)
   AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <ucontext.h>
