@@ -8,6 +8,7 @@ Improvements:
  - Add --with-hwloc-symbol-prefix configure option
  - Add errno preservation from system calls
  - Fix compilation errors on M1 MAC computers
+ - Remove Loxley experimental schedulers
 
 --- 1.16 ---
 
