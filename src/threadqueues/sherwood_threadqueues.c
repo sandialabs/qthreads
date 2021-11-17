@@ -245,7 +245,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
         q->tail              = NULL;
         q->qlength           = 0;
         q->qlength_stealable = 0;
-        QTHREAD_TRYLOCK_INIT(q->qlock);
+        QTHREAD_TRYLOCK_INIT_PTR(&q->qlock);
     }
 
     return q;
@@ -287,7 +287,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
         QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
     }
     assert(q->head == q->tail);
-    QTHREAD_TRYLOCK_DESTROY(q->qlock);
+    QTHREAD_TRYLOCK_DESTROY_PTR(&q->qlock);
     FREE_THREADQUEUE(q);
 } /*}}}*/
 

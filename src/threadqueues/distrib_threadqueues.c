@@ -116,7 +116,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
       q->head              = NULL;
       q->tail              = NULL;
       q->qlength           = 0;
-      QTHREAD_TRYLOCK_INIT(q->qlock);
+      QTHREAD_TRYLOCK_INIT_PTR(&q->qlock);
     }
   }
   for(size_t i=0; i<qlib->nshepherds * qlib->nworkerspershep; i++){
@@ -152,7 +152,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *qe){
       QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
     }
     assert(q->head == q->tail);
-    QTHREAD_TRYLOCK_DESTROY(q->qlock);
+    QTHREAD_TRYLOCK_DESTROY_PTR(&q->qlock);
   }
   QTHREAD_COND_DESTROY(qe->cond);
   free_threadqueue(qe);
