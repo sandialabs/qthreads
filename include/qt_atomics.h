@@ -5,7 +5,19 @@
 
 #include <qthread/common.h>
 #include <qthread/qthread.h>
+
+#ifndef __STDC_NO_ATOMICS__
+#define USE_C11_MEMORY_FENCE
 #include <stdatomic.h>
+#endif
+
+#ifdef USE_C11_MEMORY_FENCE
+#define THREAD_FENCE_MEM_ACQUIRE atomic_thread_fence(memory_order_acquire)
+#define THREAD_FENCE_MEM_RELEASE atomic_thread_fence(memory_order_release)
+#else
+#define THREAD_FENCE_MEM_ACQUIRE MACHINE_FENCE
+#define THREAD_FENCE_MEM_RELEASE MACHINE_FENCE
+#endif
 
 #ifdef QTHREAD_NEEDS_IA64INTRIN
 # ifdef HAVE_IA64INTRIN_H
@@ -56,10 +68,10 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
 # define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = qthread_incr(&(x)->enter, 1); \
                                         while (val != (x)->exit) SPINLOCK_BODY(); \
-                                          atomic_thread_fence(memory_order_acquire); /* spin waiting for my turn */ }
+                                          THREAD_FENCE_MEM_ACQUIRE; /* spin waiting for my turn */ }
 # define QTHREAD_FASTLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
                                            (x)->exit++; /* allow next guy's turn */ \
-                                           atomic_thread_fence(memory_order_release); \
+                                           THREAD_FENCE_MEM_RELEASE; \
                                         } while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
@@ -136,10 +148,10 @@ typedef union qt_spin_trylock_s {
 # define QTHREAD_TRYLOCK_INIT_PTR(x) { (x)->u = 0; }
 # define QTHREAD_TRYLOCK_LOCK(x)     { uint32_t val = qthread_incr(&(x)->s.users, 1); \
                                        while (val != (x)->s.ticket) SPINLOCK_BODY(); \
-                                          atomic_thread_fence(memory_order_acquire); /* spin waiting for my turn */ }
+                                          THREAD_FENCE_MEM_ACQUIRE; /* spin waiting for my turn */ }
 # define QTHREAD_TRYLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
                                           qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
-                                          atomic_thread_fence(memory_order_release); \
+                                          THREAD_FENCE_MEM_RELEASE; \
                                         } while (0)
 # define QTHREAD_TRYLOCK_DESTROY(x)
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x)
@@ -155,9 +167,8 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
     newcmp         = cmp;
     newcmp.s.users = newcmp.s.ticket + 1;
 
-
     if(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u) { 
-        atomic_thread_fence(memory_order_acquire); 
+        THREAD_FENCE_MEM_ACQUIRE; 
         return 1;
     }
     return 0;
