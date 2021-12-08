@@ -150,8 +150,8 @@ typedef union qt_spin_trylock_s {
                                        while (val != (x)->s.ticket) SPINLOCK_BODY(); \
                                           THREAD_FENCE_MEM_ACQUIRE; /* spin waiting for my turn */ }
 # define QTHREAD_TRYLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
+					  THREAD_FENCE_MEM_RELEASE; \
                                           qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
-                                          THREAD_FENCE_MEM_RELEASE; \
                                         } while (0)
 # define QTHREAD_TRYLOCK_DESTROY(x)
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x)
