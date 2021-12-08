@@ -70,8 +70,8 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
                                         while (val != (x)->exit) SPINLOCK_BODY(); \
                                           THREAD_FENCE_MEM_ACQUIRE; /* spin waiting for my turn */ }
 # define QTHREAD_FASTLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
+					   THREAD_FENCE_MEM_RELEASE; \
                                            (x)->exit++; /* allow next guy's turn */ \
-                                           THREAD_FENCE_MEM_RELEASE; \
                                         } while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
