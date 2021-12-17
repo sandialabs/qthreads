@@ -6,7 +6,7 @@
 #include <qthread/common.h>
 #include <qthread/qthread.h>
 
-#ifndef __STDC_NO_ATOMICS__
+#if (__STDC_VERSION__ >= 201112L) && (!defined(__STDC_NO_ATOMICS__))
 #define USE_C11_MEMORY_FENCE
 #include <stdatomic.h>
 #endif
