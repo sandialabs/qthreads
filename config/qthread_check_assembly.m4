@@ -212,7 +212,7 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       qthread_gcc_inline_assign='"or %0,[$]0,[$]0" : "=&r"(ret)'
     ;;
 
-    powerpc-*|powerpc64-*)
+    powerpc*|powerpc64*)
       AS_IF([test "$ac_cv_sizeof_long" = "4"],
             [qthread_cv_asm_arch="POWERPC32"],
             [qthread_cv_asm_arch="POWERPC64"])
