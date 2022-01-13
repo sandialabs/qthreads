@@ -787,8 +787,6 @@ SET:
 #endif
 
 #ifdef NEEDARMA64CONTEXT
-#warning NEEDARMA64CONTEXT
-#warning GET SET
 /* Register Usage:
  * X0 - holds pointer to context
  * X1 - X30 - GP registers
