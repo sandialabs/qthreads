@@ -898,8 +898,6 @@ SET:
 #endif
 
 #ifdef NEEDARMCONTEXT
-#warning NEEDARMCONTEXT
-#warning GET SET
 /* Register Usage:
  *
  * r0/a1       - Argument/result/scratch1
