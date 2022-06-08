@@ -1070,9 +1070,9 @@ AM_CONDITIONAL([HAVE_LIBM], [test "x$have_libm" = "xyes"])
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
                  src/Makefile
-                 man/Makefile
-                
- man/man3/Makefile
+                 man/Makefile    
+                 man/man3/Makefile
+                 man/html/Makefile
                  include/Makefile
                  include/qthread/Makefile
                  test/Makefile
