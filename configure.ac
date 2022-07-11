@@ -114,7 +114,7 @@ AC_ARG_WITH([default-stack-size],
             [AS_HELP_STRING([--with-default-stack-size=[[bytes]]],
                             [Specify the number of bytes to use for stacks, by
                              default (i.e. when the environment variable
-                             QT_STACK_SIZE is unset). Default: 4096 (4k).
+                             QT_STACK_SIZE is unset). Default: 16384 (16k).
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
@@ -937,17 +937,8 @@ int main() {
 
 AS_IF([test "x$with_default_stack_size" != "x"],
       [qthread_cv_stack_size=$with_default_stack_size],
-      [case "$host" in
-         powerpc-apple-darwin*)
-           AC_CHECK_SIZEOF([void*])
-           AS_IF([test "x$ac_cv_sizeof_voidp" = "x8"],
-                 [qthread_cv_stack_size=8192],
-                 [qthread_cv_stack_size=4096])
-           ;;
-         *)
-           qthread_cv_stack_size=4096
-           ;;
-       esac])
+      [qthread_cv_stack_size=16384])
+
 AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size], [What size stacks to use by default])
 
 AS_IF([test "x$enable_thread_count" = "xyes"],
