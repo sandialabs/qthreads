@@ -42,8 +42,13 @@
 #  define NEEDPOWERCONTEXT 1
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+#  define NEEDARMA64CONTEXT 1
+#  define ISAPPLEMACHOASM 1
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # else
-#  error What kind of a Mac is this? If M1, use CFLAGS=-D_XOPEN_SOURCE and --disable-fastcontext --with-default-stack-size=65536 in configure.
+#  error What kind of a Mac is this?
 # endif
 #elif defined(__linux__)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
@@ -793,7 +798,12 @@ SET:
  */
 .globl GET
 .global GET
-.type GET, %function
+#ifndef ISAPPLEMACHOASM
+ .type GET, %function
+#else
+.p2align 4
+#endif
+
 GET:
         /* Store GP registers */
         stp     X1, X2, [X0,#8]
@@ -851,7 +861,11 @@ GET:
 
 .globl SET
 .global SET
-.type SET, %function
+#ifndef ISAPPLEMACHOASM
+ .type SET, %function
+#else
+.p2align 4
+#endif
 SET:
         /* Load GP registers */
         ldp     X1, X2, [X0,#8]
