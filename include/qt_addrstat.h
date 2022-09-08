@@ -18,6 +18,8 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(void)
         ret->FEQ   = NULL;
         ret->FFQ   = NULL;
         ret->FFWQ  = NULL;
+        ret->acq_owner_stat.state = -1;
+        ret->acq_owner_stat.recursive_access_counter = 0;
         QTHREAD_EMPTY_TIMER_INIT(ret);
     }
     return ret;

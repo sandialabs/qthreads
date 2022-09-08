@@ -8,6 +8,7 @@
 #include "common.h"                    /* important configuration options */
 
 #include <string.h>                    /* for memcpy() */
+#include <stdbool.h>                   /* for bool */
 
 #ifndef QTHREAD_NOALIGNCHECK
 # include <stdio.h>                    /* for fprintf() */
@@ -123,7 +124,6 @@ typedef struct _syncvar_s {
 
 typedef unsigned short qthread_shepherd_id_t;
 typedef unsigned short qthread_worker_id_t;
-
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -434,6 +434,7 @@ int qthread_syncvar_status(syncvar_t *const v);
 int qthread_empty(const aligned_t *dest);
 int qthread_syncvar_empty(syncvar_t *restrict dest);
 int qthread_fill(const aligned_t *dest);
+int qthread_fill_recursive(const aligned_t *dest);
 int qthread_syncvar_fill(syncvar_t *restrict dest);
 
 /* These functions wait for memory to become empty, and then fill it. When
@@ -553,6 +554,10 @@ int qthread_readXX(aligned_t       *dest,
  */
 int qthread_lock(const aligned_t *a);
 int qthread_unlock(const aligned_t *a);
+int qthread_lock_init(const aligned_t *a, const bool is_recursive);
+
+const int qthread_trylock(const aligned_t *a);
+
 
 #if defined(QTHREAD_MUTEX_INCREMENT) ||             \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \

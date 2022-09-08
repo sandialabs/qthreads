@@ -9,6 +9,8 @@
 #include "qt_profiling.h"
 #include "qt_debug.h"
 
+#define FEB_is_recursive_lock  0
+
 typedef enum blocking_syscalls {
     ACCEPT,
     CONNECT,
@@ -46,6 +48,11 @@ typedef struct _qt_blocking_queue_node_s {
     int                               err;
 } qt_blocking_queue_node_t;
 
+typedef struct qthread_acquire_owner_stat_s {
+    int_fast8_t          state;
+    int_fast8_t          recursive_access_counter;
+} qthread_acquire_owner_stat_t;
+
 typedef struct qthread_addrstat_s {
     QTHREAD_FASTLOCK_TYPE lock;
     qthread_addrres_t    *EFQ;
@@ -57,6 +64,8 @@ typedef struct qthread_addrstat_s {
 #endif
     uint_fast8_t          full;
     uint_fast8_t          valid;
+    qthread_acquire_owner_stat_t acq_owner_stat;
+
 } qthread_addrstat_t;
 
 #ifdef UNPOOLED

@@ -17,6 +17,8 @@ typedef filter_code (*qt_feb_taskfilter_f)(qt_key_t            addr,
                                            qthread_t *restrict waiter,
                                            void *restrict      arg);
 
+int INTERNAL qthread_feb_adr_init(const aligned_t *dest, const bool is_from_recursive_lock);
+
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t);
 
 int API_FUNC qthread_writeEF_nb(aligned_t *restrict const       dest,
