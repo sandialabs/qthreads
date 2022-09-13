@@ -555,6 +555,7 @@ int qthread_readXX(aligned_t       *dest,
 int qthread_lock(const aligned_t *a);
 int qthread_unlock(const aligned_t *a);
 int qthread_lock_init(const aligned_t *a, const bool is_recursive);
+int qthread_lock_destroy(aligned_t *a);
 
 const int qthread_trylock(const aligned_t *a);
 

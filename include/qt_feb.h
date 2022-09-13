@@ -18,6 +18,7 @@ typedef filter_code (*qt_feb_taskfilter_f)(qt_key_t            addr,
                                            void *restrict      arg);
 
 int INTERNAL qthread_feb_adr_init(const aligned_t *dest, const bool is_from_recursive_lock);
+int INTERNAL qthread_feb_adr_remove(aligned_t *dest);
 
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t);
 

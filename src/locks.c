@@ -16,6 +16,11 @@ int API_FUNC qthread_lock_init(const aligned_t *a, const bool is_recursive)
     return qthread_feb_adr_init(a, is_recursive);
 }                      /*}}} */
 
+int API_FUNC qthread_lock_destroy(aligned_t *a)
+{                      /*{{{ */
+    return qthread_feb_adr_remove(a);
+}  
+
 int API_FUNC qthread_lock(const aligned_t *a)
 {                      /*{{{ */
     return qthread_readFE(NULL, a);

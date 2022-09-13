@@ -430,7 +430,7 @@ static QINLINE void qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
         FREE_ADDRRES(X);
         qthread_gotlock_fill_inner(shep, m, maddr, 1, precond_tasks);
     }
-    if ((m->full == 1) && (m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL)) {
+    if ((m->full == 1) && (m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL) && (m->FFWQ == NULL) && (m->acq_owner_stat.state <FEB_is_recursive_lock )) {        
         removeable = 1;
     } else {
         removeable = 0;
@@ -551,7 +551,7 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
     }
     if (recursive == 0) {
         int removeable;
-        if ((m->EFQ == NULL) && (m->FEQ == NULL) && (m->full == 1)) {
+        if ((m->EFQ == NULL) && (m->FEQ == NULL) && (m->full == 1) && (m->acq_owner_stat.state < FEB_is_recursive_lock)) {
             qthread_debug(FEB_DETAILS, "m(%p), addr(%p), recursive(%u): addrstat removeable!\n", m, maddr, recursive);
             removeable = 1;
         } else {
@@ -733,6 +733,11 @@ int INTERNAL qthread_feb_adr_init(const aligned_t *dest, const bool is_from_recu
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
+int INTERNAL qthread_feb_adr_remove(aligned_t *dest)
+{                      /*{{{ */
+    qthread_FEB_remove(dest);
+}                      /*}}} */
+
 int API_FUNC qthread_fill(const aligned_t *dest)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
@@ -776,9 +781,6 @@ int API_FUNC qthread_fill(const aligned_t *dest)
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], (void *)alignedaddr);
         if (m) {
             QTHREAD_FASTLOCK_LOCK(&m->lock);
-            if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {
-                --m->acq_owner_stat.recursive_access_counter;
-            }
         }
     }                              /* END CRITICAL SECTION */
     qt_hash_unlock(FEBs[lockbin]); /* unlock hash */
@@ -787,10 +789,12 @@ int API_FUNC qthread_fill(const aligned_t *dest)
         if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {
             --m->acq_owner_stat.recursive_access_counter;
             if (m->acq_owner_stat.recursive_access_counter >0){
-                qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): decrementing recursive_access_counter\n", dest, qthread_id());
+                qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): released recursive lock (inner)\n", dest, qthread_id());
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                 return QTHREAD_SUCCESS;
             }
-            m->acq_owner_stat.state = FEB_is_recursive_lock; //reset
+            qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): released recursive lock (outer)\n", dest, qthread_id());
+            m->acq_owner_stat.state = FEB_is_recursive_lock; //reset owner, maintain lock type
         }
         /* if dest wasn't in the hash, it was already full. Since it was,
          * we need to fill it. */
@@ -1460,6 +1464,7 @@ int API_FUNC qthread_readFE(aligned_t *restrict       dest,
     if (!me) {
         return qthread_feb_blocker_func(dest, (void *)src, READFE);
     }
+
     assert(me->rdata);
     qthread_debug(FEB_CALLS, "dest=%p, src=%p (tid=%i)\n", dest, src, me->thread_id);
     QTHREAD_FEB_UNIQUERECORD(feb, src, me);
@@ -1520,13 +1525,16 @@ got_m:
     if (m->full == 0) {          /* empty, thus, we must block */
                                  /* unless read_FE was taken by qthread_lock() */
                                  /* on same thread */
-        if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {
-            if (m->acq_owner_stat.state == qthread_id()) {
+        if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {            
+            if (m->acq_owner_stat.state == qthread_readstate(CURRENT_WORKER)) {
+                
                 ++m->acq_owner_stat.recursive_access_counter;
+                qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): acquired recursive lock (inner)\n", dest, me->thread_id);
                 QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                 QTHREAD_FEB_TIMER_STOP(febblock, me);
                 return QTHREAD_SUCCESS;
             }
+            qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): attempt to acquire inner recursive lock failed thus blocking\n", dest, me->thread_id);
         }
         QTHREAD_WAIT_TIMER_DECLARATION;
         qthread_addrres_t *X = ALLOC_ADDRRES();
@@ -1552,16 +1560,18 @@ got_m:
 #endif /* QTHREAD_USE_EUREKAS */
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p after waiting\n", me->thread_id, dest, src);
     } else {                   /* full, thus IT IS OURS! MUAHAHAHA! */
+
+    
         if (dest && (dest != src)) {
             *(aligned_t *)dest = *(aligned_t *)src;
             MACHINE_FENCE;
         }
 
         if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {
-            m->acq_owner_stat.state == qthread_id();
+            m->acq_owner_stat.state = qthread_readstate(CURRENT_WORKER); /* Set owner */
             ++m->acq_owner_stat.recursive_access_counter;
             MACHINE_FENCE;
-            qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): incrementing recursive_access_counter\n", dest, qthread_id());
+            qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): acquired recursive lock (outer)\n", dest, me->thread_id);
         }
 
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
@@ -1651,13 +1661,17 @@ int API_FUNC qthread_readFE_nb(aligned_t *restrict       dest,
 # endif /* ifdef LOCK_FREE_FEBS */
     qthread_debug(FEB_DETAILS, "data structure locked\n");
     /* by this point m is locked */
-    if (m->full == 0) {            /* empty, thus, we must fail */
-                                   /* unless called from qthread_trylock on a recursive lock*/
-         if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {
-
+    if (m->full == 0) {          /* empty, thus, we must block */
+                                 /* unless read_FE was taken by qthread_lock() */
+                                 /* on same thread */
+        if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {            
+            if (m->acq_owner_stat.state == qthread_readstate(CURRENT_WORKER)) {
+                
                 ++m->acq_owner_stat.recursive_access_counter;
-                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): acquired recursive lock (inner)\n", dest, me->thread_id);
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);        
                 return QTHREAD_SUCCESS;
+            }
         }
         qthread_debug(FEB_BEHAVIOR, "tid %u non-blocking fail\n", me->thread_id);
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
@@ -1669,10 +1683,10 @@ int API_FUNC qthread_readFE_nb(aligned_t *restrict       dest,
         }
 
         if(m->acq_owner_stat.state >= FEB_is_recursive_lock) {
-            m->acq_owner_stat.state == qthread_id();
+            m->acq_owner_stat.state = qthread_readstate(CURRENT_WORKER); /* Set owner */
             ++m->acq_owner_stat.recursive_access_counter;
             MACHINE_FENCE;
-            qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): incrementing recursive_access_counter\n", dest, qthread_id());
+            qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): acquired recursive lock (outer)\n", dest, me->thread_id);
         }
 
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
