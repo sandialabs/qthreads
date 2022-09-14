@@ -2,10 +2,14 @@
 #include <stdio.h>
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
+#include <pthread.h>
 
 static int64_t count;
 static aligned_t lock;
 bool is_recursive_lock = true;
+bool is_not_recursive_lock = false;
+
+pthread_mutex_t count_mutex;
 
 static void task_1(size_t start, size_t stop, void  *args_) {
   qthread_lock(&lock);
@@ -22,7 +26,7 @@ static void task_2(size_t start, size_t stop, void  *args_) {
 }
 
 int main(int argc, char *argv[]) {
-    uint64_t iters = 1000000l;
+    uint64_t iters = 4l;
     assert(qthread_initialize() == 0);
 
     /* Simple lock acquire and release */
