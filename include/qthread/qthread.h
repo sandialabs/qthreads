@@ -320,7 +320,6 @@ qthread_worker_id_t   qthread_worker_local(qthread_shepherd_id_t *s);
 void *   qthread_get_tasklocal(unsigned int);
 unsigned qthread_size_tasklocal(void);
 
-
 void* qthread_tos(void);
 void* qthread_bos(void);
 

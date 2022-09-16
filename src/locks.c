@@ -33,34 +33,34 @@ typedef struct {
 #define LOCKBIN(key) QTHREAD_CHOOSE_STRIPE2(key)
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 
-qt_hash * spinlock_buckets;    
+qt_hash * qthread_spinlock_buckets;    
 
 static void qthread_spinlock_destroy_fn(qthread_spinlock_t *l) {
     QTHREAD_TRYLOCK_DESTROY_PTR(&l->lock);
 }  
 
 INTERNAL qthread_spinlock_t * lock_hashmap_get(const aligned_t * key) {
-    if(!spinlock_buckets)
+    if(!qthread_spinlock_buckets)
         return NULL;
 
-    return  qt_hash_get(spinlock_buckets[LOCKBIN(key)], key);
+    return  qt_hash_get(qthread_spinlock_buckets[LOCKBIN(key)], key);
 }
 
 INTERNAL int lock_hashmap_put(const aligned_t * key, qthread_spinlock_t * val) {
-    if(!spinlock_buckets)
+    if(!qthread_spinlock_buckets)
         return QTHREAD_OPFAIL;
     
-    if (PUT_SUCCESS == qt_hash_put(spinlock_buckets[LOCKBIN(key)], key, val))
+    if (PUT_SUCCESS == qt_hash_put(qthread_spinlock_buckets[LOCKBIN(key)], key, val))
         return QTHREAD_SUCCESS;
 
     return QTHREAD_OPFAIL;
 }
 
 INTERNAL int lock_hashmap_remove(const aligned_t * key) {
-    if(!spinlock_buckets)
+    if(!qthread_spinlock_buckets)
         return QTHREAD_OPFAIL;
     
-    if (qt_hash_remove(spinlock_buckets[LOCKBIN(key)], key))
+    if (qt_hash_remove(qthread_spinlock_buckets[LOCKBIN(key)], key))
         return QTHREAD_SUCCESS;
 
     return QTHREAD_OPFAIL;
@@ -70,15 +70,20 @@ INTERNAL bool qthread_is_spin_lock(const aligned_t * a) {
     return (NULL != lock_hashmap_get(a));
 }
 
+INTERNAL int qthread_spinlock_initialize() {
+    qthread_spinlock_buckets = NULL;
+    return QTHREAD_SUCCESS;
+}
+
 INTERNAL int qthread_spinlock_init(const aligned_t * a, const bool is_recursive) {
     uint_fast8_t need_sync = 1;
 
-    if(!spinlock_buckets){
-       spinlock_buckets = (qt_hash*) qt_malloc (sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-       assert(spinlock_buckets);
+    if(!qthread_spinlock_buckets){
+       qthread_spinlock_buckets = (qt_hash*) qt_malloc (sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+       assert(qthread_spinlock_buckets);
        for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-            spinlock_buckets[i] = qt_hash_create(need_sync);
-            assert(spinlock_buckets[i]);
+            qthread_spinlock_buckets[i] = qt_hash_create(need_sync);
+            assert(qthread_spinlock_buckets[i]);
         }
     }
 
@@ -99,14 +104,14 @@ INTERNAL int qthread_spinlock_destroy(const aligned_t * a) {
 }
 
 INTERNAL int qthread_spinlock_finalize() {
-    if(spinlock_buckets){
+    if(qthread_spinlock_buckets){
         for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-            assert(spinlock_buckets[i]);
-            qt_hash_destroy_deallocate(spinlock_buckets[i],
+            assert(qthread_spinlock_buckets[i]);
+            qt_hash_destroy_deallocate(qthread_spinlock_buckets[i],
                             (qt_hash_deallocator_fn)
                             qthread_spinlock_destroy_fn);
         }
-        qt_free(spinlock_buckets);
+        qt_free(qthread_spinlock_buckets);
     }
     return QTHREAD_SUCCESS;
 }

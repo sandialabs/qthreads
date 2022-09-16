@@ -132,8 +132,9 @@ int GUARD_PAGES = 1;
 #define GUARD_PAGES 0
 #endif
 
-extern qt_hash * spinlock_buckets;
+//extern qt_hash * qthread_spinlock_buckets;
 extern int INTERNAL qthread_spinlock_finalize();
+extern int INTERNAL qthread_spinlock_initialize();
 
 /* Internal Prototypes */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -1015,7 +1016,7 @@ int API_FUNC qthread_initialize(void)
         qthread_debug(SHEPHERD_DETAILS, "shepherd %i set up (%p)\n", i, &qlib->shepherds[i]);
     }
 
-    spinlock_buckets = NULL;
+    qthread_spinlock_initialize();
 
     qthread_debug(SHEPHERD_DETAILS, "done setting up shepherds.\n");
 
