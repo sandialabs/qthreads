@@ -43,7 +43,6 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky
         make
-## Currently hangs on OSX -- https://github.com/Qthreads/qthreads/issues/59
-#    - name: make check
-#      run: |
-#        make check
+    - name: make check
+      run: |
+        make check
