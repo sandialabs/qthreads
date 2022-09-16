@@ -6,6 +6,7 @@
 #include <limits.h>                    /* for UINT_MAX (C89) */
 #include "qthread-int.h"               /* for uint32_t and uint64_t */
 #include "common.h"                    /* important configuration options */
+#include <stdbool.h> 
 
 #include <string.h>                    /* for memcpy() */
 
@@ -553,6 +554,14 @@ int qthread_readXX(aligned_t       *dest,
  */
 int qthread_lock(const aligned_t *a);
 int qthread_unlock(const aligned_t *a);
+int qthread_trylock(const aligned_t *a);
+
+/* functions to implement spinlock-based locking/unlocking 
+ * if qthread_lock_init(adr) is called, subsequent locking over adr 
+ * uses spin locking instead of FEBs. Support recursive locking.
+ */
+int qthread_lock_init(const aligned_t *a, const bool is_recursive); 
+int qthread_lock_destroy(aligned_t *a);
 
 #if defined(QTHREAD_MUTEX_INCREMENT) ||             \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \

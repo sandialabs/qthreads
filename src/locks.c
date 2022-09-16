@@ -18,7 +18,6 @@
 
 #define SPINLOCK_IS_RECURSIVE (-1)
 #define SPINLOCK_IS_NOT_RECURSIVE (-2)
-//typedef struct qt_hash_s qt_hash;
                               
 typedef struct {
     int64_t s;
@@ -204,7 +203,7 @@ int API_FUNC qthread_lock(const aligned_t *a)
     return qthread_spinlock_lock(a);
 }                      /*}}} */
 
-const int API_FUNC qthread_trylock(const aligned_t *a)
+int API_FUNC qthread_trylock(const aligned_t *a)
 {                      /*{{{ */
     if (!qthread_is_spin_lock(a)){
         return qthread_readFE_nb(NULL, a);
