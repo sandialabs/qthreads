@@ -1,4 +1,16 @@
 #!/bin/bash
+
+# Gen script for distributable package
+# Usage: cd SRC_DIR/scripts && bash package.sh TAG
+
+# Runs ./autogen 
+# Copies all files into subdir
+# Replaces soft links with linked files
+# Removes hidden files (except .autogen-version)
+# Updates .autogen-version
+# Creates tar.gz
+# Leaves subdir
+
 shopt -s extglob
 
 tag=$1
@@ -13,8 +25,10 @@ if [ ! -f ./autogen.sh ]; then
     exit 1
 fi
 
+#=================================================================
 base_dir_name=${PWD##*/}
 base_dir_name=${base_dir_name:-/}
+#=================================================================
 
 linked_files="./compile \
               ./config.guess \
@@ -30,11 +44,16 @@ linked_files="./compile \
               ./missing \
               ./test-driver"
 
+
+#=================================================================
 echo "./autogen"
 bash ./autogen.sh
-mkdir $base_dir_name-$tag
+#=================================================================
 echo "mkdir $base_dir_name-$tag"
+mkdir $base_dir_name-$tag
+#=================================================================
 cp -r !($base_dir_name-$tag) $base_dir_name-$tag/
+#=================================================================
 cd $base_dir_name-$tag
     echo "rm -r ./autom4te.cache"
     rm -rf ./autom4te.cache 
@@ -52,9 +71,15 @@ cd $base_dir_name-$tag
     echo "Removing hidden files"
     rm -rf .[a-z]*
     echo "Update .autogen-version"
-    rm .autogen-version
+    rm -rf .autogen-version
     echo "$tag" > .autogen-version
+    echo "Gen time-stamp"
+    echo "timestamp for include/qthread/common.h" > ./include/qthread/stamp-h2
+    # Now update time stamp of the configure script to avoid rebuilding it
+    touch ./configure
+#=================================================================
 cd .. #$base_dir_name-$tag
-echo "tar cjf $base_dir_name-$tag.tar.gz -C .. $base_dir_name-$tag"
-tar cjf $base_dir_name-$tag.tar.gz -C . $base_dir_name-$tag 
-
+#=================================================================
+echo "tar czf $base_dir_name-$tag.tar.gz -C .. $base_dir_name-$tag"
+tar czf $base_dir_name-$tag.tar.gz -C . $base_dir_name-$tag 
+#=================================================================
