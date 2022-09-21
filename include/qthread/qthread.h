@@ -52,7 +52,39 @@
 #define NO_SHEPHERD    ((qthread_shepherd_id_t)-1)
 #define NO_WORKER      ((qthread_worker_id_t)-1)
 
-#define QTHREAD_VERSION 1010001
+#define QTHREAD_RELEASE_TYPE_ALPHA  0
+#define QTHREAD_RELEASE_TYPE_BETA   1
+#define QTHREAD_RELEASE_TYPE_RC     2
+#define QTHREAD_RELEASE_TYPE_PATCH  3
+
+/* QTHREAD_VERSION = [MAJ].[MIN].[REV][EXT][EXT_NUMBER]
+ * Example: QTHREAD_VERSION = 1.17.1rc1 represents
+ *          MAJ = 1
+ *          MIN = 17
+ *          REV = 1
+ *          EXT = rc
+ *          EXT_NUMBER = 1
+ */
+#define QTHREAD_VERSION "1.18"
+
+/* * QTHREAD_NUMVERSION = [MAJ] * 10000000 + [MIN] * 100000 + [REV] * 1000
+ *                      + [EXT] * 100 + [EXT_NUMBER]
+ * where [EXT] is converted to the following format number:
+ *    ALPHA (a) = 0 (ABT_RELEASE_TYPE_ALPHA)
+ *    BETA (b)  = 1 (ABT_RELEASE_TYPE_BETA)
+ *    RC (rc)   = 2 (ABT_RELEASE_TYPE_RC)
+ *    PATCH (p) = 3 (ABT_RELEASE_TYPE_PATCH)
+ 
+ *
+ * QTHREAD_NUMVERSION has 2 digit for MAJ, 2 digits for MIN, 2 digits for REV, 1
+ * digit for EXT, and 2 digits for EXT_NUMBER.  For example, 1.17.1rc1 is
+ * converted to the numeric version 011701201.
+ */
+#define QTHREAD_NUMVERSION 011800000
+
+#define QTHREADS_GET_VERSION(MAJOR, MINOR, REVISION, TYPE, PATCH) \
+    (((MAJOR) * 10000000) + ((MINOR) * 100000) + ((REVISION) * 1000) + ((TYPE) * 100) + (PATCH))
+
 
 #include "macros.h"
 
