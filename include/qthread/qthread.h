@@ -456,6 +456,28 @@ int       qthread_queue_destroy(qthread_queue_t q);
  * (full, no waiters) state at any one time.
  */
 
+#define QTHREAD_SPINLOCK_IS_RECURSIVE (-1)
+#define QTHREAD_SPINLOCK_IS_NOT_RECURSIVE (-2)
+
+typedef union qt_spin_trylock_s {
+    aligned_t u;
+    struct {
+        haligned_t ticket;
+        haligned_t users;
+    } s;
+} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) qt_spin_trylock_t;
+
+typedef struct {
+    int64_t s;
+    int64_t count;
+} qthread_spinlock_state_t;
+
+typedef struct {
+    qt_spin_trylock_t lock;
+    qthread_spinlock_state_t state;
+} qthread_spinlock_t;
+
+
 /* This function is just to assist with debugging; it returns 1 if the address
  * is full, and 0 if the address is empty */
 int qthread_feb_status(const aligned_t *addr);
@@ -586,6 +608,21 @@ int qthread_readXX(aligned_t       *dest,
 int qthread_lock(const aligned_t *a);
 int qthread_unlock(const aligned_t *a);
 int qthread_trylock(const aligned_t *a);
+
+int qthread_spinlock_init(qthread_spinlock_t *a, const bool is_recursive);
+int qthread_spinlock_destroy(qthread_spinlock_t *a);
+int qthread_spinlock_lock(qthread_spinlock_t *a);
+int qthread_spinlock_unlock(qthread_spinlock_t *a);
+int qthread_spinlock_trylock(qthread_spinlock_t *a);
+
+int qthread_spinlocks_init(qthread_spinlock_t *a, const bool is_recursive); 
+int qthread_spinlocks_destroy(qthread_spinlock_t *a);
+
+#define QTHREAD_SPINLOCK_IS_RECURSIVE (-1)
+#define QTHREAD_SPINLOCK_IS_NOT_RECURSIVE (-2)
+
+#define QTHREAD_MUTEX_INITIALIZER  {{.s={0,0}},{QTHREAD_SPINLOCK_IS_NOT_RECURSIVE,0}}
+#define QTHREAD_RECURSIVE_MUTEX_INITIALIZER {{.s={0,0}},{QTHREAD_SPINLOCK_IS_RECURSIVE,0}}
 
 /* functions to implement spinlock-based locking/unlocking 
  * if qthread_lock_init(adr) is called, subsequent locking over adr 

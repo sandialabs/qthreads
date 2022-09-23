@@ -144,13 +144,6 @@ extern pthread_mutexattr_t _fastlock_attr;
     && defined(QTHREAD_ATOMIC_INCR)                           \
     && !defined(QTHREAD_MUTEX_INCREMENT)
 
-typedef union qt_spin_trylock_s {
-    aligned_t u;
-    struct {
-        haligned_t ticket;
-        haligned_t users;
-    } s;
-} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) qt_spin_trylock_t;
 
 # define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 # define QTHREAD_TRYLOCK_INIT(x)     { (x).u = 0; }
