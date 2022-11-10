@@ -12,7 +12,7 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
-static Q_NOINLINE void thread2(size_t left,
+static Q_NOINLINE size_t thread2(size_t left,
                                size_t depth)
 {
     size_t foo = qthread_stackleft();
@@ -23,9 +23,10 @@ static Q_NOINLINE void thread2(size_t left,
 #else
     assert(foo < left);
 #endif
-    /*if (depth < 5) {
-     * thread2(t, foo, depth+1);
-     * } */
+    if (depth < 5) {
+    	thread2(foo, depth+1);
+    } 
+    return 1;
 }
 
 static aligned_t thread(void *arg)
