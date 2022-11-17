@@ -160,7 +160,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     va_list arg;
     //set stack segment
     uint64_t top_of_stack = (uint64_t) (ucp->uc_stack.ss_sp);
-    top_of_stack += ucp->uc_stack.ss_size;
+    top_of_stack += ucp->uc_stack.ss_size / sizeof(void *);
     top_of_stack = top_of_stack & 0xfffffffffffffff0;	//16-byte aligned for Aarch64
     assert((top_of_stack % 16) == 0);
 
