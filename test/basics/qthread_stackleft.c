@@ -12,11 +12,10 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
-static Q_NOINLINE size_t thread2(size_t left,
+Q_NOINLINE size_t thread2(size_t left,
                                size_t depth)
 {
     size_t foo = qthread_stackleft();
-
     iprintf("leveli%i: %zu bytes left\n", (int)depth, foo);
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     assert(foo <= left);
@@ -32,15 +31,10 @@ static Q_NOINLINE size_t thread2(size_t left,
 static aligned_t thread(void *arg)
 {
     int me = qthread_id();
-
-    // printf("thread(%p): me %i\n", (void*) t, me);
     size_t foo = qthread_stackleft();
-
     iprintf("%zu bytes left\n", foo);
     thread2(foo, 2);
-
     assert(qthread_lock(&x) == 0);
-    // printf("thread(%i): x=%d\n", me, x);
     x++;
     if (x == target) {
         qthread_unlock(&alldone);
