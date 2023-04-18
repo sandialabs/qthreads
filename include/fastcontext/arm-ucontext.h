@@ -20,9 +20,7 @@ struct mctxt {
     /* Saved main processor registers. */
 #ifdef NEEDARMA64CONTEXT
 	uint64_t regs[32]; /* callee saves x0-x30, SP */
-	#ifdef ARMA64_CONTEXT_SWITCH_NEON_REGS
-	uint128_t regs[32]; /* SIMD Neon Registers*/
-	#endif
+	uint64_t fpu_regs[64]; /* 32 128bit FPU/SIMD Neon Registers */
 #else
     uint32_t regs[16]; /* callee saves r0-r15 */
 #endif

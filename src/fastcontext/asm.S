@@ -821,12 +821,11 @@ GET:
         stp     X25, X26, [X0,#200]  
         stp     X27, X28, [X0,#216]
         stp     X29, X30, [X0,#232]     /* X30 is LR */
-	mov	X29, SP
+        mov     X29, SP
         str     X29, [X0,#248]           /* sp, not sure if ARMv8 allows storing SP directly */
-	ldr	X29, [X0,#232]		/* restore FP just to be safe */
+        ldr     X29, [X0,#232]           /* restore FP just to be safe */
 
-#ifdef ARMA64_CONTEXT_SWITCH_NEON_REGS
-        /* Store vector registers */
+        /* Store fpu/vector registers */
         add     X0, X0, #256            /* Update pointer to avoid immediate growing to large for STP/LDP instruction */
         stp     Q0, Q1, [X0]
         stp     Q2, Q3, [X0,#32]
@@ -845,14 +844,14 @@ GET:
         stp     Q28, Q29, [X0,#448]
         stp     Q30, Q31, [X0,#480]
         sub     X0, X0, #256
-#endif
+
         /* Store 1 as X0-to-restore */
         mov     X1, #1
         str     X1, [X0]                
         
         /* return 0 */
         mov     X0, #0
-	ret
+        ret
 
 /*
  * TODO: add vector registers for both NEON and SVE
@@ -883,11 +882,10 @@ SET:
         ldp     X25, X26, [X0,#200]  
         ldp     X27, X28, [X0,#216]
         ldr     X29, [X0,#248]
-	mov	SP, X29
-	ldp	X29, X30, [X0,#232]
+        mov	SP, X29
+        ldp	X29, X30, [X0,#232]
         
-#ifdef ARMA64_CONTEXT_SWITCH_NEON_REG
-        /* Load vector registers */
+        /* Load fpu/vector registers */
         add     X0, X0, #256
         ldp     Q0, Q1, [X0]
         ldp     Q2, Q3, [X0,#32]
@@ -906,7 +904,6 @@ SET:
         ldp     Q28, Q29, [X0,#448]
         ldp     Q30, Q31, [X0,#480]
         sub     X0, X0, #256
-#endif
         ldr     X0, [X0]
 	ret
 #endif
