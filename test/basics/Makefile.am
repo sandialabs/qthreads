@@ -39,8 +39,9 @@ TESTS = \
  		qthread_fork_precond \
 		qthread_migrate_to  \
 		qthread_disable_shepherd \
-                qthread_timer_wait
-
+                qthread_timer_wait \
+                qthread_fp \
+                qthread_fp_double
 
 if QTHREAD_PERFORMANCE
 TESTS += performance
