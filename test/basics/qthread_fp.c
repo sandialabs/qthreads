@@ -16,7 +16,7 @@ struct parts
   int length;
   float exp;
   float ans;
-  aligned_t cond;
+  aligned_t cond[2];
 };
 
 // https://www.w3resource.com/c-programming-exercises/math/c-math-exercise-24.php
@@ -26,6 +26,7 @@ static float taylor_exponential_core(int n, float x)
   for (int i = n - 1; i > 0; --i)
   {
     exp_sum = 1 + x * exp_sum / i;
+    qthread_yield();
   }
   return exp_sum;
 }
@@ -43,12 +44,12 @@ static void checkFloatAsQthread()
 {
   int ret = -1;
   struct parts teParts = {250, 9.0f, 0.0f};
-  qthread_empty(&teParts.cond);
+  qthread_empty(&teParts.cond[0]);
 
-  ret = qthread_fork(taylor_exponential, &teParts, &teParts.cond);
+  ret = qthread_fork(taylor_exponential, &teParts, &teParts.cond[0]);
   assert(ret == QTHREAD_SUCCESS);
 
-  ret = qthread_readFF(NULL, &teParts.cond);
+  ret = qthread_readFF(NULL, &teParts.cond[0]);
   assert(ret == QTHREAD_SUCCESS);
 
   assert(teParts.ans == 8103.083984f);
