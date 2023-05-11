@@ -40,19 +40,40 @@ static aligned_t taylor_exponential(void *arg)
   return 0;
 }
 
+static void startQthread(struct parts *teParts)
+{
+  qthread_empty(&teParts->cond);
+
+  int ret = qthread_fork(taylor_exponential, teParts, &teParts->cond);
+  assert(ret == QTHREAD_SUCCESS);
+}
+
 static aligned_t checkFloatAsQthreads()
 {
-  struct parts teParts = {250, 9.0f, 0.0f};
-  qthread_empty(&teParts.cond);
+  struct parts teParts1 = {250, 9.0f, 0.0f};
+  struct parts teParts2 = {50, 3.0f, 0.0f};
+  struct parts teParts3 = {150, 11.0f, 0.0f};
 
-  struct parts teParts1 = {50, 9.0f, 0.0f};
-  qthread_empty(&teParts1.cond);
-  
-  struct parts teParts2 = {9, 9.0f, 0.0f};
-  qthread_empty(&teParts2.cond);
+  startQthread(&teParts1);
+  startQthread(&teParts2);
+  startQthread(&teParts3);
+
+  int ret = qthread_readFF(NULL, &teParts1.cond);
+  assert(ret == QTHREAD_SUCCESS);
+
+  ret = qthread_readFF(NULL, &teParts2.cond);
+  assert(ret == QTHREAD_SUCCESS);
+
+  ret = qthread_readFF(NULL, &teParts3.cond);
+  assert(ret == QTHREAD_SUCCESS);
+
+  assert(teParts1.ans == 8103.083984f);
+
+  assert(teParts2.ans == 20.085535f);
+
+  assert(teParts3.ans == 59874.144531f);
 
   return 0;
-
 }
 
 static void checkFloatAsQthread()
@@ -82,7 +103,8 @@ int main(void)
 
   int status = qthread_initialize();
   assert(status == QTHREAD_SUCCESS);
+
   checkFloatAsQthread();
-  
+  checkFloatAsQthreads();
   return EXIT_SUCCESS;
 }
