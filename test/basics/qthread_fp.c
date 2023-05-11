@@ -16,7 +16,7 @@ struct parts
   int length;
   float exp;
   float ans;
-  aligned_t cond[2];
+  aligned_t cond;
 };
 
 // https://www.w3resource.com/c-programming-exercises/math/c-math-exercise-24.php
@@ -40,16 +40,31 @@ static aligned_t taylor_exponential(void *arg)
   return 0;
 }
 
+static aligned_t checkFloatAsQthreads()
+{
+  struct parts teParts = {250, 9.0f, 0.0f};
+  qthread_empty(&teParts.cond);
+
+  struct parts teParts1 = {50, 9.0f, 0.0f};
+  qthread_empty(&teParts1.cond);
+  
+  struct parts teParts2 = {9, 9.0f, 0.0f};
+  qthread_empty(&teParts2.cond);
+
+  return 0;
+
+}
+
 static void checkFloatAsQthread()
 {
   int ret = -1;
   struct parts teParts = {250, 9.0f, 0.0f};
-  qthread_empty(&teParts.cond[0]);
+  qthread_empty(&teParts.cond);
 
-  ret = qthread_fork(taylor_exponential, &teParts, &teParts.cond[0]);
+  ret = qthread_fork(taylor_exponential, &teParts, &teParts.cond);
   assert(ret == QTHREAD_SUCCESS);
 
-  ret = qthread_readFF(NULL, &teParts.cond[0]);
+  ret = qthread_readFF(NULL, &teParts.cond);
   assert(ret == QTHREAD_SUCCESS);
 
   assert(teParts.ans == 8103.083984f);
