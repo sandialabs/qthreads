@@ -10,9 +10,9 @@ AC_DEFUN([QTHREAD_CHECK_HWLOC], [
   AC_ARG_WITH([hwloc],
               [AS_HELP_STRING([--with-hwloc=[[PATH]]],
 			                  [specify the path to the hwloc library; used for both the library and the include files])])
-  AC_ARG_WITH([hwloc-symbol-prefix], 
+  AC_ARG_WITH([hwloc-symbol-prefix],
               [AS_HELP_STRING([--with-hwloc-symbol-prefix=[[prefix]]],
-                        [specify prefix for hwloc symbols @<:@default=hwloc_@:>@.])], [], 
+                        [specify prefix for hwloc symbols @<:@default=hwloc_@:>@.])], [],
                         [with_hwloc_symbol_prefix="hwloc_"])
   AC_ARG_ENABLE([hwloc-configure-checks],
               [AS_HELP_STRING([--disable-hwloc-configure-checks],
@@ -60,16 +60,20 @@ int main()
       [AC_MSG_RESULT(no)])
       ])
     AS_IF([test "x$qt_allgoodsofar" = xyes],
+        # we can use hwloc and do action-if-found
         [AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
-       $1])],
-    # don't do configuration checks
+       $1],
+      # restore CPPFLAGS and LDFLAGS if hwloc is unavailable
+      [CPPFLAGS="$hwloc_saved_CPPFLAGS"
+       LDFLAGS="$hwloc_saved_LDFLAGS"
+       # do action-if-not-found
+       $2])],
+    # don't do configuration checks, assume hwloc works
     [AC_MSG_NOTICE([skipping hwloc link checks])
     AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
     # default to having distance if not specified
     AS_IF([test "x$qt_allgoodsofar" = xyes && test "x$enable_hwloc_has_distance" = x],
         [AC_MSG_NOTICE([enabling hwloc distance support])
-        AC_DEFINE([QTHREAD_HAVE_HWLOC_DISTS],[1],[hwloc has distances])])])
-
-  CPPFLAGS="$hwloc_saved_CPPFLAGS"
-  LDFLAGS="$hwloc_saved_LDFLAGS"
-])
+        AC_DEFINE([QTHREAD_HAVE_HWLOC_DISTS],[1],[hwloc has distances])])
+    # do action-if-found
+    $1])])
