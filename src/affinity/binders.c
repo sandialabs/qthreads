@@ -96,6 +96,8 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
   extern void * HWLOC_GET_TOPOLOGY_FUNCTION;
   topology = (hwloc_topology_t) HWLOC_GET_TOPOLOGY_FUNCTION;
 #endif
+  // Note: the lack of a teardown routine will cause topology initialization
+  // to be skipped if qthreads is re-initialized
   if (topology == NULL) {
     hwloc_topology_init(&topology);
     hwloc_topology_load(topology);
