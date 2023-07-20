@@ -17,7 +17,7 @@ struct parts
   int length;
   float exp;
   float ans;
-  aligned_t* cond;
+  aligned_t cond;
 };
 
 // https://www.w3resource.com/c-programming-exercises/math/c-math-exercise-24.php
@@ -42,15 +42,14 @@ static aligned_t taylor_exponential(void *arg)
 
 static void checkFloat()
 {
-  void* cond = malloc(QTHREAD_SIZEOF_ALIGNED_T);
-  struct parts teParts = {250,9.0f,0.0f, cond};
+  struct parts teParts = {250,9.0f,0.0f};
   int ret = -1;
-  qthread_empty(teParts.cond);
+  qthread_empty(&teParts.cond);
 
-  ret = qthread_fork(taylor_exponential, &teParts, teParts.cond);
+  ret = qthread_fork(taylor_exponential, &teParts, &teParts.cond);
   assert(ret == QTHREAD_SUCCESS);
 
-  ret = qthread_readFF(NULL, teParts.cond);
+  ret = qthread_readFF(NULL, &teParts.cond);
   assert(ret == QTHREAD_SUCCESS);
 }
 
