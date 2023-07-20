@@ -52,14 +52,11 @@ static void checkFloat()
 
   ret = qthread_readFF(NULL, teParts.cond);
   assert(ret == QTHREAD_SUCCESS);
-
-  printf("value of ans = %f\n", teParts.ans);
 }
 
 int main(void)
 {
   float ans = taylor_exponential_core(250, 9.0);
-  printf("value of ans = %f\n", ans);
   assert(ans == 8103.083984f);
 
   int status = qthread_initialize();
