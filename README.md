@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/Qthreads/qthreads.svg?branch=master)](https://travis-ci.org/Qthreads/qthreads)
 
-# WELCOME TO THE NEW HOME OF QTHREADS: https://github.com/sandialabs/qthreads
+# WELCOME TO THE NEW HOME OF QTHREADS:
+# https://github.com/sandialabs/qthreads
 
 QTHREADS!
 =========
