@@ -1,4 +1,21 @@
---- 1.18 (current) ---
+--- 1.19 (current) ---
+
+New Features:
+ - Add a mechanism to reset the default task spawn order
+ - Enable the use of HWLOC_GET_TOPOLOGY_FUNCTION
+
+Improvements:
+ - Fix fast context swap on ARM64
+ - Mature support of ARM64 for Apple MacOS and Linux
+ - Improvements to testing
+ - Improvements to configure scripts
+ - Remove unused files
+ - Make version numbering consistent
+
+Notes:
+ - Software repository migrated to new locaton
+
+--- 1.18 ---
 
 New Features:
  - Add support for Apple Mac Mx hardware
