@@ -70,6 +70,7 @@ cd $base_dir_name-$tag
     cd .. #config dir
     echo "Removing hidden files"
     rm -rf .[a-z]*
+    rm -rf configure~
     echo "Update .autogen-version"
     rm -rf .autogen-version
     echo "$tag" > .autogen-version
