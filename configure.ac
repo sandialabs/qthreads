@@ -1062,6 +1062,7 @@ AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  man/Makefile
+                 qthread.pc
                 
  man/man3/Makefile
                  include/Makefile
