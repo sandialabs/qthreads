@@ -11,10 +11,17 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
+        compiler: [gcc-9, gcc-10, gcc-11, gcc-12, gcc-13]
         scheduler: [nemesis, sherwood]
         topology: [hwloc, binders, no]
+    env:
+      CC: ${{ matrix.compiler }}
     steps:
     - uses: actions/checkout@v2
+    - if: ${{ matrix.compiler == 'gcc-13' }}
+      run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
+    - name: install gcc
+      run: sudo apt-get install ${{ matrix.compiler }}
     - name: install hwloc
       run: |
         sudo apt-get install hwloc libhwloc-dev
