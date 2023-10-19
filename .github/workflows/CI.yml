@@ -23,7 +23,7 @@ jobs:
       run: |
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make
+        make -j2
     - name: make check
       run: |
         timeout --foreground 3m make check
@@ -43,7 +43,7 @@ jobs:
       run: |
         ./autogen.sh
         ./configure --enable-picky
-        make
+        make -j3
 ## Currently hangs on OSX -- https://github.com/Qthreads/qthreads/issues/59
     - name: make check
       run: |
