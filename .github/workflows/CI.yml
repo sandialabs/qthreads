@@ -60,7 +60,6 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky
         make -j3
-## Currently hangs on OSX -- https://github.com/Qthreads/qthreads/issues/59
     - name: make check
       run: |
         gtimeout --foreground 8m make check
