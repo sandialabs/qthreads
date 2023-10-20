@@ -64,3 +64,35 @@ jobs:
     - name: make check
       run: |
         gtimeout --foreground 8m make check
+
+  sanitizers:
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        sanitizer: [address, memory, thread, undefined]
+        scheduler: [nemesis, sherwood]
+        topology: [hwloc, binders, no]
+    env:
+      CC: clang-17
+      CFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
+      LDFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
+    steps:
+    - uses: actions/checkout@v3
+    - name: install compiler
+      run: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main' && break || sleep 1
+        sudo apt-get install clang-17
+    - name: install hwloc
+      run: |
+        sudo apt-get install hwloc libhwloc-dev
+        hwloc-ls --version
+    - name: build qthreads
+      run: |
+        ./autogen.sh
+        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
+        make -j2
+    - name: make check
+      run: |
+        timeout --foreground 6m make check
