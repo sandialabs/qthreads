@@ -31,7 +31,7 @@ jobs:
         sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main' && break || sleep 1
     - name: install compiler
       run: sudo apt-get install ${{ matrix.compiler }}
-    - name: install hwloc
+    - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
@@ -83,7 +83,7 @@ jobs:
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
         sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main' && break || sleep 1
         sudo apt-get install clang-17
-    - name: install hwloc
+    - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
