@@ -74,7 +74,9 @@ jobs:
         topology: [hwloc, binders, no]
     env:
       CC: clang-17
+      CXX: clang++-17
       CFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
+      CXXFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
       LDFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
     steps:
     - uses: actions/checkout@v3
