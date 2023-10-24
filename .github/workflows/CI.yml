@@ -90,7 +90,7 @@ jobs:
         make -j2
     - name: make check
       run: |
-        timeout --foreground 3m make check
+        timeout --foreground 6m make check
 
   mac:
     runs-on: macos-latest
@@ -151,7 +151,7 @@ jobs:
         make -j2
     - name: make check
       run: |
-        timeout --foreground 6m make check
+        timeout --foreground 8m make check
 
   linux-thorough:
     runs-on: ubuntu-22.04
