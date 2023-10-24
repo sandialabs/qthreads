@@ -139,7 +139,7 @@ jobs:
         sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main' && break || sleep 1
         sudo apt-get install clang-17
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install libc++-${{ matrix.clang_version }}-dev libc++abi-${{ matrix.clang_version }}-dev
+      run: sudo apt-get install libc++-17-dev libc++abi-17-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
@@ -148,6 +148,54 @@ jobs:
       run: |
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
+        make -j2
+    - name: make check
+      run: |
+        timeout --foreground 6m make check
+
+  linux-thorough:
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        scheduler: [nemesis, sherwood]
+        topology: [hwloc, binders, no]
+        use_libcxx: [true, false]
+        use_asserts: [true, false]
+        use_expensive_asserts: [true, false]
+        optimization_level: [0, 2, 3]
+        exclude:
+          - compiler: gcc
+            use_libcxx: true
+          - use_asserts: false
+            use_expensive_asserts: true
+    env:
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc-13' || 'clang-17' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++-13' || 'clang++-17' }}
+      CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -O{0}', matrix.optimization_level) || format('-O{0}', matrix.optimization_level) }}
+      QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
+      QTHREADS_ENABLE_EXPENSIVE_ASSERTS: ${{ matrix.use_expensive_asserts && '--enable-paranoia' || '' }}
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
+        sudo apt-get install gcc-13 g++-13
+    - if: ${{ matrix.compiler == 'clang' }}
+      run: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main' && break || sleep 1
+        sudo apt-get install clang-17
+    - if: ${{ matrix.use_libcxx }}
+      run: sudo apt-get install libc++-17-dev libc++abi-17-dev
+    - if: ${{ matrix.topology != 'no' }}
+      run: |
+        sudo apt-get install hwloc libhwloc-dev
+        hwloc-ls --version
+    - name: build qthreads
+      run: |
+        ./autogen.sh
+        ./configure $QTHREADS_ENABLE_ASSERTS $QTHREADS_ENABLE_EXPENSIVE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
     - name: make check
       run: |
