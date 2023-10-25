@@ -45,7 +45,6 @@ jobs:
         clang_version: [11, 12, 13, 14, 15, 16, 17]
         scheduler: [nemesis, sherwood]
         topology: [hwloc, binders, no]
-        use_libcxx: [true, false] # check with libc++ too since there are plans to expand the use of C++ in qthreads
         include:
           - clang_version: 11
             gcc_version: 10
@@ -64,7 +63,6 @@ jobs:
     env:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++${{ matrix.clang_version }}
-      CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
     steps:
     - uses: actions/checkout@v3
     - if: ${{ matrix.clang_version == '16' || matrix.clang_version == 17 }}
@@ -73,12 +71,10 @@ jobs:
         sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.clang_version }} main' && break || sleep 1
     - if: ${{ matrix.gcc_version == '13' && ! matrix.use_libcxx }}
       run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
-    - if: ${{ ! matrix.use_libcxx }}
+    - name: install gcc
       run: sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
     - name: install clang
       run: sudo apt-get install clang-${{ matrix.clang_version }}
-    - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install libc++-${{ matrix.clang_version }}-dev libc++abi-${{ matrix.clang_version }}-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
