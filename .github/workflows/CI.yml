@@ -129,7 +129,7 @@ jobs:
         sanitizer: [address, memory, thread, undefined]
         scheduler: [nemesis, sherwood]
         topology: [hwloc, binders, no]
-        use_libcxx: [true, false]
+        use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
     env:
       CC: clang-17
       CXX: clang++-17
@@ -170,7 +170,7 @@ jobs:
         compiler: [gcc, clang]
         scheduler: [nemesis, sherwood]
         topology: [hwloc, binders, no]
-        use_libcxx: [true, false]
+        use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
         use_asserts: [true, false]
         use_expensive_asserts: [true, false]
         exclude:
