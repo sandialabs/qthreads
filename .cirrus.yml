@@ -26,7 +26,19 @@ freebsd_task:
   test_script: |
     timeout --foreground 8m make check
 
-# arm_linux_task:
+arm_linux_task:
+  arm_container:
+    image: gcc:latest
+  install_deps_script: |
+    apt-get update -y
+    apt-get install -y autoconf automake libtool
+    apt-get install -y hwloc
+  build_script: |
+    ./autogen.sh
+    ./configure --enable-picky
+    make -j$CIRRUS_CPU
+  test_script: |
+    timeout --foreground 6m make check
 
 # linux_musl_task:
 
