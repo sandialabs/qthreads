@@ -96,13 +96,8 @@ jobs:
         scheduler: [nemesis, sherwood]
         topology: [hwloc, binders, no]
         use_asserts: [true, false]
-        use_expensive_asserts: [true, false]
-        exclude:
-          - use_asserts: false
-            use_expensive_asserts: true
     env:
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
-      QTHREADS_ENABLE_EXPENSIVE_ASSERTS: ${{ matrix.use_expensive_asserts && '--enable-paranoia' || '' }}
     steps:
     - uses: actions/checkout@v3
     - name: install deps
@@ -115,7 +110,7 @@ jobs:
     - name: build qthreads
       run: |
         ./autogen.sh
-        ./configure $QTHREADS_ENABLE_ASSERTS $QTHREADS_ENABLE_EXPENSIVE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
+        ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j3
     - name: make check
       run: |
@@ -172,18 +167,14 @@ jobs:
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
         use_asserts: [true, false]
-        use_expensive_asserts: [true, false]
         exclude:
           - compiler: gcc
             use_libcxx: true
-          - use_asserts: false
-            use_expensive_asserts: true
     env:
       CC: ${{ matrix.compiler == 'gcc' && 'gcc-13' || 'clang-17' }}
       CXX: ${{ matrix.compiler == 'gcc' && 'g++-13' || 'clang++-17' }}
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
-      QTHREADS_ENABLE_EXPENSIVE_ASSERTS: ${{ matrix.use_expensive_asserts && '--enable-paranoia' || '' }}
     steps:
     - uses: actions/checkout@v3
     - run: |
@@ -203,7 +194,7 @@ jobs:
     - name: build qthreads
       run: |
         ./autogen.sh
-        ./configure $QTHREADS_ENABLE_ASSERTS $QTHREADS_ENABLE_EXPENSIVE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
+        ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
     - name: make check
       run: |
