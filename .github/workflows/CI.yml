@@ -97,7 +97,6 @@ jobs:
         topology: [hwloc, binders, no]
         use_asserts: [true, false]
         use_expensive_asserts: [true, false]
-        optimization_level: [0, 2, 3]
         exclude:
           - use_asserts: false
             use_expensive_asserts: true
@@ -174,7 +173,6 @@ jobs:
         use_libcxx: [true, false]
         use_asserts: [true, false]
         use_expensive_asserts: [true, false]
-        optimization_level: [0, 2, 3]
         exclude:
           - compiler: gcc
             use_libcxx: true
@@ -183,7 +181,7 @@ jobs:
     env:
       CC: ${{ matrix.compiler == 'gcc' && 'gcc-13' || 'clang-17' }}
       CXX: ${{ matrix.compiler == 'gcc' && 'g++-13' || 'clang++-17' }}
-      CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -O{0}', matrix.optimization_level) || format('-O{0}', matrix.optimization_level) }}
+      CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
       QTHREADS_ENABLE_EXPENSIVE_ASSERTS: ${{ matrix.use_expensive_asserts && '--enable-paranoia' || '' }}
     steps:
