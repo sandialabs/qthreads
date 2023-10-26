@@ -90,19 +90,33 @@ jobs:
 
   mac:
     runs-on: macos-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        scheduler: [nemesis, sherwood]
+        topology: [hwloc, binders, no]
+        use_asserts: [true, false]
+        use_expensive_asserts: [true, false]
+        optimization_level: [0, 2, 3]
+        exclude:
+          - use_asserts: false
+            use_expensive_asserts: true
+    env:
+      QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
+      QTHREADS_ENABLE_EXPENSIVE_ASSERTS: ${{ matrix.use_expensive_asserts && '--enable-paranoia' || '' }}
     steps:
     - uses: actions/checkout@v3
     - name: install deps
       run: |
         brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
-    - name: install hwloc
+    - if: ${{ matrix.topology != 'no' }}
       run: |
         brew install hwloc
         hwloc-ls --version
     - name: build qthreads
       run: |
         ./autogen.sh
-        ./configure --enable-picky
+        ./configure $QTHREADS_ENABLE_ASSERTS $QTHREADS_ENABLE_EXPENSIVE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j3
     - name: make check
       run: |
