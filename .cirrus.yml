@@ -12,7 +12,21 @@ osx_m1_task:
   test_script: |
     gtimeout --foreground 8m make check
 
-# freebsd_task:
+freebsd_task:
+  freebsd_instance:
+    image_family: freebsd-13-2
+  install_deps_script: |
+    pkg install -y bash
+    pkg install -y llvm autoconf automake libtool
+    pkg install -y hwloc
+  build_script: |
+    bash autogen.sh
+    bash configure --enable-picky
+    make -j$CIRRUS_CPU
+  test_script: |
+    timeout --foreground 8m make check
 
 # arm_linux_task:
+
+# linux_musl_task:
 
