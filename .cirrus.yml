@@ -8,11 +8,9 @@ osx_m1_task:
       QTHREADS_SCHEDULER: sherwood
   install_deps_script: |
     brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
-    brew install hwloc
-    hwloc-ls --version
   build_script: |
     ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=hwloc
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
     make -j$CIRRUS_CPU
   test_script: |
     gtimeout --foreground 3m make check
@@ -28,10 +26,9 @@ freebsd_task:
   install_deps_script: |
     pkg install -y bash
     pkg install -y llvm autoconf automake libtool
-    pkg install -y hwloc
   build_script: |
     bash autogen.sh
-    bash configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=hwloc
+    bash configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
     make -j$CIRRUS_CPU
   test_script: |
     timeout --foreground 2m make check
