@@ -10,7 +10,7 @@ osx_m1_task:
     ./configure --enable-picky
     make -j$CIRRUS_CPU
   test_script: |
-    gtimeout --foreground 8m make check
+    gtimeout --foreground 3m make check
 
 freebsd_task:
   freebsd_instance:
@@ -24,7 +24,7 @@ freebsd_task:
     bash configure --enable-picky
     make -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground 8m make check
+    timeout --foreground 2m make check
 
 arm_linux_task:
   arm_container:
@@ -38,7 +38,7 @@ arm_linux_task:
     ./configure --enable-picky
     make -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground 6m make check
+    timeout --foreground 2m make check
 
 arm_linux_clang_task:
   arm_container:
@@ -59,5 +59,5 @@ arm_linux_clang_task:
     ./configure --enable-picky
     make -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground 6m make check
+    timeout --foreground 2m make check
 
