@@ -18,6 +18,7 @@ osx_m1_task:
 freebsd_task:
   freebsd_instance:
     image_family: freebsd-13-2
+  timeout_in: 5m
   matrix:
     env:
       QTHREADS_SCHEDULER: nemesis
