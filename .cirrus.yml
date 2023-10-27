@@ -41,15 +41,23 @@ arm_linux_task:
   matrix:
     env:
       QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: hwloc
     env:
       QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: hwloc
   install_deps_script: |
     apt-get update -y
     apt-get install -y autoconf automake libtool
-    apt-get install -y hwloc
+    apt-get install -y hwloc libhwloc-dev
   build_script: |
     ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=hwloc
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
   test_script: |
     timeout --foreground 2m make check
@@ -62,10 +70,22 @@ arm_linux_clang_task:
       CC: clang
       CXX: clang++
       QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: no
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: hwloc
     env:
       CC: clang
       CXX: clang++
       QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: no
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: hwloc
   install_deps_script: |
     apt-get update -y
     apt-get install -y software-properties-common
@@ -73,10 +93,10 @@ arm_linux_clang_task:
     apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
     apt-get install -y clang
     apt-get install -y autoconf automake libtool
-    apt-get install -y hwloc
+    apt-get install -y hwloc libhwloc-dev
   build_script: |
     ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=hwloc
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
   test_script: |
     timeout --foreground 2m make check
