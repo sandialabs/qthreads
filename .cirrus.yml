@@ -38,6 +38,7 @@ freebsd_task:
 arm_linux_task:
   arm_container:
     image: gcc:latest
+  timeout_in: 5m
   matrix:
     env:
       QTHREADS_SCHEDULER: nemesis
@@ -60,11 +61,12 @@ arm_linux_task:
     ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground 2m make check
+    timeout --foreground -k 10s 2m make check
 
 arm_linux_clang_task:
   arm_container:
     image: gcc:latest
+  timeout_in: 5m
   matrix:
     env:
       CC: clang
@@ -99,5 +101,5 @@ arm_linux_clang_task:
     ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground 2m make check
+    timeout --foreground -k 10s 2m make check
 
