@@ -27,12 +27,13 @@ freebsd_task:
   install_deps_script: |
     pkg install -y bash
     pkg install -y llvm autoconf automake libtool
+    pkg install -y coreutils # to get gtimeout for CI. The built-in timeout sometimes fails to kill the process.
   build_script: |
     bash autogen.sh
     bash configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
     make -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground -k 10s 2m make check
+    gtimeout --foreground -k 10s 2m make check
 
 arm_linux_task:
   arm_container:
