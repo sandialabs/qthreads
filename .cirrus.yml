@@ -61,34 +61,3 @@ arm_linux_clang_task:
   test_script: |
     timeout --foreground 6m make check
 
-#linux_musl_task:
-#  container:
-#    image: alpine:latest
-#  install_deps_script: |
-#    apk add --no-cache --no-progress bash
-#    apk add --no-cache --no-progress gcc g++ make
-#    apk add --no-cache --no-progress autoconf automake libtool
-#    apk add --no-cache --no-progress hwloc
-#  build_script: |
-#    bash autogen.sh
-#    bash configure --enable-picky
-#    make -j$CIRRUS_CPU
-#  test_script: |
-#    timeout --foreground 6m make check
-
-#linux_musl_arm_task:
-#  arm_container:
-#    image: alpine:latest
-#  install_deps_script: |
-#    apk add --no-cache --no-progress bash
-#    apk add --no-cache --no-progress gcc g++ make
-#    apk add --no-cache --no-progress autoconf automake libtool
-#    apk add --no-cache --no-progress hwloc
-#  build_script: |
-#    pwd
-#    ls -a
-#    bash autogen.sh
-#    bash configure --enable-picky
-#    make -j$CIRRUS_CPU
-#  test_script: |
-#    timeout --foreground 6m make check
