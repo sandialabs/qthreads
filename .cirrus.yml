@@ -20,8 +20,8 @@ freebsd_task:
     image_family: freebsd-13-2
   timeout_in: 5m
   matrix:
-    #env:
-    #  QTHREADS_SCHEDULER: nemesis
+    env:
+      QTHREADS_SCHEDULER: nemesis
     env:
       QTHREADS_SCHEDULER: sherwood
   install_deps_script: |
