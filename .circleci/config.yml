@@ -1,0 +1,72 @@
+version: 2.1
+
+jobs:
+  arm_gcc:
+    parameters:
+      scheduler:
+        type: string
+      topology:
+        type: string
+    machine:
+      image: ubuntu-2204:2023.10.1
+    resource_class: arm.medium
+    environment:
+      CC: gcc-13
+      CXX: g++-13
+    steps:
+      - checkout
+      - run: |
+          sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
+          sudo apt-get install -y gcc-13 g++-13
+          sudo apt-get install -y autoconf automake libtool
+          sudo apt-get install -y hwloc libhwloc-dev
+      - run: |
+          ./autogen.sh
+          ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> --with-topology=<< parameters.topology >>
+          make -j2
+      - run: |
+          timeout --foreground -k 10s 2m make check
+
+  arm_clang:
+    parameters:
+      scheduler:
+        type: string
+      topology:
+        type: string
+    machine:
+      image: ubuntu-2204:2023.10.1
+    resource_class: arm.medium
+    environment:
+      CC: clang-17
+      CXX: clang++-17
+    steps:
+      - checkout
+      - run: |
+          sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
+          sudo apt-get install -y gcc-13 g++-13
+          sudo apt-get install -y autoconf automake libtool
+          sudo apt-get install -y hwloc libhwloc-dev
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
+          sudo apt-get install -y clang-17
+      - run: |
+          ./autogen.sh
+          ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
+          make -j2
+      - run: |
+         timeout --foreground -k 10s 2m make check
+
+workflows:
+  build_and_test:
+    jobs:
+      - arm_gcc:
+          matrix:
+            parameters:
+              scheduler: [nemesis, sherwood]
+              topology: ['no', binders, hwloc]
+      - arm_clang:
+          matrix:
+            parameters:
+              scheduler: [nemesis, sherwood]
+              topology: ['no', binders, hwloc]
+
