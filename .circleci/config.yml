@@ -56,6 +56,40 @@ jobs:
       - run: |
          timeout --foreground -k 10s 2m make check
 
+  arm_sanitizers:
+    parameters:
+      scheduler:
+        type: string
+      topology:
+        type: string
+      sanitizer:
+        type: string
+    machine:
+      image: ubuntu-2204:2023.10.1
+    resource_class: arm.medium
+    environment:
+      CC: clang-17
+      CXX: clang++-17
+      CFLAGS: "-fsanitize=<< parameters.sanitizer >>"
+      CXXFLAGS: "-fsanitize=<< parameters.sanitizer >>"
+      LDFLAGS: "-fsanitize=<< parameters.sanitizer >>"
+    steps:
+      - checkout
+      - run: |
+          sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
+          sudo apt-get install -y gcc-13 g++-13
+          sudo apt-get install -y autoconf automake libtool
+          sudo apt-get install -y hwloc libhwloc-dev
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
+          sudo apt-get install -y clang-17
+      - run: |
+          ./autogen.sh
+          ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
+          make -j2
+      - run: |
+         timeout --foreground -k 10s 4444m make check
+
 workflows:
   build_and_test:
     jobs:
@@ -69,4 +103,10 @@ workflows:
             parameters:
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
+      - arm_sanitizers:
+          matrix:
+            parameters:
+              scheduler: [nemesis, sherwood, distrib]
+              topology: ['no', binders, hwloc]
+              sanitizer: [address, memory, thread, undefined]
 
