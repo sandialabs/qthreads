@@ -1,6 +1,7 @@
 osx_m1_task:
   macos_instance:
     image: ghcr.io/cirruslabs/macos-sonoma-xcode:latest
+  timeout_in: 5m
   matrix:
     env:
       QTHREADS_SCHEDULER: nemesis
