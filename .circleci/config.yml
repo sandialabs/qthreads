@@ -24,8 +24,9 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> --with-topology=<< parameters.topology >>
           make -j2
-      - run: |
-          timeout --foreground -k 10s 2m make check
+      - run:
+          command: timeout --foreground -k 10s 2m make check
+          no_output_timeout: 30s
 
   arm_clang:
     parameters:
@@ -53,8 +54,9 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
-      - run: |
-         timeout --foreground -k 10s 2m make check
+      - run:
+          command: timeout --foreground -k 10s 2m make check
+          no_output_timeout: 30s
 
   arm_sanitizers:
     parameters:
@@ -87,8 +89,9 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
-      - run: |
-         timeout --foreground -k 10s 4444m make check
+      - run:
+          command: timeout --foreground -k 10s 4m make check
+          no_output_timeout: 30s
 
 workflows:
   build_and_test:
