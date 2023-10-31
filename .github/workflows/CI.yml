@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         gcc_version: [9, 10, 11, 12, 13]
-        scheduler: [nemesis, sherwood]
+        scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
     env:
       CC: gcc-${{ matrix.gcc_version }}
@@ -43,7 +43,7 @@ jobs:
     strategy:
       matrix:
         clang_version: [11, 12, 13, 14, 15, 16, 17]
-        scheduler: [nemesis, sherwood]
+        scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         include:
           - clang_version: 11
@@ -93,7 +93,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        scheduler: [nemesis, sherwood]
+        scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_asserts: [true, false]
     env:
@@ -122,7 +122,7 @@ jobs:
     strategy:
       matrix:
         sanitizer: [address, memory, thread, undefined]
-        scheduler: [nemesis, sherwood]
+        scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
     env:
@@ -163,7 +163,7 @@ jobs:
     strategy:
       matrix:
         compiler: [gcc, clang]
-        scheduler: [nemesis, sherwood]
+        scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
         use_asserts: [true, false]
