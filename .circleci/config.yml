@@ -62,11 +62,11 @@ workflows:
       - arm_gcc:
           matrix:
             parameters:
-              scheduler: [nemesis, sherwood]
+              scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
       - arm_clang:
           matrix:
             parameters:
-              scheduler: [nemesis, sherwood]
+              scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
 
