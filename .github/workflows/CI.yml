@@ -34,8 +34,8 @@ jobs:
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
     - name: make check
-      run: |
-        timeout --foreground 3m make check
+      run: timeout -k 10s --foreground 3m make check
+      timeout-minutes: 4
 
   linux-clang:
     runs-on: ubuntu-22.04
@@ -85,8 +85,8 @@ jobs:
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
     - name: make check
-      run: |
-        timeout --foreground 6m make check
+      run: timeout -k 10s --foreground 6m make check
+      timeout-minutes: 7
 
   mac:
     runs-on: macos-latest
@@ -113,8 +113,8 @@ jobs:
         ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j3
     - name: make check
-      run: |
-        gtimeout --foreground 8m make check
+      run: gtimeout -k 10s --foreground 8m make check
+      timeout-minutes: 9
 
   sanitizers:
     runs-on: ubuntu-22.04
@@ -154,8 +154,8 @@ jobs:
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
     - name: make check
-      run: |
-        timeout --foreground 8m make check
+      run: timeout -k 10s --foreground 8m make check
+      timeout-minutes: 9
 
   linux-thorough:
     runs-on: ubuntu-22.04
@@ -197,5 +197,5 @@ jobs:
         ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
     - name: make check
-      run: |
-        timeout --foreground 6m make check
+      run: timeout -k 10s --foreground 6m make check
+      timeout-minutes: 7
