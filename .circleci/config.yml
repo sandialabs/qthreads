@@ -1,3 +1,4 @@
+
 version: 2.1
 
 jobs:
@@ -93,6 +94,43 @@ jobs:
           command: timeout --foreground -k 10s 4m make check
           no_output_timeout: 30s
 
+  arm_acfl:
+    parameters:
+      scheduler:
+        type: string
+      topology:
+        type: string
+    machine:
+      image: ubuntu-2204:2023.10.1
+    resource_class: arm.medium
+    environment:
+      CC: armclang
+      CXX: armclang++
+    steps:
+      - checkout
+      - run: |
+          sudo apt-get update -y
+          sudo apt-get install -y autoconf automake libtool
+          sudo apt-get install -y hwloc libhwloc-dev
+          wget -O acfl.tar https://developer.arm.com/-/media/Files/downloads/hpc/arm-compiler-for-linux/23-10/arm-compiler-for-linux_23.10_Ubuntu-22.04_aarch64.tar
+          tar -vxf acfl.tar
+          ./arm-compiler-for-linux_23.10_Ubuntu-22.04/arm-compiler-for-linux_23.10_Ubuntu-22.04.sh -a -f -s acfl
+          rm acfl.tar
+          sudo apt install -y ./acfl/gcc-12.2.0_Ubuntu-22.04.deb ./acfl/arm-linux-compiler-23.10_Ubuntu-22.04.deb
+          rm -rf acfl
+          export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
+          armclang -v
+      - run: |
+          export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
+          ./autogen.sh
+          ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
+          make -j2
+      - run:
+          command: |
+              export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
+              timeout --foreground -k 10s 4m make check
+          no_output_timeout: 30s
+
 workflows:
   build_and_test:
     jobs:
@@ -112,4 +150,9 @@ workflows:
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
               sanitizer: [address, memory, thread, undefined]
+      - arm_acfl:
+          matrix:
+            parameters:
+              scheduler: [nemesis, sherwood, distrib]
+              topology: ['no', binders, hwloc]
 
