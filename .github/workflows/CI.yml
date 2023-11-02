@@ -12,7 +12,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        gcc_version: [9, 10, 11, 12, 13]
+        gcc_version: [9, 10, 11, 12]
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
     env:
@@ -20,8 +20,6 @@ jobs:
       CXX: g++-${{ matrix.gcc_version }}
     steps:
     - uses: actions/checkout@v3
-    - if: ${{ matrix.gcc_version == '13' }}
-      run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
     - name: install compiler
       run: sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
     - if: ${{ matrix.topology != 'no' }}
@@ -42,7 +40,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        clang_version: [11, 12, 13, 14, 15, 16, 17]
+        clang_version: [11, 12, 13, 14, 15, 16]
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         include:
