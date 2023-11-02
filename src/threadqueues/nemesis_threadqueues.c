@@ -167,7 +167,6 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
             q->shadow_head = retval->next;
             retval->next   = NULL;
         } else {
-            qt_threadqueue_node_t *old;
             q->shadow_head = NULL;
             if (q->tail == retval) {
                 q->tail = NULL;
@@ -176,21 +175,6 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
     }
     qthread_debug(THREADQUEUE_DETAILS, "nemesis q:%p head:%p tail:%p shadow_head:%p\n", q, q->head, q->tail, q->shadow_head);
     return retval;
-}                                      /*}}} */
-
-static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
-{                                      /*{{{ */
-    qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
-
-    if (node) {
-        qthread_t *retval = node->thread;
-        assert(node->next == NULL);
-        (void)qthread_incr(&(q->advisory_queuelen), -1);
-        FREE_TQNODE(node);
-        return retval;
-    } else {
-        return NULL;
-    }
 }                                      /*}}} */
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
@@ -363,7 +347,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
                                             uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     int i;
+#endif /* QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 #ifdef QTHREAD_USE_EUREKAS
     qt_eureka_disable();
 #endif /* QTHREAD_USE_EUREKAS */

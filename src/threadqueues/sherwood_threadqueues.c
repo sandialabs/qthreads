@@ -471,9 +471,6 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                        !(f &QTHREAD_BIG_STRUCT) &&                         \
                                        !(f &QTHREAD_FUTURE) && !(f &QTHREAD_REAL_MCCOY) && \
                                        !(f &QTHREAD_AGGREGATED))
-// && (f & QTHREAD_AGGREGABLE) \
-//               )
-// (f & QTHREAD_AGGREGABLE)
 
 qthread_t INTERNAL *qt_init_agg_task() // partly a duplicate from qthread.c
 {
@@ -704,7 +701,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;
     qthread_worker_id_t worker_id = NO_WORKER;
+#ifdef QTHREAD_TASK_AGGREGATION
     int                 curr_cost, max_t, ret_agg_task;
+#endif
 
     assert(q != NULL);
     assert(my_shepherd);

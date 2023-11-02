@@ -1582,7 +1582,6 @@ static void qt_syncvar_call_tf(const qt_key_t      addr,
         }
         for (; curs != NULL; curs = curs->next) {
             qthread_t *waiter = curs->waiter;
-            void      *tls;
             switch(tf(addr, waiter, f_arg)) {
                 case 0: // ignore, move to the next one
                     base = &curs->next;

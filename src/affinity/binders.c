@@ -19,10 +19,6 @@ struct {
   int num;
 } workers;
 
-int INTERNAL qt_affinity_get_unique_id(int i){
-  return i;
-}
-
 void INTERNAL qt_affinity_balanced(int num_workers, 
                                    int start, 
                                    hwloc_obj_t obj)
@@ -168,7 +164,6 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
     sheps.binds = qt_malloc(sizeof(hwloc_cpuset_t) * sheps.num);
     workers.num = 0;
     for (i=0; i<sheps.num; i++) {
-      char tmp[256];
       sheps.binds[i] = hwloc_bitmap_alloc();
       hwloc_bitmap_list_sscanf(sheps.binds[i], ranges[i]);
       //hwloc_bitmap_list_snprintf(tmp, 256, sheps.binds[i]);
@@ -178,7 +173,6 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
     int id;
     workers.binds = qt_malloc(sizeof(hwloc_cpuset_t) * workers.num);
     for (i=0; i<sheps.num; i++) {
-      char tmp[256];
       hwloc_bitmap_foreach_begin(id, sheps.binds[i])
         workers.binds[j] = hwloc_bitmap_alloc();
         hwloc_bitmap_set(workers.binds[j], id);

@@ -62,7 +62,6 @@
 #include "qt_qthread_mgmt.h"
 #include "qt_shepherd_innards.h"
 #include "qt_blocking_structs.h"
-#include "qt_addrstat.h"
 #include "qt_threadqueues.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_affinity.h"
@@ -2433,7 +2432,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #if defined(QTHREAD_DEBUG)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
 #endif
-    qthread_shepherd_id_t save_target = target_shep;
 #ifdef QTHREAD_OMP_AFFINITY
     if(target_shep == NO_SHEPHERD) {
         if (me->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY) {

@@ -34,8 +34,6 @@ static float taylor_exponential_core(int n, float x)
 static aligned_t taylor_exponential(void *arg)
 {
   struct parts* te = (struct parts*) arg;
-  float exp = te->exp;
-  float length = te->length;
   te->ans = taylor_exponential_core(te->length, te->exp);
   return 0;
 }

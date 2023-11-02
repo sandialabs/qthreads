@@ -77,12 +77,14 @@ aligned_t task(void* arg) {
 }
 
 int test2() {
+  int status = QTHREAD_SUCCESS;
   aligned_t ret;
-  qthread_fork(task, NULL, &ret);
+  status &= qthread_fork(task, NULL, &ret);
   check += 1;
   qthread_sleep(t_long);
   check -= 2;
   qthread_readFF(NULL, &ret);
+  return status;
 }
 
 aligned_t task_short_inner(void *arg) {

@@ -101,9 +101,6 @@ static QINLINE void free_tqnode(qt_threadqueue_node_t* t){
 
 extern qt_mpool generic_qthread_pool;
 
-static QINLINE qthread_t* alloc_qthread() {
-  return (qthread_t*) qt_mpool_alloc(generic_qthread_pool);
-}
 static QINLINE void free_qthread(qthread_t* t){
   return qt_mpool_free(generic_qthread_pool, t);
 }
@@ -347,10 +344,8 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t              active){   
-  qt_threadqueue_internal * q= myqueue(qe);
   qt_threadqueue_node_t *node = NULL;
   qthread_t* t;
-  qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
 
   for(int numwaits = 0; !node; numwaits ++){
     node = qt_threadqueue_dequeue_tail(qe);
