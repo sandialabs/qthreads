@@ -86,6 +86,83 @@ jobs:
       run: timeout -k 10s --foreground 6m make check
       timeout-minutes: 7
 
+  linux-icx:
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        scheduler: [nemesis, sherwood, distrib]
+        topology: [hwloc, binders, no]
+    env:
+      CC: icx
+      CXX: icpx
+    steps:
+    - uses: actions/checkout@v3
+    - if: ${{ matrix.topology != 'no' }}
+      run: |
+        sudo apt-get install hwloc libhwloc-dev
+        hwloc-ls --version
+    - name: install gcc
+      run: |
+        sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
+        sudo apt-get install gcc-13 g++-13
+    - name: install icx
+      run: |
+        wget -O - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add - && break || sleep 1
+        sudo apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && break || sleep 1
+        sudo apt-get install intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.1
+        source /opt/intel/oneapi/setvars.sh
+        icx -v
+    - name: build qthreads
+      run: |
+        source /opt/intel/oneapi/setvars.sh
+        ./autogen.sh
+        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
+        make -j2
+    - name: make check
+      run: |
+        source /opt/intel/oneapi/setvars.sh
+        timeout -k 10s --foreground 6m make check
+      timeout-minutes: 7
+
+  linux-icc:
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    strategy:
+      matrix:
+        scheduler: [nemesis, sherwood, distrib]
+        topology: [hwloc, binders, no]
+    env:
+      CC: icc
+      CXX: icpc
+    steps:
+    - uses: actions/checkout@v3
+    - if: ${{ matrix.topology != 'no' }}
+      run: |
+        sudo apt-get install hwloc libhwloc-dev
+        hwloc-ls --version
+    - name: install gcc
+      run: |
+        sudo apt-get install gcc-12 g++-12 # last compatible gcc version for icpc
+    - name: install icc
+      run: |
+        wget -O - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add - && break || sleep 1
+        sudo apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && break || sleep 1
+        sudo apt-get install intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.1
+        source /opt/intel/oneapi/setvars.sh
+        icc -v
+    - name: build qthreads
+      run: |
+        source /opt/intel/oneapi/setvars.sh
+        ./autogen.sh
+        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
+        make -j2
+    - name: make check
+      run: |
+        source /opt/intel/oneapi/setvars.sh
+        timeout -k 10s --foreground 6m make check
+      timeout-minutes: 7
+
   mac:
     runs-on: macos-latest
     continue-on-error: true
