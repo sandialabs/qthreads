@@ -38,7 +38,7 @@ static aligned_t taylor_exponential(void *arg)
   return 0;
 }
 
-static void checkFloat()
+static void checkFloat(void)
 {
   struct parts teParts = {250,9.0f,0.0f};
   int ret = -1;

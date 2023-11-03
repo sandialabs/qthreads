@@ -24,7 +24,7 @@ double t_short = 0.01;
 
 int check = 0;
 
-aligned_t task_long(void *arg) {
+static aligned_t task_long(void *arg) {
     double secs = t_long;
     qtimer_t t = qtimer_create();
     qtimer_start(t);
@@ -37,7 +37,7 @@ aligned_t task_long(void *arg) {
     return 0;
 }
 
-aligned_t task_short(void *arg) {
+static aligned_t task_short(void *arg) {
     double secs = t_short;
     qtimer_t t = qtimer_create();
     qtimer_start(t);
@@ -50,7 +50,7 @@ aligned_t task_short(void *arg) {
     return 0;
 }
 
-int test1() {
+static int test1(void) {
     int status = QTHREAD_SUCCESS;   
     reset;
     check += 1;
@@ -60,7 +60,7 @@ int test1() {
     return status;
 }
 
-void qthread_sleep(double secs) {
+static void qthread_sleep(double secs) {
   qtimer_t t = qtimer_create();
   qtimer_start(t);
   do {
@@ -70,13 +70,13 @@ void qthread_sleep(double secs) {
   qtimer_destroy(t);
 }
 
-aligned_t task(void* arg) {
+static aligned_t task(void* arg) {
   qthread_sleep(t_short);
   check *= 2;
   return 0;
 }
 
-int test2() {
+static int test2(void) {
   int status = QTHREAD_SUCCESS;
   aligned_t ret;
   status &= qthread_fork(task, NULL, &ret);
@@ -87,7 +87,7 @@ int test2() {
   return status;
 }
 
-aligned_t task_short_inner(void *arg) {
+static aligned_t task_short_inner(void *arg) {
     double secs = t_short;
     qtimer_t t = qtimer_create();
     qtimer_start(t);
@@ -100,7 +100,7 @@ aligned_t task_short_inner(void *arg) {
     return 0;
 }
 
-aligned_t task_long_outer(void *arg) {
+static aligned_t task_long_outer(void *arg) {
     int status = QTHREAD_SUCCESS;
     status &= qthread_fork(task_short_inner, NULL, NULL);
     assert(status == QTHREAD_SUCCESS);
@@ -116,7 +116,7 @@ aligned_t task_long_outer(void *arg) {
     return 0;
 }
 
-int test3() {
+static int test3(void) {
     int status = QTHREAD_SUCCESS;
     reset;
     check += 1;

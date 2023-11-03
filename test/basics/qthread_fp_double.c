@@ -46,7 +46,7 @@ static void startQthread(struct parts *teParts)
   assert(ret == QTHREAD_SUCCESS);
 }
 
-static aligned_t checkDoubleAsQthreads()
+static aligned_t checkDoubleAsQthreads(void)
 {
   struct parts teParts1 = {250, 9.0, 0.0};
   struct parts teParts2 = {50, 3.0, 0.0};
@@ -74,7 +74,7 @@ static aligned_t checkDoubleAsQthreads()
   return 0;
 }
 
-static void checkDoubleAsQthread()
+static void checkDoubleAsQthread(void)
 {
   int ret = -1;
   struct parts teParts = {250, 9.0, 0.0};
@@ -89,7 +89,7 @@ static void checkDoubleAsQthread()
   assert(teParts.ans == 8103.0839275753824);
 }
 
-static void checkDouble()
+static void checkDouble(void)
 {
   double ans = taylor_exponential_core(250, 9.0);
   assert(ans == 8103.0839275753824);

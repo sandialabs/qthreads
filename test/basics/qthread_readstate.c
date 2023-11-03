@@ -15,7 +15,7 @@
     assert(v opr val); \
 } while (0)
 
-aligned_t spinner(void *arg)
+static aligned_t spinner(void *arg)
 {
     while (*(aligned_t*)arg == 0) ;
     return 1;

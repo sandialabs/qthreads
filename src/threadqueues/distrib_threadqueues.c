@@ -20,6 +20,7 @@
 #include "qt_asserts.h"
 #include "qt_prefetch.h"
 #include "qt_threadqueues.h"
+#include "qt_threadqueue_scheduler.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
 #ifdef QTHREAD_USE_EUREKAS
@@ -76,7 +77,7 @@ qt_threadqueue_pools_t generic_threadqueue_pools;
 #define mycounter(q) (q->w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)].n)
 #define myqueue(q) (q->t + mycounter(q))
 
-static qt_threadqueue_t* alloc_threadqueue(){
+static qt_threadqueue_t* alloc_threadqueue(void){
   qt_threadqueue_t* t = (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues);
   t->num_queues = qlib->nworkerspershep; // Assumption built into api of constant number of workers per shepherd
   t->t = qt_malloc(sizeof(qt_threadqueue_internal) * t->num_queues);
@@ -155,12 +156,12 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *qe){
   free_threadqueue(qe);
 } 
 
-static void qt_threadqueue_subsystem_shutdown(){   
+static void qt_threadqueue_subsystem_shutdown(void){   
   qt_mpool_destroy(generic_threadqueue_pools.nodes);
   qt_mpool_destroy(generic_threadqueue_pools.queues);
 } 
 
-void INTERNAL qt_threadqueue_subsystem_init(){   
+void INTERNAL qt_threadqueue_subsystem_init(void){   
   steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 8, 0);
   condwait_backoff = qt_internal_get_env_num("CONDWAIT_BACKOFF", 2048, 0);
   finalizing = 0;
@@ -177,8 +178,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q){
 
 /* Threadqueue operations 
  * We have 4 basic queue operations, enqueue and dequeue for head and tail */
-void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
-                                          qthread_t *restrict        t){ 
+static void qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
+                                        qthread_t *restrict        t){ 
   if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
     finalizing = 1;
   }
@@ -219,8 +220,8 @@ void INTERNAL qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
   }
 } 
 
-void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
-                                          qthread_t *restrict        t){   
+static void qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
+                                        qthread_t *restrict        t){   
   if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
     if(mccoy) {
       printf("mccoy thread non-null and trying to set!\n");
@@ -255,7 +256,7 @@ void INTERNAL qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
   }
 } 
 
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){                                     
+static qt_threadqueue_node_t *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){                                     
   qt_threadqueue_internal* q = myqueue(qe);
   mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node;
@@ -278,7 +279,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe
   return node;
 }                                   
 
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_head(qt_threadqueue_t *qe){                                     
+static qt_threadqueue_node_t *qt_threadqueue_dequeue_head(qt_threadqueue_t *qe){                                     
   qt_threadqueue_internal* q = myqueue(qe);
   mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
   qt_threadqueue_node_t *node;
@@ -386,10 +387,10 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *qe,
   return t;
 } 
 
-void INTERNAL qthread_steal_enable(){     
+void INTERNAL qthread_steal_enable(void){     
 }   
 
-void INTERNAL qthread_steal_disable(){     
+void INTERNAL qthread_steal_disable(void){     
 }     
 
 qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * curr_shep){

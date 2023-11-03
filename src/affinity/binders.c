@@ -19,9 +19,9 @@ struct {
   int num;
 } workers;
 
-void INTERNAL qt_affinity_balanced(int num_workers, 
-                                   int start, 
-                                   hwloc_obj_t obj)
+static void qt_affinity_balanced(int num_workers, 
+                                 int start, 
+                                 hwloc_obj_t obj)
 {
   if (num_workers > 0){
     hwloc_obj_t child = obj->first_child;
@@ -56,8 +56,8 @@ void INTERNAL qt_affinity_balanced(int num_workers,
   }
 }
 
-int INTERNAL qt_affinity_compact(int num_workers, 
-                                 hwloc_obj_t obj)
+static int qt_affinity_compact(int num_workers, 
+                               hwloc_obj_t obj)
 {
   int n = num_workers;
   hwloc_obj_t child = obj->first_child;

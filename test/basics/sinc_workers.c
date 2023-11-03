@@ -8,7 +8,7 @@ typedef struct {
   int *ret;
 } args_t;
 
-aligned_t fib(void *args_){
+static aligned_t fib(void *args_){
   args_t* args = (args_t*)args_;
   if(args->i < 2){
     *args->ret = 1;
@@ -31,7 +31,7 @@ aligned_t fib(void *args_){
   return 0;
 }
 
-int main(){
+int main(void){
   assert(qthread_initialize() == 0);
   qt_sinc_t sinc;
   qt_sinc_init(&sinc, 0, NULL, NULL, 1);

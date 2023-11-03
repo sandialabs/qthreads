@@ -18,6 +18,7 @@
 #include "qt_asserts.h"
 #include "qt_prefetch.h"
 #include "qt_threadqueues.h"
+#include "qt_threadqueue_scheduler.h"
 #include "qt_envariables.h"
 #include "qt_qthread_struct.h"
 #include "qt_debug.h"
@@ -226,8 +227,8 @@ void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c
 {}
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
-void INTERNAL qthread_steal_enable() {}
-void INTERNAL qthread_steal_disable() {}
+void INTERNAL qthread_steal_enable(void) {}
+void INTERNAL qthread_steal_disable(void) {}
 
 #ifdef QTHREAD_PARANOIA
 static void sanity_check_tq(NEMESIS_queue *q)
