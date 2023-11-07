@@ -56,14 +56,12 @@ jobs:
             gcc_version: 12
           - clang_version: 16
             gcc_version: 13
-          - clang_version: 17
-            gcc_version: 13
     env:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++${{ matrix.clang_version }}
     steps:
     - uses: actions/checkout@v3
-    - if: ${{ matrix.clang_version == '16' || matrix.clang_version == 17 }}
+    - if: ${{ matrix.clang_version == '16' }}
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
         sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.clang_version }} main' && break || sleep 1
