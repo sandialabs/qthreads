@@ -1,0 +1,126 @@
+osx_m1_task:
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-sonoma-xcode:latest
+  timeout_in: 5m
+  matrix:
+    env:
+      QTHREADS_SCHEDULER: nemesis
+    env:
+      QTHREADS_SCHEDULER: sherwood
+    env:
+      QTHREADS_SCHEDULER: distrib
+  install_deps_script: |
+    brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+  build_script: |
+    ./autogen.sh
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
+    make -j$CIRRUS_CPU
+  test_script: |
+    gtimeout --foreground 3m make check
+
+freebsd_task:
+  freebsd_instance:
+    image_family: freebsd-13-2
+  timeout_in: 5m
+  matrix:
+    env:
+      QTHREADS_SCHEDULER: nemesis
+    env:
+      QTHREADS_SCHEDULER: sherwood
+    env:
+      QTHREADS_SCHEDULER: distrib
+  install_deps_script: |
+    pkg install -y bash
+    pkg install -y llvm autoconf automake libtool
+    pkg install -y coreutils # to get gtimeout for CI. The built-in timeout sometimes fails to kill the process.
+  build_script: |
+    bash autogen.sh
+    bash configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
+    make -j$CIRRUS_CPU
+  test_script: |
+    gtimeout --foreground -k 10s 2m make check
+
+arm_linux_task:
+  arm_container:
+    image: gcc:latest
+  timeout_in: 5m
+  matrix:
+    env:
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: hwloc
+  install_deps_script: |
+    apt-get update -y
+    apt-get install -y autoconf automake libtool
+    apt-get install -y hwloc libhwloc-dev
+  build_script: |
+    ./autogen.sh
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
+    make -j$CIRRUS_CPU
+  test_script: |
+    timeout --foreground -k 10s 2m make check
+
+arm_linux_clang_task:
+  arm_container:
+    image: gcc:latest
+  timeout_in: 5m
+  matrix:
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: no
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: no
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: no
+    env:
+      CC: clang
+      CXX: clang++
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: hwloc
+  install_deps_script: |
+    apt-get update -y
+    apt-get install -y software-properties-common
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+    apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
+    apt-get install -y clang
+    apt-get install -y autoconf automake libtool
+    apt-get install -y hwloc libhwloc-dev
+  build_script: |
+    ./autogen.sh
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
+    make -j$CIRRUS_CPU
+  test_script: |
+    timeout --foreground -k 10s 2m make check
+
