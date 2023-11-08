@@ -12,8 +12,16 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
-Q_NOINLINE size_t thread2(size_t left,
-                               size_t depth)
+#ifdef __clang__
+#define STACKLEFT_NOINLINE __attribute__((optnone))
+#elif __GNUC__
+#define STACKLEFT_NOINLINE __attribute__((optimize(0)))
+#else
+#define STACKLEFT_NOINLINE
+#endif
+
+static STACKLEFT_NOINLINE size_t thread2(size_t left,
+                                         size_t depth)
 {
     size_t foo = qthread_stackleft();
     iprintf("leveli%i: %zu bytes left\n", (int)depth, foo);
