@@ -4,6 +4,7 @@
 # include <config.h>
 #endif
 
+#include <stdio.h>
 #include "fastcontext/taskimpl.h"
 #include <string.h>      /* for memmove(), per C89 */
 #include <qthread-int.h> /* for uintptr_t */
@@ -13,6 +14,16 @@
 #include "qt_visibility.h"
 #include "qt_prefetch.h"
 #include "qt_asserts.h"
+
+#if defined(__GNUC__)
+#define QT_SUPPRESS_BOUNDS_CHECK_WARNINGS          \
+_Pragma("GCC diagnostic push")                      \
+_Pragma("GCC diagnostic ignored \"-Warray-bounds\"")
+#define QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS _Pragma("GCC diagnostic pop")
+#else
+#define QT_SUPPRESS_BOUNDS_CHECK_WARNINGS
+#define QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS
+#endif
 
 #ifdef NEEDPOWERMAKECONTEXT
 void INTERNAL qt_makectxt(uctxt_t *ucp,
@@ -60,7 +71,9 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
 #if 0
     memcpy(sp, &argc + 1, argc * sizeof(uintptr_t));
 #else
+QT_SUPPRESS_BOUNDS_CHECK_WARNINGS
     *(uintptr_t*)sp = *(uintptr_t*)((&argc)+1);
+QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS
 #endif
     /*for (i=0; i<argc; ++i) {
      *  uintptr_t tmp = va_arg(argp, uintptr_t);
