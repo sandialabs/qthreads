@@ -133,6 +133,8 @@ jobs:
     env:
       CC: icc
       CXX: icpc
+      CFLAGS: "-diag-disable=10441"
+      CXXFLAGS: "-diag-disable=10441"
     steps:
     - uses: actions/checkout@v3
     - if: ${{ matrix.topology != 'no' }}
