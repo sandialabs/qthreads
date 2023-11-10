@@ -131,6 +131,30 @@ jobs:
               timeout --foreground -k 10s 4m make check
           no_output_timeout: 30s
 
+  musl:
+    parameters:
+      worker_type:
+        type: string
+      scheduler:
+        type: string
+      topology:
+        type: string
+    docker:
+      - image: alpine:latest
+    resource_class: << parameters.worker_type >>
+    steps:
+      - checkout
+      - run: |
+          apk add --no-cache --no-progress bash make musl-dev hwloc-dev libtool autoconf automake gcc g++
+      - run: |
+          bash autogen.sh
+          bash configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >> || cat config.log
+          cat config.log
+          make -j2
+      - run:
+          command: make check
+          no_output_timeout: 30s
+
 workflows:
   build_and_test:
     jobs:
@@ -153,6 +177,12 @@ workflows:
       - arm_acfl:
           matrix:
             parameters:
+              scheduler: [nemesis, sherwood, distrib]
+              topology: ['no', binders, hwloc]
+      - musl:
+          matrix:
+            parameters:
+              worker_type: [medium, arm.medium]
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
 
