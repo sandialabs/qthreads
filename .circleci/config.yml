@@ -148,8 +148,7 @@ jobs:
           apk add --no-cache --no-progress bash make musl-dev hwloc-dev libtool autoconf automake gcc g++
       - run: |
           bash autogen.sh
-          bash configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >> || cat config.log
-          cat config.log
+          bash configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
       - run:
           command: make check
