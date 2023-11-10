@@ -4,6 +4,7 @@
 # include <config.h>
 #endif
 
+#include <stdarg.h>
 #include <stdio.h>
 #include "fastcontext/taskimpl.h"
 #include <string.h>      /* for memmove(), per C89 */
@@ -14,16 +15,6 @@
 #include "qt_visibility.h"
 #include "qt_prefetch.h"
 #include "qt_asserts.h"
-
-#if defined(__GNUC__)
-#define QT_SUPPRESS_BOUNDS_CHECK_WARNINGS          \
-_Pragma("GCC diagnostic push")                      \
-_Pragma("GCC diagnostic ignored \"-Warray-bounds\"")
-#define QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS _Pragma("GCC diagnostic pop")
-#else
-#define QT_SUPPRESS_BOUNDS_CHECK_WARNINGS
-#define QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS
-#endif
 
 #ifdef NEEDPOWERMAKECONTEXT
 void INTERNAL qt_makectxt(uctxt_t *ucp,
@@ -56,25 +47,15 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
 {
     uintptr_t *sp;
 
-# ifdef NEEDX86REGISTERARGS
-    //int     i;
-    va_list argp;
-
-    va_start(argp, argc);
-# endif
-
     assert((uintptr_t)(ucp->uc_stack.ss_sp) > 1024);
     sp  = (uintptr_t *)(ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size); /* sp = top of stack */
     sp -= argc;                                                       /* count down to where 8(%rsp) should be */
     sp  = (void *)((uintptr_t)sp - (uintptr_t)sp % 16);               /* 16-align for OS X */
     /* now copy from my arg list to the function's arglist */
-#if 0
-    memcpy(sp, &argc + 1, argc * sizeof(uintptr_t));
-#else
-QT_SUPPRESS_BOUNDS_CHECK_WARNINGS
-    *(uintptr_t*)sp = *(uintptr_t*)((&argc)+1);
-QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS
-#endif
+    va_list argp;
+    va_start(argp, argc);
+    *(uintptr_t*)sp = va_arg(argp, uintptr_t);
+    va_end(argp);
     /*for (i=0; i<argc; ++i) {
      *  uintptr_t tmp = va_arg(argp, uintptr_t);
      *  sp[i] = tmp;
@@ -84,7 +65,7 @@ QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS
     /* HOWEVER, the function may not be expecting to pull from the stack,
      * several 64-bit architectures expect that args will be in the correct
      * registers! */
-    ucp->mc.mc_edi = va_arg(argp, uintptr_t);
+    ucp->mc.mc_edi = *(uintptr_t*)sp;
 #  if 0
     for (i = 0; i < argc; i++) {
         switch (i) {
@@ -102,9 +83,6 @@ QT_END_SUPPRESS_BOUNDS_CHECK_WARNINGS
     *--sp          = 0;          /* return address */
     ucp->mc.mc_eip = (long)func;
     ucp->mc.mc_esp = (long)sp;
-# ifdef NEEDX86REGISTERARGS
-    va_end(argp);
-# endif
 }
 
 #elif defined(NEEDTILEMAKECONTEXT)
