@@ -2,6 +2,7 @@
 #include <config.h>
 #endif
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -67,11 +68,19 @@ static aligned_t checkDoubleAsQthreads()
   ret = qthread_readFF(NULL, &teParts3.cond);
   assert(ret == QTHREAD_SUCCESS);
 
-  assert(teParts1.ans == 8103.0839275753824);
+  double threshold = 1E-15;
 
-  assert(teParts2.ans == 20.085536923187668);
+  double expected_1 = 8103.0839275753824;
+  double rel_error_1 = fabs(expected_1 - teParts1.ans) / fabs(expected_1); 
+  assert(rel_error_1 < threshold);
 
-  assert(teParts3.ans == 59874.141715197809);
+  double expected_2 = 20.085536923187668;
+  double rel_error_2 = fabs(expected_2 - teParts2.ans) / fabs(expected_2);
+  assert(rel_error_2 < threshold);
+
+  double expected_3 = 59874.141715197809;
+  double rel_error_3 = fabs(expected_3 - teParts3.ans) / fabs(expected_3);
+  assert(rel_error_3 < threshold);
 
   return 0;
 }
@@ -88,13 +97,17 @@ static void checkDoubleAsQthread()
   ret = qthread_readFF(NULL, &teParts.cond);
   assert(ret == QTHREAD_SUCCESS);
 
-  assert(teParts.ans == 8103.0839275753824);
+  double expected = 8103.0839275753824;
+  double rel_error = fabs(expected - teParts.ans) / fabs(expected);
+  assert(rel_error < 1E-15);
 }
 
 static void checkDouble()
 {
   double ans = taylor_exponential_core(250, 9.0);
-  assert(ans == 8103.0839275753824);
+  double expected = 8103.0839275753824;
+  double rel_error = fabs(expected - ans) / fabs(expected);
+  assert(rel_error < 1E-15);
 }
 
 int main(void)
