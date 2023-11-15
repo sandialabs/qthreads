@@ -58,7 +58,7 @@ typedef struct {
     saligned_t nemesis_advisory_queuelen;
     uint8_t    pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t)];
 }
-NEMESIS_queue Q_ALIGNED (CACHELINE_WIDTH);
+NEMESIS_queue;
 
 struct _qt_threadqueue {
     NEMESIS_queue q;
