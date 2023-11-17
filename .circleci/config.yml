@@ -76,6 +76,7 @@ jobs:
       CFLAGS: "-fsanitize=<< parameters.sanitizer >>"
       CXXFLAGS: "-fsanitize=<< parameters.sanitizer >>"
       LDFLAGS: "-fsanitize=<< parameters.sanitizer >>"
+      QTHREAD_STACK_SIZE: 32768
     steps:
       - checkout
       - run: |

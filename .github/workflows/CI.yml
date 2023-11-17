@@ -206,6 +206,7 @@ jobs:
       CFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
       CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -fsanitize={0}', matrix.sanitizer) || format('-fsanitize={0}', matrix.sanitizer) }}
       LDFLAGS: "-fsanitize=${{ matrix.sanitizer }}"
+      QTHREAD_STACK_SIZE: 32768
     steps:
     - uses: actions/checkout@v3
     - if:  ${{ ! matrix.use_libcxx }}
