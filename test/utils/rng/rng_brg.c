@@ -26,9 +26,9 @@ void rng_spawn(RNG_state *mystate, RNG_state *newstate, int spawnnumber)
 	sha1_ctx ctx;
 	uint8_t  bytes[4];
 	
-	bytes[0] = 0xFF & (spawnnumber >> 24);
-	bytes[1] = 0xFF & (spawnnumber >> 16);
-	bytes[2] = 0xFF & (spawnnumber >> 8);
+	bytes[0] = 0xFF & (spawnnumber >> 24u);
+	bytes[1] = 0xFF & (spawnnumber >> 16u);
+	bytes[2] = 0xFF & (spawnnumber >> 8u);
 	bytes[3] = 0xFF & spawnnumber;
 	
 	sha1_begin(&ctx);
@@ -39,8 +39,8 @@ void rng_spawn(RNG_state *mystate, RNG_state *newstate, int spawnnumber)
 
 int rng_rand(RNG_state *mystate){
         int r;
-	uint32_t b =  (mystate[16] << 24) | (mystate[17] << 16)
-		| (mystate[18] << 8) | (mystate[19] << 0);
+	uint32_t b =  (mystate[16] << 24u) | (mystate[17] << 16u)
+		| (mystate[18] << 8u) | (mystate[19] << 0u);
 	b = b & POS_MASK;
 	
 	r = (int) b;
@@ -55,8 +55,8 @@ int rng_nextrand(RNG_state *mystate){
 	sha1_begin(&ctx);
 	sha1_hash(mystate, 20, &ctx);
 	sha1_end(mystate, &ctx);
-	b =  (mystate[16] << 24) | (mystate[17] << 16)
-		| (mystate[18] << 8) | (mystate[19] << 0);
+	b =  (mystate[16] << 24u) | (mystate[17] << 16u)
+		| (mystate[18] << 8u) | (mystate[19] << 0u);
 	b = b & POS_MASK;
 	
 	r = (int) b;
