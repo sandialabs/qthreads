@@ -56,9 +56,10 @@ static QINLINE void qt_loop_balance_inner(const size_t       start,
                                           const uint_fast8_t flags,
                                           synctype_t         sync_type);
 
-static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
+static aligned_t qloop_wrapper(void *const restrict arg_void)
 {                                      /*{{{ */
     /* tree-based spawning (credit: AKP) */
+    struct qloop_wrapper_args *const arg = (struct qloop_wrapper_args *const) arg_void;
     size_t           tot_workers = arg->spawnthreads - 1; // -1 because I already exist
     size_t           level       = arg->level;
     size_t           my_id       = arg->id;
@@ -146,8 +147,9 @@ struct qt_loop_spawner_arg {
     uint8_t    flags;
 };
 
-static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg)
+static aligned_t qt_loop_wrapper(void *const restrict arg_void)
 {   /*{{{*/
+    struct qt_loop_wrapper_args *const arg = (struct qt_loop_wrapper_args *const) arg_void;
     arg->func(arg->startat, arg->stopat, arg->arg);
     switch (arg->sync_type) {
         default:
@@ -527,8 +529,9 @@ struct qloopaccum_wrapper_args {
     void          *sync;
 };
 
-static aligned_t qloopaccum_wrapper(struct qloopaccum_wrapper_args *const restrict arg)
+static aligned_t qloopaccum_wrapper(void *const restrict arg_void)
 {                                      /*{{{ */
+    struct qloopaccum_wrapper_args *const arg = (struct qloopaccum_wrapper_args *const) arg_void;
     /* tree-based spawning (credit: AKP) */
     size_t           tot_workers = arg->spawnthreads - 1; // -1 because I already exist
     size_t           level       = arg->level;
@@ -1041,8 +1044,9 @@ static QINLINE void qqloop_destroy_iq(qqloop_iteration_queue_t *iq)
     FREE(iq, sizeof(qqloop_iteration_queue_t));
 }                                      /*}}} */
 
-static aligned_t qqloop_wrapper(const struct qqloop_wrapper_args *arg)
+static aligned_t qqloop_wrapper(void *const arg_void)
 {   /*{{{*/
+    struct qqloop_wrapper_args *const arg = (struct qqloop_wrapper_args *const)arg_void;
     struct qqloop_static_args *const restrict stat      = arg->stat;
     qqloop_iteration_queue_t *const restrict  iq        = stat->iq;
     const qt_loop_f                           func      = stat->func;

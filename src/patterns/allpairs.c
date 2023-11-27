@@ -53,8 +53,9 @@ struct qt_ap_workunit {
     size_t a1_start, a1_stop, a2_start, a2_stop;
 };
 
-static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
+static aligned_t qt_ap_worker(void *restrict args_void)
 {
+    struct qt_ap_wargs *args = (struct qt_ap_wargs *)args_void;
     while (1) {
         struct qt_ap_workunit *restrict const wu =
             qdqueue_dequeue(args->work_queue);
@@ -143,9 +144,10 @@ struct qt_ap_gargs2 {
 
 static void qt_ap_genwork2(const size_t           startat,
                            const size_t           stopat,
-                           const qarray *Q_UNUSED a,
-                           struct qt_ap_gargs2   *gargs)
+                           qarray *const Q_UNUSED a,
+                           void                   *gargs_void)
 {
+    struct qt_ap_gargs2 *gargs = (struct qt_ap_gargs2 *)gargs_void;
     struct qt_ap_workunit *workunit = MALLOC(sizeof(struct qt_ap_workunit));
 
     const qthread_shepherd_id_t shep     = gargs->shep;
@@ -200,9 +202,10 @@ static void qt_ap_genwork2(const size_t           startat,
 
 static void qt_ap_genwork(const size_t                    startat,
                           const size_t                    stopat,
-                          const qarray *restrict Q_UNUSED a,
-                          struct qt_ap_gargs *restrict    gargs)
+                          qarray *const restrict Q_UNUSED a,
+                          void *restrict                  gargs_void)
 {
+    struct qt_ap_gargs *gargs = (struct qt_ap_gargs *)gargs_void;
     struct qt_ap_gargs2 garg2 = { gargs->wq, startat, stopat, qthread_shep() };
 
     qarray_iter_constloop(gargs->array2, 0, gargs->array2->count,
