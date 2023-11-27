@@ -45,6 +45,7 @@ static aligned_t alignedWriteFF_iters(void *arg)
 static void testConcurrentWriteFF(void)
 {
     int num_writers = (int)qthread_num_workers()/2;
+    if (num_writers <= 1) num_writers = 2;
     aligned_t rets[num_writers*2];
     concurrent_t = 0;
     qthread_fill(&concurrent_t);
