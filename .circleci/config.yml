@@ -27,7 +27,7 @@ jobs:
           make -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
   arm_clang:
     parameters:
@@ -57,7 +57,7 @@ jobs:
           make -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
   arm_sanitizers:
     parameters:
@@ -93,7 +93,7 @@ jobs:
           make -j2
       - run:
           command: timeout --foreground -k 10s 4m make check
-          no_output_timeout: 30s
+          no_output_timeout: 120s
 
   arm_acfl:
     parameters:
@@ -130,7 +130,7 @@ jobs:
           command: |
               export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
               timeout --foreground -k 10s 4m make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
   musl:
     parameters:
@@ -153,7 +153,7 @@ jobs:
           make -j2
       - run:
           command: make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
 workflows:
   build_and_test:
