@@ -39,8 +39,8 @@ void rng_spawn(RNG_state *mystate, RNG_state *newstate, int spawnnumber)
 
 int rng_rand(RNG_state *mystate){
         int r;
-	uint32_t b =  (mystate[16] << 24u) | (mystate[17] << 16u)
-		| (mystate[18] << 8u) | (mystate[19] << 0u);
+	uint32_t b =  ((uint32_t)mystate[16] << (uint32_t)24u) | ((uint32_t)mystate[17] << (uint32_t)16u)
+		| ((uint32_t)mystate[18] << (uint32_t)8u) | ((uint32_t)mystate[19] << (uint32_t)0u);
 	b = b & POS_MASK;
 	
 	r = (int) b;
