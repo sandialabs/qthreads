@@ -200,15 +200,12 @@ jobs:
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
-        include:
-          - sanitizer: undefined
-            sanitizer_extra_flags: "-fno-sanitize-recover=all"
     env:
       CC: clang-17
       CXX: clang++-17
-      CFLAGS: "-fsanitize=${{ matrix.sanitizer }} ${{ matrix.sanitizer_extra_flags }}"
-      CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -fsanitize={0} {1}', matrix.sanitizer, matrix.sanitizer_extra_flags) || format('-fsanitize={0} {1}', matrix.sanitizer, matrix.sanitizer_extra_flags) }}
-      LDFLAGS: "-fsanitize=${{ matrix.sanitizer }} ${{ matrix.sanitizer_extra_flags }}"
+      CFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
+      CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) || format('-fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) }}
+      LDFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
       QTHREAD_STACK_SIZE: 32768
     steps:
     - uses: actions/checkout@v3

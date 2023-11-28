@@ -73,9 +73,9 @@ jobs:
     environment:
       CC: clang-17
       CXX: clang++-17
-      CFLAGS: "-fsanitize=<< parameters.sanitizer >>"
-      CXXFLAGS: "-fsanitize=<< parameters.sanitizer >>"
-      LDFLAGS: "-fsanitize=<< parameters.sanitizer >>"
+      CFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
+      CXXFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
+      LDFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       QTHREAD_STACK_SIZE: 524288
     steps:
       - checkout
@@ -88,18 +88,11 @@ jobs:
           sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
           sudo apt-get install -y clang-17
       - run: |
-          if [[ "<< parameters.sanitizer >>" == "undefined" ]]; then export CFLAGS="-fno-sanitize-recover=all $CFLAGS"; fi
-          if [[ "<< parameters.sanitizer >>" == "undefined" ]]; then export CXXFLAGS="-fno-sanitize-recover=all $CXXFLAGS"; fi
-          if [[ "<< parameters.sanitizer >>" == "undefined" ]]; then export LDFLAGS="-fno-sanitize-recover=all $LDFLAGS"; fi
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
       - run:
-          command: |
-            if [[ "<< parameters.sanitizer >>" == "undefined" ]]; then export CFLAGS="-fno-sanitize-recover=all $CFLAGS"; fi
-            if [[ "<< parameters.sanitizer >>" == "undefined" ]]; then export CXXFLAGS="-fno-sanitize-recover=all $CXXFLAGS"; fi
-            if [[ "<< parameters.sanitizer >>" == "undefined" ]]; then export LDFLAGS="-fno-sanitize-recover=all $LDFLAGS"; fi
-            timeout --foreground -k 10s 4m make check
+          command: timeout --foreground -k 10s 4m make check
           no_output_timeout: 120s
 
   arm_acfl:
