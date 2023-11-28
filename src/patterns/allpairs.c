@@ -67,8 +67,8 @@ static aligned_t qt_ap_worker(void *restrict args_void)
             }
             qthread_yield();
         } else {
-            const char *const a1_base  = qarray_elem_nomigrate(args->a1, wu->a1_start);
-            const char *const a2_base  = qarray_elem_nomigrate(args->a2, wu->a2_start);
+            char *a1_base  = qarray_elem_nomigrate(args->a1, wu->a1_start);
+            char *a2_base  = qarray_elem_nomigrate(args->a2, wu->a2_start);
             const size_t      a1_usize = args->a1->unit_size;
             const size_t      a2_usize = args->a2->unit_size;
             size_t            a1_i;
@@ -93,8 +93,8 @@ static aligned_t qt_ap_worker(void *restrict args_void)
                 if (args->output == NULL) {
                     for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start);
                          a1_i++) {
-                        const char *restrict const this_a1_base = a1_base + (a1_i * a1_usize);
-                        size_t                     a2_i;
+                        char *restrict this_a1_base = a1_base + (a1_i * a1_usize);
+                        size_t         a2_i;
 
                         for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start); a2_i++) {
                             f(this_a1_base, a2_base + (a2_i * a2_usize), NULL);
@@ -102,9 +102,9 @@ static aligned_t qt_ap_worker(void *restrict args_void)
                     }
                 } else {
                     for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
-                        const char *restrict const this_a1_base = a1_base + (a1_i * a1_usize);
-                        char *restrict const       this_outbase = args->output[a1_i + wu->a1_start];
-                        size_t                     a2_i;
+                        char *restrict this_a1_base = a1_base + (a1_i * a1_usize);
+                        char *restrict this_outbase = args->output[a1_i + wu->a1_start];
+                        size_t         a2_i;
 
                         for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start); a2_i++) {
                             f(this_a1_base,
@@ -117,8 +117,8 @@ static aligned_t qt_ap_worker(void *restrict args_void)
                 const dist_f f = args->f.d;
 
                 for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
-                    const char *restrict const this_a1_base = a1_base + (a1_i * a1_usize);
-                    size_t                     a2_i;
+                    char *restrict this_a1_base = a1_base + (a1_i * a1_usize);
+                    size_t         a2_i;
 
                     for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start); a2_i++) {
                         f(this_a1_base, a2_base + (a2_i * a2_usize));
@@ -142,10 +142,10 @@ struct qt_ap_gargs2 {
     const qthread_shepherd_id_t shep;
 };
 
-static void qt_ap_genwork2(const size_t           startat,
-                           const size_t           stopat,
-                           qarray *const Q_UNUSED a,
-                           void                   *gargs_void)
+static void qt_ap_genwork2(const size_t     startat,
+                           const size_t     stopat,
+                           qarray *Q_UNUSED a,
+                           void             *gargs_void)
 {
     struct qt_ap_gargs2 *gargs = (struct qt_ap_gargs2 *)gargs_void;
     struct qt_ap_workunit *workunit = MALLOC(sizeof(struct qt_ap_workunit));
@@ -313,11 +313,11 @@ static void qt_allpairs_internal(const qarray             *array1,
 #endif
 }
 
-void qt_allpairs_output(const qarray            *array1,
-                        const qarray            *array2,
-                        const dist_out_f         distfunc,
+void qt_allpairs_output(qarray const *array1,
+                        qarray const *array2,
+                        dist_out_f distfunc,
                         void *restrict *restrict output,
-                        const size_t             outsize)
+                        size_t outsize)
 {
     union distfuncunion df;
 
@@ -325,9 +325,9 @@ void qt_allpairs_output(const qarray            *array1,
     qt_allpairs_internal(array1, array2, df, 1, output, outsize);
 }
 
-void qt_allpairs(const qarray *array1,
-                 const qarray *array2,
-                 const dist_f  distfunc)
+void qt_allpairs(qarray const *array1,
+                 qarray const *array2,
+                 dist_f distfunc)
 {
     const union distfuncunion df = { distfunc };
 
