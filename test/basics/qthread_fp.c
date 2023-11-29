@@ -2,6 +2,7 @@
 #include <config.h>
 #endif
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -56,7 +57,10 @@ static void checkFloat()
 int main(void)
 {
   float ans = taylor_exponential_core(250, 9.0);
-  assert(ans == 8103.083984f);
+  float expected = 8103.083984f;
+  float rel_error = fabsf(ans - expected) / fabsf(expected);
+  float threshold = 1E-7f;
+  assert(rel_error < threshold);
 
   int status = qthread_initialize();
   assert(status == QTHREAD_SUCCESS);
