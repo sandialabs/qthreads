@@ -520,8 +520,8 @@ int qthread_syncvar_writeEF_const(syncvar_t *restrict dest,
  * 1 - data is copied from src to destination
  * 2 - the destination's FEB state gets set to full
  */
-int qthread_writeF(aligned_t *restrict       dest,
-                   const aligned_t *restrict src);
+int qthread_writeF(aligned_t       *dest,
+                   const aligned_t *src);
 int qthread_writeF_const(aligned_t *dest,
                          aligned_t  src);
 int qthread_syncvar_writeF(syncvar_t *restrict      dest,

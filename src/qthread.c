@@ -62,7 +62,6 @@
 #include "qt_qthread_mgmt.h"
 #include "qt_shepherd_innards.h"
 #include "qt_blocking_structs.h"
-#include "qt_addrstat.h"
 #include "qt_threadqueues.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_affinity.h"
@@ -71,6 +70,7 @@
 #include "qt_envariables.h"
 #include "qt_queue.h"
 #include "qt_feb.h"
+#include "qt_locks.h"
 #include "qt_syncvar.h"
 #include "qt_spawncache.h"
 #ifdef QTHREAD_MULTINODE
@@ -131,9 +131,6 @@ int GUARD_PAGES = 1;
 #else
 #define GUARD_PAGES 0
 #endif
-
-extern int INTERNAL spinlocks_finalize();
-extern int INTERNAL spinlocks_initialize();
 
 /* Internal Prototypes */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -2433,7 +2430,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #if defined(QTHREAD_DEBUG)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
 #endif
-    qthread_shepherd_id_t save_target = target_shep;
 #ifdef QTHREAD_OMP_AFFINITY
     if(target_shep == NO_SHEPHERD) {
         if (me->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY) {
@@ -3055,7 +3051,7 @@ void qt_set_barrier(qt_barrier_t *bar)
     me->rdata->barrier = bar;
 }                      /*}}} */
 
-qt_barrier_t *qt_get_barrier()
+qt_barrier_t *qt_get_barrier(void)
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
 

@@ -727,8 +727,8 @@ int API_FUNC qthread_fill(const aligned_t *dest)
  * 2 - the destination's FEB state gets changed from empty to full
  */
 
-int API_FUNC qthread_writeF(aligned_t *restrict       dest,
-                            const aligned_t *restrict src)
+int API_FUNC qthread_writeF(aligned_t       *dest,
+                            const aligned_t *src)
 {                      /*{{{ */
     aligned_t *alignedaddr;
 
@@ -1732,7 +1732,6 @@ static void qt_feb_call_tf(const qt_key_t      addr,
         }
         for (; curs != NULL; curs = curs->next) {
             qthread_t *waiter = curs->waiter;
-            void      *tls;
             switch(tf(addr, waiter, f_arg)) {
                 case IGNORE_AND_CONTINUE: // ignore, move to the next one
                     base = &curs->next;

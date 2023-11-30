@@ -22,6 +22,7 @@
 #include "qt_asserts.h"
 #include "qt_prefetch.h"
 #include "qt_threadqueues.h"
+#include "qt_threadqueue_scheduler.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
 #ifdef QTHREAD_USE_EUREKAS
@@ -471,11 +472,8 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                        !(f &QTHREAD_BIG_STRUCT) &&                         \
                                        !(f &QTHREAD_FUTURE) && !(f &QTHREAD_REAL_MCCOY) && \
                                        !(f &QTHREAD_AGGREGATED))
-// && (f & QTHREAD_AGGREGABLE) \
-//               )
-// (f & QTHREAD_AGGREGABLE)
 
-qthread_t INTERNAL *qt_init_agg_task() // partly a duplicate from qthread.c
+qthread_t INTERNAL *qt_init_agg_task(void) // partly a duplicate from qthread.c
 {
     qthread_t *t = ALLOC_QTHREAD();
 
@@ -704,7 +702,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;
     qthread_worker_id_t worker_id = NO_WORKER;
+#ifdef QTHREAD_TASK_AGGREGATION
     int                 curr_cost, max_t, ret_agg_task;
+#endif
 
     assert(q != NULL);
     assert(my_shepherd);
@@ -1484,12 +1484,12 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
     return (t);
 }     /*}}}*/
 
-void INTERNAL qthread_steal_enable()
+void INTERNAL qthread_steal_enable(void)
 {       /*{{{*/
     steal_disable = 0;
 }     /*}}}*/
 
-void INTERNAL qthread_steal_disable()
+void INTERNAL qthread_steal_disable(void)
 {       /*{{{*/
     steal_disable = 1;
 }     /*}}}*/

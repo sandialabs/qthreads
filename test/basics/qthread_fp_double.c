@@ -35,8 +35,6 @@ static double taylor_exponential_core(int n, double x)
 static aligned_t taylor_exponential(void *arg)
 {
   struct parts *te = (struct parts *)arg;
-  double exp = te->exp;
-  double length = te->length;
   te->ans = taylor_exponential_core(te->length, te->exp);
   return 0;
 }
@@ -49,7 +47,7 @@ static void startQthread(struct parts *teParts)
   assert(ret == QTHREAD_SUCCESS);
 }
 
-static aligned_t checkDoubleAsQthreads()
+static aligned_t checkDoubleAsQthreads(void)
 {
   struct parts teParts1 = {250, 9.0, 0.0};
   struct parts teParts2 = {50, 3.0, 0.0};
@@ -85,7 +83,7 @@ static aligned_t checkDoubleAsQthreads()
   return 0;
 }
 
-static void checkDoubleAsQthread()
+static void checkDoubleAsQthread(void)
 {
   int ret = -1;
   struct parts teParts = {250, 9.0, 0.0};
@@ -102,7 +100,7 @@ static void checkDoubleAsQthread()
   assert(rel_error < 1E-15);
 }
 
-static void checkDouble()
+static void checkDouble(void)
 {
   double ans = taylor_exponential_core(250, 9.0);
   double expected = 8103.0839275753824;
