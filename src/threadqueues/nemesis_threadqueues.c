@@ -43,7 +43,7 @@ int num_spins_before_condwait;
 
 /* Data Structures */
 struct _qt_threadqueue_node {
-    struct _qt_threadqueue_node *next;
+    struct _qt_threadqueue_node *_Atomic next;
     qthread_t                   *thread;
 };
 
@@ -139,17 +139,19 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *
     qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
 
     if ((retval != NULL) && (retval != (void *)1)) {
-        if (retval->next != NULL) {
-            q->shadow_head = retval->next;
-            retval->next   = NULL;
+        struct _qt_threadqueue_node *next_loc = atomic_load_explicit(&retval->next, memory_order_relaxed);
+        if (next_loc != NULL) {
+            q->shadow_head = next_loc;
+            atomic_store_explicit(&retval->next, NULL, memory_order_relaxed);
         } else {
             qt_threadqueue_node_t *old;
             q->shadow_head = NULL;
             old            = qthread_cas_ptr((void**)&(q->tail), retval, NULL);
             if (old != retval) {
-                while (retval->next == NULL) SPINLOCK_BODY();
-                q->shadow_head = retval->next;
-                retval->next   = NULL;
+                void *retval_next_tmp;
+                while ((retval_next_tmp = atomic_load_explicit(&retval->next, memory_order_relaxed)) == NULL) SPINLOCK_BODY();
+                q->shadow_head = retval_next_tmp;
+                atomic_store_explicit(&retval->next, NULL, memory_order_relaxed);
             }
         }
     }
@@ -170,9 +172,10 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
     qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
 
     if ((retval != NULL) && (retval != (void *)1)) {
-        if (retval->next != NULL) {
-            q->shadow_head = retval->next;
-            retval->next   = NULL;
+        void *retval_next_tmp = atomic_load_explicit(&retval->next, memory_order_relaxed);
+        if (retval_next_tmp != NULL) {
+            q->shadow_head = retval_next_tmp;
+            atomic_store_explicit(&retval->next, NULL, memory_order_relaxed);
         } else {
             q->shadow_head = NULL;
             if (atomic_load_explicit(&q->tail, memory_order_relaxed) == retval) {
@@ -191,7 +194,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
         qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue_st(&q->q);
         if (node) {
             qthread_t *retval = node->thread;
-            assert(node->next == NULL);
+            assert(atomic_load_explicit(&node->next, memory_order_relaxed) == NULL);
             (void)qthread_incr(&(q->advisory_queuelen), -1);
             FREE_TQNODE(node);
             qthread_thread_free(retval);
@@ -258,8 +261,8 @@ static void sanity_check_tq(NEMESIS_queue *q)
             curs = q->shadow_head;
             assert(curs->thread);
             assert(curs->thread != (void *)0x7777777777777777);
-            while (curs->next) {
-                curs = curs->next;
+            while (atomic_load_explicit(&curs->next, memory_order_relaxed)) {
+                curs = atomic_load_explicit(&curs->next, memory_order_relaxed);
                 assert(curs->thread);
                 assert(curs->thread != (void *)0x7777777777777777);
             }
@@ -268,8 +271,8 @@ static void sanity_check_tq(NEMESIS_queue *q)
             curs = q->head;
             assert(curs->thread);
             assert(curs->thread != (void *)0x7777777777777777);
-            while (curs->next) {
-                curs = curs->next;
+            while (atomic_load_explicit(&curs->next, memory_order_relaxed)) {
+                curs = atomic_load_explicit(&curs->next, memory_order_relaxed);
                 assert(curs->thread);
                 assert(curs->thread != (void *)0x7777777777777777);
             }
@@ -311,14 +314,14 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     node = ALLOC_TQNODE();
     assert(node != NULL);
     node->thread = t;
-    node->next   = NULL;
+    atomic_init(&node->next, NULL);
 
     prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), node);
 
     if (prev == NULL) {
         atomic_store_explicit(&q->q.head, node, memory_order_relaxed);
     } else {
-        prev->next = node;
+        atomic_store_explicit(&prev->next, node, memory_order_relaxed);
     }
     PARANOIA(sanity_check_tq(&q->q));
     (void)qthread_incr(&(q->advisory_queuelen), 1);
@@ -399,7 +402,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         node = qt_internal_NEMESIS_dequeue(&q->q);
     }
     assert(node);
-    assert(node->next == NULL);
+    assert(atomic_load_explicit(&node->next, memory_order_relaxed) == NULL);
     (void)qthread_incr(&(q->advisory_queuelen), -1);
     retval = node->thread;
     FREE_TQNODE(node);
@@ -435,7 +438,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 if (prev == NULL) {
                     atomic_store_explicit(&tmp.head, curs, memory_order_relaxed);
                 } else {
-                    prev->next = curs;
+                    atomic_store_explicit(&prev->next, curs, memory_order_relaxed);
                 }
                 tmp.nemesis_advisory_queuelen++;
                 break;
@@ -444,7 +447,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 if (prev == NULL) {
                     atomic_store_explicit(&tmp.head, curs, memory_order_relaxed);
                 } else {
-                    prev->next = curs;
+                    atomic_store_explicit(&prev->next, curs, memory_order_relaxed);
                 }
                 tmp.nemesis_advisory_queuelen++;
                 goto pushback;
@@ -472,7 +475,7 @@ pushback:
         if (prev == NULL) {
             atomic_store_explicit(&tmp.head, atomic_load_explicit(&q->q.head, memory_order_relaxed), memory_order_relaxed);
         } else {
-            prev->next = atomic_load_explicit(&q->q.head, memory_order_relaxed);
+            atomic_store_explicit(&prev->next, atomic_load_explicit(&q->q.head, memory_order_relaxed), memory_order_relaxed);
         }
         tmp.nemesis_advisory_queuelen += q->advisory_queuelen;
         atomic_store_explicit(&tmp.tail, atomic_load_explicit(&q->q.tail, memory_order_relaxed), memory_order_relaxed);
