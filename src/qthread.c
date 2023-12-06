@@ -12,6 +12,7 @@
 /* System Headers                                     */
 /******************************************************/
 #include <stdio.h>
+#include <stdatomic.h>
 #include <stdlib.h>              /* for malloc() and abort() */
 #include <stdarg.h>              /* for va_list, va_start() and va_end() */
 #include <limits.h>              /* for INT_MAX */
@@ -2263,26 +2264,26 @@ void INTERNAL qthread_exec(qthread_t    *t,
 #endif
         }
 
-        t->rdata->return_context = c;
+        atomic_store_explicit(&t->rdata->return_context, c, memory_order_relaxed);
 
         RLIMIT_TO_TASK(t);
 
         qthread_debug(SHEPHERD_DETAILS,
-                      "t(%p): executing swapcontext(%p, %p)...\n", t, t->rdata->return_context, &t->rdata->context);
+                      "t(%p): executing swapcontext(%p, %p)...\n", t, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), &t->rdata->context);
         /* return_context (aka "c") is being written over with the current context */
 #ifdef QTHREAD_USE_VALGRIND
         VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
-        VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
+        VALGRIND_CHECK_MEM_IS_ADDRESSABLE(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
         VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
-        VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
+        VALGRIND_MAKE_MEM_DEFINED(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
 #endif
 #ifdef QTHREAD_PERFORMANCE
         QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
 #endif /*  ifdef QTHREAD_PERFORMANCE */
 #ifdef HAVE_NATIVE_MAKECONTEXT
-        qassert(swapcontext(t->rdata->return_context, &t->rdata->context), 0);
+        qassert(swapcontext(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), &t->rdata->context), 0);
 #else
-        qassert(qt_swapctxt(t->rdata->return_context, &t->rdata->context), 0);
+        qassert(qt_swapctxt(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), &t->rdata->context), 0);
 #endif
         RLIMIT_TO_NORMAL(t);
 #ifdef QTHREAD_PERFORMANCE
@@ -2341,8 +2342,8 @@ void API_FUNC qthread_yield_(int k)
                         nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
                         QTPERF_QTHREAD_ENTER_STATE(nt->rdata->performance_data, QTHREAD_STATE_YIELDED);
                         nt->rdata->blockedon.thread = t;
-                        qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
-                        nt->rdata->return_context = t->rdata->return_context;
+                        qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed));
+                        atomic_store_explicit(&nt->rdata->return_context, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), memory_order_relaxed);
                         RLIMIT_TO_TASK(t);
                         /* SWAP! */
                         qthread_debug(SHEPHERD_DETAILS,
@@ -2919,14 +2920,14 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
     /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
     VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
-    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
-    qassert(swapcontext(&t->rdata->context, t->rdata->return_context), 0);
+    qassert(swapcontext(&t->rdata->context, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed)), 0);
 #else
-    qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
+    qassert(qt_swapctxt(&t->rdata->context, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed)), 0);
 #endif
     RLIMIT_TO_TASK(t);
 #ifdef QTHREAD_PERFORMANCE
@@ -2945,14 +2946,14 @@ void INTERNAL qthread_back_to_master2(qthread_t *t)
     /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
     VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
-    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
-    setcontext(t->rdata->return_context);
+    setcontext(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed));
 #else
-    qt_setmctxt(&t->rdata->return_context->mc);
+    qt_setmctxt(&atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed)->mc);
 #endif
 }                      /*}}} */
 
