@@ -314,7 +314,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     node = ALLOC_TQNODE();
     assert(node != NULL);
     node->thread = t;
-    atomic_init(&node->next, NULL);
+    // atomic_init trips a sanitizer warning about a race condition since
+    // it's not guaranteed to be atomic. On all the platforms we care about
+    // right now atomics are trivially initializable though, so we can just do this.
+    atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
 
     prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), node);
 
