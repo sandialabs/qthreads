@@ -7,19 +7,19 @@
  * keeping track of the FEB status of an address. It expects a shepherd pointer
  * to use to find the right memory pool to use. */
 static QINLINE qthread_addrstat_t *qthread_addrstat_new(void)
-{                                      /*{{{ */
+{                                     /*{{{ */
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT();
+    QTHREAD_FASTLOCK_INIT_PTR(&ret->lock);
+    QTHREAD_FASTLOCK_LOCK(&ret->lock);
+    ret->full  = 1;
+    ret->valid = 1;
+    ret->EFQ   = NULL;
+    ret->FEQ   = NULL;
+    ret->FFQ   = NULL;
+    ret->FFWQ  = NULL;
+    QTHREAD_EMPTY_TIMER_INIT(ret);
+    QTHREAD_FASTLOCK_UNLOCK(&ret->lock);
 
-    if (ret != NULL) {
-        QTHREAD_FASTLOCK_INIT(ret->lock);
-        ret->full  = 1;
-        ret->valid = 1;
-        ret->EFQ   = NULL;
-        ret->FEQ   = NULL;
-        ret->FFQ   = NULL;
-        ret->FFWQ  = NULL;
-        QTHREAD_EMPTY_TIMER_INIT(ret);
-    }
     return ret;
 }                                      /*}}} */
 

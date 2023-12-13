@@ -200,11 +200,14 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
             alloc_size *= 2;
         }
     }
-    pool->alloc_size      = alloc_size;
-    pool->items_per_alloc = alloc_size / item_size;
-    pool->reuse_pool      = NULL;
     QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
+    QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
+    pool->reuse_pool      = NULL;
+    QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
+    QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
+    pool->alloc_size      = alloc_size;
+    pool->items_per_alloc = alloc_size / item_size;
 #ifdef TLS
     pool->offset = qthread_incr(&pool_cache_global_max, 1);
 #else
@@ -218,6 +221,7 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
     atomic_store_explicit(&pool->alloc_list_pos, 0u, memory_order_relaxed);
 
     atomic_store_explicit(&pool->caches, NULL, memory_order_relaxed);
+    QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
     return pool;
 
     qgoto(errexit);

@@ -73,11 +73,10 @@ typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ord
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
-# define QTHREAD_FASTLOCK_INIT(x)     { atomic_store_explicit(&(x).enter, 0u, memory_order_relaxed); atomic_store_explicit(&(x).exit, 0u, memory_order_relaxed); }
-# define QTHREAD_FASTLOCK_INIT_PTR(x) { atomic_store_explicit(&(x)->enter, 0u, memory_order_relaxed); atomic_store_explicit(&(x)->exit, 0u, memory_order_relaxed); }
+# define QTHREAD_FASTLOCK_INIT(x)     { atomic_store_explicit(&(x).enter, 0u, memory_order_release); atomic_store_explicit(&(x).exit, 0u, memory_order_release); }
+# define QTHREAD_FASTLOCK_INIT_PTR(x) { atomic_store_explicit(&(x)->enter, 0u, memory_order_release); atomic_store_explicit(&(x)->exit, 0u, memory_order_release); }
 # define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = atomic_fetch_add_explicit(&(x)->enter, 1u, memory_order_relaxed); \
-                                        while (val != atomic_load_explicit(&(x)->exit, memory_order_relaxed)) SPINLOCK_BODY(); \
-                                           atomic_thread_fence(memory_order_acquire); /* spin waiting for turn */ }
+                                        while (val != atomic_load_explicit(&(x)->exit, memory_order_acquire)); /* spin waiting for turn */ }
 # define QTHREAD_FASTLOCK_UNLOCK(x)   do { atomic_fetch_add_explicit(&(x)->exit, 1u, memory_order_release); /* notify next waiting thread */} while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
