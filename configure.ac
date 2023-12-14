@@ -50,6 +50,10 @@ AC_ARG_ENABLE([picky],
               [AS_HELP_STRING([--enable-picky],
                               [turns on extra compiler warnings (for developers of qthreads)])])
 
+AC_ARG_ENABLE([avx],
+              [AS_HELP_STRING([--disable-avx],
+                              [turns off avx for x86-64 and uses a fallback implementation to get lockfree 128 bit atomics instead of relying on the consistency guarantees of avx processors])])
+
 AC_ARG_ENABLE([debugging],
               [AS_HELP_STRING([--enable-debugging],
                               [turns off optimization and turns on debug flags])])
@@ -534,6 +538,10 @@ AS_IF([test "x$qthread_cv_asm_arch" = "xPOWERPC32"],
        align_aligned_t=4],
       [sizeof_aligned_t=8
        align_aligned_t=8])
+AS_IF([test "x$enable_avx" != "xno"],
+       AS_IF([test "x$qthread_cv_asm_arch" = xAMD64],
+             [CFLAGS="-mavx $CFLAGS"
+              CXXFLAGS="-mavx $CXXFLAGS"]))
 AS_IF([test "x$enable_64bit_aligned_t" = "xyes"], [sizeof_aligned_t="8"
                                                    align_aligned_t="8"])
 AS_IF([test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_sizeof_int"

@@ -3,6 +3,8 @@
 
 #include <sys/time.h>
 
+#include "qt_128b_atomics.h"
+
 #include <qthread/common.h>
 #include <qthread/qthread.h>
 
