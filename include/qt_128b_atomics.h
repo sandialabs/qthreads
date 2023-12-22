@@ -25,13 +25,6 @@
 // and pipe it through to here via our own preprocessor define.
 // icc exactly mimics gcc in this case, and icx and acfl behave the same as clang but do
 // not require their own detection logic here.
-#if defined(__clang__)
-#define QTHREADS_GCC_LIB_MAJOR_VERSION QTHREADS_CLANG_UNDERLYING_GCC_MAJOR_VERSION
-#define QTHREADS_GCC_LIB_MINOR_VERSION QTHREADS_CLANG_UNDERLYING_GCC_MINOR_VERSION
-#else
-#define QTHREADS_GCC_LIB_MAJOR_VERSION __GNUC__
-#define QTHREADS_GCC_LIB_MINOR_VERSION __GNUC_MINOR__
-#endif
 #ifdef __x86_64__
 #ifdef __AVX__
 // Intel and AMD both specify that 128 bit loads and stores are atomic (with reasonable alignment constraints)
@@ -52,7 +45,7 @@
 // This all works assuming that qthreads is never compiled with a newer libatomic than is available at runtime.
 #if defined(__clang__) && defined(__OPTIMIZE__)
 #define QTHREADS_USE_STANDARD_128_BIT_ATOMICS
-#elif QTHREADS_GCC_LIB_MAJOR_VERSION >= 13 || (QTHREADS_GCC_LIB_MAJOR_VERSION == 12 && QTHREADS_GCC_LIB_MINOR_VERSION >= 3) || (QTHREADS_GCC_LIB_MAJOR_VERSION == 11 && QTHREADS_GCC_LIB_MINOR_VERSION >= 4)
+#elif __GNUC__ >= 13 || (__GNUC__ == 12 && __GNUC_MINOR__ >= 3) || (__GNUC__ == 11 && __GNUC_MINOR__ >= 4)
 #define QTHREADS_USE_STANDARD_128_BIT_ATOMICS
 #endif
 #endif // #ifdef __AVX__
@@ -61,12 +54,12 @@
 #if __ARM_ARCH < 8
 #error "Qthreads is not compatible with arm versions earlier than 8."
 #endif
-#if defined(__clang) && defined(__OPTIMIZE__)
+#if defined(__clang) && (defined(__OPTIMIZE__) || !defined(QTHREADS_NEEDS_128_BIT_ATOMIC_FALLBACK))
 // clang inlines the 128 bit atomic loads on arm as long as optimizations are on, but falls back to
 // the gcc libatomic implementation (which isn't always equivalent) when optimizations aren't on.
 // Again, this all works assuming that qthreads is never compiled with a newer libatomic than is available at runtime.
 #define QTHREADS_USE_STANDARD_128_BIT_ATOMICS
-#elif QTHREADS_GCC_LIB_MAJOR_VERSION >= 13
+#elif __GNUC__ >= 13
 #if __ARM_ARCH > 8 && __ARM_ARCH != 801 && __ARM_ARCH != 802 && __ARM_ARCH != 803
 // gcc only provides lock-free 128 bit atomics in libatomic for armv8.4 and later.
 // We want arm 8.4 or later, but there's inconsistency with how to detect arm versions.

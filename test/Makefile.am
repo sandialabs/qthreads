@@ -37,12 +37,7 @@ buildall: buildtests buildextra
 
 noinst_HEADERS = argparsing.h
 
-# Get the version of gcc that clang (or one of its derivatives) is using for its supporting libraries.
-# This will just be empty for gcc and icc.
-clang_underlying_gcc_major_version !=  clang -v 2>&1 | sed '/Selected GCC installation/!d;s/^.*\/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)$$/\1/g'
-clang_underlying_gcc_minor_version !=  clang -v 2>&1 | sed '/Selected GCC installation/!d;s/^.*\/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)$$/\2/g'
-
-AM_CPPFLAGS = -I$(top_srcdir)/include -DQTHREADS_CLANG_UNDERLYING_GCC_MAJOR_VERSION=$(clang_underlying_gcc_major_version) -DQTHREADS_CLANG_UNDERLYING_GCC_MINOR_VERSION=$(clang_underlying_gcc_minor_version)
+AM_CPPFLAGS = -I$(top_srcdir)/include
 outputdir = $(top_builddir)/src
 qthreadlib = $(outputdir)/libqthread.la
 

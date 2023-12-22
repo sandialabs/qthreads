@@ -588,6 +588,8 @@ AS_IF([test "x$enable_eurekas" = "xyes"],
 
 AC_CACHE_SAVE
 
+QT_NEEDS_128_BIT_ATOMIC_FALLBACK
+
 ## ----------------------- ##
 ## Checks for header files ##
 ## ----------------------- ##
