@@ -59,7 +59,12 @@ if WANT_SINGLE_WORKER_SCHEDULER
 TESTS_ENVIRONMENT += env QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1
 endif
 
-AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/test/
+# Get the version of gcc that clang (or one of its derivatives) is using for its supporting libraries.
+# This will just be empty for gcc and icc.
+clang_underlying_gcc_major_version !=  clang -v 2>&1 | sed '/Selected GCC installation/!d;s/^.*\/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)$$/\1/g'
+clang_underlying_gcc_minor_version !=  clang -v 2>&1 | sed '/Selected GCC installation/!d;s/^.*\/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)$$/\2/g'
+
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/test/ -DQTHREADS_CLANG_UNDERLYING_GCC_MAJOR_VERSION=$(clang_underlying_gcc_major_version) -DQTHREADS_CLANG_UNDERLYING_GCC_MINOR_VERSION=$(clang_underlying_gcc_minor_version)
 qthreadlib = $(top_builddir)/src/libqthread.la
 
 buildall: $(TESTS)

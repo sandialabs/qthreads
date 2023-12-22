@@ -16,8 +16,22 @@
 // architecture-defined behavior and not standard defined behavior.
 // That should make trying other architectures easier.
 
-// user can define QTHREADS_USE_STANDARD_128_BIT_ATOMICS in their flags to override this detection logic.
+// User can define QTHREADS_USE_STANDARD_128_BIT_ATOMICS in their flags to override this detection logic.
 #ifndef QTHREADS_USE_STANDARD_128_BIT_ATOMICS
+
+// Get the version of the gcc supporting libraries being used.
+// Clang currently says it's gcc 4.2 via the __GNUC__ and __GNUC_MINOR__ macros
+// so instead we have to parse the version info from it's selected gcc install at configure time
+// and pipe it through to here via our own preprocessor define.
+// icc exactly mimics gcc in this case, and icx and acfl behave the same as clang but do
+// not require their own detection logic here.
+#if defined(__clang__)
+#define QTHREADS_GCC_LIB_MAJOR_VERSION QTHREADS_CLANG_UNDERLYING_GCC_MAJOR_VERSION
+#define QTHREADS_GCC_LIB_MINOR_VERSION QTHREADS_CLANG_UNDERLYING_GCC_MINOR_VERSION
+#else
+#define QTHREADS_GCC_LIB_MAJOR_VERSION __GNUC__
+#define QTHREADS_GCC_LIB_MINOR_VERSION __GNUC_MINOR__
+#endif
 #ifdef __x86_64__
 #ifdef __AVX__
 // Intel and AMD both specify that 128 bit loads and stores are atomic (with reasonable alignment constraints)
@@ -35,14 +49,10 @@
 // then fall back to the vendored implementation which just uses the old cmpxchg16b instruction if it would use locks.
 // With clang, it'll just inline the appropriate atomic instructions as long as optimizations are on.
 // In debug mode it falls back to the not quite equivalent libatomic implementation from gcc though.
-// In our configure script we set clang up to tell us which gcc version it's using via the __GNUC__ and __GNUC_MINOR__
-// defines instead of its old weird defaults so we can check for the libatomic version at compile time here.
 // This all works assuming that qthreads is never compiled with a newer libatomic than is available at runtime.
-// icc also just passes through the __GNUC__ values from the underlying gcc it's using.
-// icx and acfl just do what clang does.
 #if defined(__clang__) && defined(__OPTIMIZE__)
 #define QTHREADS_USE_STANDARD_128_BIT_ATOMICS
-#elif __GNUC__ >= 13 || (__GNUC__ == 12 && __GNUC_MINOR__ >= 3) || (__GNUC__ == 11 && __GNUC_MINOR__ >= 4)
+#elif QTHREADS_GCC_LIB_MAJOR_VERSION >= 13 || (QTHREADS_GCC_LIB_MAJOR_VERSION == 12 && QTHREADS_GCC_LIB_MINOR_VERSION >= 3) || (QTHREADS_GCC_LIB_MAJOR_VERSION == 11 && QTHREADS_GCC_LIB_MINOR_VERSION >= 4)
 #define QTHREADS_USE_STANDARD_128_BIT_ATOMICS
 #endif
 #endif // #ifdef __AVX__
@@ -54,11 +64,9 @@
 #if defined(__clang) && defined(__OPTIMIZE__)
 // clang inlines the 128 bit atomic loads on arm as long as optimizations are on, but falls back to
 // the gcc libatomic implementation (which isn't always equivalent) when optimizations aren't on.
-// At build time we have clang pipe the underlying gcc's version info through __GNUC__ and __GNUC_MINOR__
-// so that logic works as a fallback when optimizations are off.
 // Again, this all works assuming that qthreads is never compiled with a newer libatomic than is available at runtime.
 #define QTHREADS_USE_STANDARD_128_BIT_ATOMICS
-#elif __GNUC__ >= 13
+#elif QTHREADS_GCC_LIB_MAJOR_VERSION >= 13
 #if __ARM_ARCH > 8 && __ARM_ARCH != 801 && __ARM_ARCH != 802 && __ARM_ARCH != 803
 // gcc only provides lock-free 128 bit atomics in libatomic for armv8.4 and later.
 // We want arm 8.4 or later, but there's inconsistency with how to detect arm versions.
