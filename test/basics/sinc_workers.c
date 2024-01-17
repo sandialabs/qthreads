@@ -40,9 +40,9 @@ int main(void){
   qt_sinc_t sinc;
   qt_sinc_init(&sinc, 0, NULL, NULL, 1);
   int ret;
-  args_t args = { 30, &sinc, &ret };
+  args_t args = { 28, &sinc, &ret };
   qthread_fork_copyargs(fib, &args, sizeof(args_t), NULL);
   qt_sinc_wait(&sinc, NULL);
-  assert(ret == expected[30]);
+  assert(ret == expected[28]);
 }
 
