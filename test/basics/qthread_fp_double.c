@@ -21,13 +21,13 @@ struct parts
 };
 
 // https://www.w3resource.com/c-programming-exercises/math/c-math-exercise-24.php
-static double taylor_exponential_core(int n, double x)
+static double taylor_exponential_core(int n, double x, int yield)
 {
   double exp_sum = 1;
   for (int i = n - 1; i > 0; --i)
   {
     exp_sum = 1 + x * exp_sum / i;
-    qthread_yield();
+    if (yield) qthread_yield();
   }
   return exp_sum;
 }
@@ -35,7 +35,7 @@ static double taylor_exponential_core(int n, double x)
 static aligned_t taylor_exponential(void *arg)
 {
   struct parts *te = (struct parts *)arg;
-  te->ans = taylor_exponential_core(te->length, te->exp);
+  te->ans = taylor_exponential_core(te->length, te->exp, 1);
   return 0;
 }
 
@@ -102,7 +102,7 @@ static void checkDoubleAsQthread(void)
 
 static void checkDouble(void)
 {
-  double ans = taylor_exponential_core(250, 9.0);
+  double ans = taylor_exponential_core(250, 9.0, 0);
   double expected = 8103.0839275753824;
   double rel_error = fabs(expected - ans) / fabs(expected);
   assert(rel_error < 1E-15);

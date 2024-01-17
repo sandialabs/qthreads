@@ -96,7 +96,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 
     num_spins_before_condwait = qt_internal_get_env_num("SPINCOUNT", DEFAULT_SPINCOUNT, 0);
 
-    generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
+    generic_threadqueue_pools.queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_t), _Alignof(qt_threadqueue_t));
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 8);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/

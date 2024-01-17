@@ -25,8 +25,9 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(void)
 
 /* this function is for maintenance of the FEB hashtables. SHOULD only be
  * necessary for things left over when qthread_finalize is called */
-static void qthread_addrstat_delete(qthread_addrstat_t *m)
+static void qthread_addrstat_delete(void *m_void)
 {                                      /*{{{ */
+    qthread_addrstat_t *m = (qthread_addrstat_t*)m_void;
 #ifdef QTHREAD_FEB_PROFILING
     qtimer_destroy(m->empty_timer);
 #endif
