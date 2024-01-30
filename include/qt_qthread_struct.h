@@ -1,6 +1,8 @@
 #ifndef QT_QTHREAD_STRUCT_H
 #define QT_QTHREAD_STRUCT_H
 
+#include <stdatomic.h>
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -41,7 +43,7 @@
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
     qt_context_t  context;         /* the context switch info */
-    qt_context_t *return_context;  /* context of parent shepherd */
+    qt_context_t * _Atomic return_context;  /* context of parent shepherd */
 
     /* a pointer used for passing information back to the shepherd when
      * context swapping */
