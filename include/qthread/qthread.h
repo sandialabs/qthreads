@@ -3,6 +3,7 @@
 
 #include <errno.h>                     /* for ENOMEM */
 
+#include <stdatomic.h>
 #include <limits.h>                    /* for UINT_MAX (C89) */
 #include "qthread-int.h"               /* for uint32_t and uint64_t */
 #include "common.h"                    /* important configuration options */
@@ -674,7 +675,7 @@ static QINLINE float qthread_fincr(float *operand,
     } oldval, newval, res;
 
     do {
-        oldval.f = *(volatile float *)operand;
+        oldval.f = atomic_load_explicit((_Atomic float *)operand, memory_order_relaxed);
         newval.f = oldval.f + incr;
         res.i    = __sync_val_compare_and_swap((uint32_t *)operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
@@ -830,7 +831,7 @@ static QINLINE double qthread_dincr(double *operand,
     } oldval, newval, res;
 
     do {
-        oldval.d = *(volatile double *)operand;
+        oldval.d = atomic_load_explicit((_Atomic double *)operand, memory_order_relaxed);
         newval.d = oldval.d + incr;
         res.i    = __sync_val_compare_and_swap((uint64_t *)operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
