@@ -7,7 +7,7 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-static unsigned int target = 10;
+static unsigned int target = 8;
 static aligned_t x = 0;
 
 static aligned_t alldone;

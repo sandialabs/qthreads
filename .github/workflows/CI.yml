@@ -202,7 +202,7 @@ jobs:
       CFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
       CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) || format('-fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) }}
       LDFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
-      QTHREAD_STACK_SIZE: 32768
+      QTHREAD_STACK_SIZE: 2097152
       ASAN_OPTIONS: "check_initialization_order=1"
     steps:
     - uses: actions/checkout@v3
