@@ -139,7 +139,7 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *
     qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
 
     if ((retval != NULL) && (retval != (void *)1)) {
-        struct _qt_threadqueue_node *next_loc = atomic_load_explicit(&retval->next, memory_order_relaxed);
+        struct _qt_threadqueue_node *next_loc = atomic_load_explicit(&retval->next, memory_order_acquire);
         if (next_loc != NULL) {
             q->shadow_head = next_loc;
             atomic_store_explicit(&retval->next, NULL, memory_order_relaxed);
@@ -314,10 +314,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     node = ALLOC_TQNODE();
     assert(node != NULL);
     node->thread = t;
-    // atomic_init trips a sanitizer warning about a race condition since
-    // it's not guaranteed to be atomic. On all the platforms we care about
-    // right now atomics are trivially initializable though, so we can just do this.
-    atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
+    atomic_store_explicit(&node->next, NULL, memory_order_release);
 
     prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), node);
 
