@@ -466,13 +466,13 @@ static void *qthread_master(void *arg)
 #endif
         qthread_debug(SHEPHERD_DETAILS, "id(%i): fetching a thread from my queue...\n", my_id);
 
-        while (!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
+        while (!atomic_load_explicit(&me_worker->active, memory_order_relaxed)) {
             SPINLOCK_BODY();
         }
 #ifdef QTHREAD_LOCAL_PRIORITY
-        t = qt_scheduler_get_thread(threadqueue, localpriorityqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
+        t = qt_scheduler_get_thread(threadqueue, localpriorityqueue, localqueue, atomic_load_explicit(&me->active, memory_order_relaxed));
 #else
-        t = qt_scheduler_get_thread(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
+        t = qt_scheduler_get_thread(threadqueue, localqueue, atomic_load_explicit(&me->active, memory_order_relaxed));
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -521,7 +521,7 @@ static void *qthread_master(void *arg)
             }
 
             if ((t->target_shepherd != NO_SHEPHERD) && (t->target_shepherd != my_id) &&
-                QTHREAD_CASLOCK_READ_UI(qlib->shepherds[t->target_shepherd].active)) {
+                atomic_load_explicit(&qlib->shepherds[t->target_shepherd].active, memory_order_relaxed)) {
                 /* send this thread home */
                 qthread_debug(THREAD_DETAILS,
                               "id(%u): thread %u going back home to shep %u\n",
@@ -529,7 +529,7 @@ static void *qthread_master(void *arg)
                 t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
                 assert(t->rdata->shepherd_ptr->ready != NULL);
                 qt_threadqueue_enqueue(qlib->shepherds[t->target_shepherd].ready, t);
-            } else if (!QTHREAD_CASLOCK_READ_UI(me->active)) {
+            } else if (!atomic_load_explicit(&me->active, memory_order_relaxed)) {
                 qthread_debug(THREAD_DETAILS,
                               "id(%u): skipping thread exec because I've been disabled!\n",
                               my_id);
@@ -613,10 +613,10 @@ static void *qthread_master(void *arg)
                         {
 #ifdef QTHREAD_LOCAL_PRIORITY
                             qthread_t *f = qt_scheduler_get_thread(threadqueue, localpriorityqueue, NULL, 
-                                                                   QTHREAD_CASLOCK_READ_UI(me->active));
+                                                                   atomic_load_explicit(&me->active, memory_order_relaxed));
 #else
                             qthread_t *f = qt_scheduler_get_thread(threadqueue, NULL, 
-                                                                   QTHREAD_CASLOCK_READ_UI(me->active));
+                                                                   atomic_load_explicit(&me->active, memory_order_relaxed));
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */                          
                             qt_threadqueue_enqueue(me->ready, t);
                             qt_threadqueue_enqueue(me->ready, f);
@@ -1071,8 +1071,8 @@ int API_FUNC qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "calling qthread_makecontext\n");
     qlib->shepherds[0].workers[0].worker   = pthread_self();
     qlib->shepherds[0].workers[0].shepherd = &qlib->shepherds[0];
-    QTHREAD_CASLOCK_INIT(qlib->shepherds[0].workers[0].active, 1);
-    qthread_debug(CORE_DETAILS, "initialized caslock 0,0 %p\n", &qlib->shepherds[0].workers[0].active);
+    atomic_store_explicit(&qlib->shepherds[0].workers[0].active, 1, memory_order_relaxed);
+    qthread_debug(CORE_DETAILS, "initialized caslock 0,0 %p\n", atomic_load_explicit(&qlib->shepherds[0].workers[0].active, memory_order_relaxed));
     qlib->shepherds[0].workers[0].worker_id = 0;
     qlib->shepherds[0].workers[0].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
                                                                     &qlib->max_unique_id_lock, 1);
@@ -1155,10 +1155,10 @@ int API_FUNC qthread_initialize(void)
 
             if ((j * nshepherds) + i + 1 > hw_par) {
                 qthread_debug(CORE_DETAILS, "deactivate shep %i's worker %i\n", (int)i, (int)j);
-                QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 0);
+                atomic_store_explicit(&qlib->shepherds[i].workers[j].active, 0, memory_order_relaxed);
             } else {
                 qthread_debug(CORE_DETAILS, "activate shep %i's worker %i\n", (int)i, (int)j);
-                QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 1);
+                atomic_store_explicit(&qlib->shepherds[i].workers[j].active, 1, memory_order_relaxed);
             }
             qthread_debug(CORE_DETAILS, "initialized caslock %i,%i %p\n", i, j, &qlib->shepherds[i].workers[j].active);
             qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
@@ -1430,7 +1430,7 @@ void API_FUNC qthread_finalize(void)
             t->thread_id    = QTHREAD_NON_TASK_ID;
             t->flags        = QTHREAD_UNSTEALABLE;
             qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
-            if (!QTHREAD_CASLOCK_READ_UI(qlib->shepherds[i].workers[j].active)) {
+            if (!atomic_load_explicit(&qlib->shepherds[i].workers[j].active, memory_order_relaxed)) {
                 qthread_debug(SHEPHERD_DETAILS, "re-enabling worker %i:%i, so he can exit\n", (int)i, (int)j);
                 (void)QT_CAS(qlib->shepherds[i].workers[j].active, 0, 1);
             }
@@ -1501,7 +1501,6 @@ void API_FUNC qthread_finalize(void)
         }
         FREE(qlib->shepherds[i].workers, qlib->nworkerspershep * sizeof(qthread_worker_t));
         if (i == 0) { continue; }
-        QTHREAD_CASLOCK_DESTROY(shep->active);
         qt_threadqueue_free(shep->ready);
 #ifdef QTHREAD_LOCAL_PRIORITY
         qt_threadqueue_free(shep->local_priority_queue);
