@@ -84,7 +84,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
 #define QTHREAD_CHOOSE_STRIPE(addr)         (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
         atomic_store_explicit((_Atomic uint64_t*)&(addr)->u.w, (unlocked), memory_order_relaxed);\
 } while (0)
@@ -105,7 +105,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
         MACHINE_FENCE;                                       \
         atomic_store_explicit((_Atomic uint64_t*)&(addr)->u.w, BUILD_UNLOCKED_SYNCVAR(val, state), memory_order_relaxed);    \
 } while (0)
-#else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) */
+#else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do {                \
         /* this has its own pthread mutex, so does not need memory synch */ \
         qthread_cas64(&((addr)->u.w), (addr)->u.w, (unlocked));             \
@@ -114,7 +114,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
         /* this has its own pthread mutex, so does not need memory synch */             \
         qthread_cas64(&((addr)->u.w), (addr)->u.w, BUILD_UNLOCKED_SYNCVAR(val, state)); \
 } while (0)
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) */
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
 
 static uint64_t qthread_mwaitc(syncvar_t *const restrict addr,
                                unsigned char const       statemask,
@@ -258,7 +258,9 @@ int qthread_syncvar_status(syncvar_t *const v)
 # if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||   \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||      \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||\
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64))
     {
         /* I'm being optimistic here; this only works if a basic 64-bit load is
          * atomic (on most platforms it is). Thus, if I've done an atomic read
@@ -272,7 +274,7 @@ int qthread_syncvar_status(syncvar_t *const v)
             return (local_copy_of_v.u.s.state & 0x2) ? 0 : 1;
         }
     }
-# endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) */
+# endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
     (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = v->u.s.state;
@@ -380,7 +382,9 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict  dest,
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||    \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||      \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
     {
         /* I'm being optimistic here; this only works if a basic 64-bit load is
          * atomic (on most platforms it is). Thus, if I've done an atomic read
@@ -397,7 +401,7 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict  dest,
             return QTHREAD_SUCCESS;
         }
     }
-#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) */
+#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
     ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
     qthread_debug(SYNCVAR_DETAILS, "2 src(%p) = %x, ret = %x\n", src,
                   (uintptr_t)src->u.w, ret);
@@ -505,7 +509,9 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict  dest,
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||    \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||      \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64))
     {
         /* I'm being optimistic here; this only works if a basic 64-bit load is
          * atomic (on most platforms it is). Thus, if I've done an atomic read
@@ -521,7 +527,7 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict  dest,
             return QTHREAD_SUCCESS;
         }
     }
-#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) */
+#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
     ret = qthread_mwaitc(src, SYNCFEB_FULL, 1, &e);
     qthread_debug(SYNCVAR_DETAILS, "2 src(%p) = %x, ret = %x\n", src,
                   (uintptr_t)src->u.w, ret);
