@@ -86,11 +86,11 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
-        (addr)->u.s.lock = 0;                                \
+        atomic_store_explicit((_Atomic uint64_t*)&(addr)->u.w, (unlocked), memory_order_relaxed);\
 } while (0)
 # define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
         MACHINE_FENCE;                                       \
-        (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val, state);    \
+        atomic_store_explicit((_Atomic uint64_t*)&(addr)->u.w, BUILD_UNLOCKED_SYNCVAR(val, state), memory_order_relaxed);    \
 } while (0)
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||    \
@@ -99,11 +99,11 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||   \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO))
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
-        (addr)->u.w = (unlocked);                            \
+        atomic_store_explicit((_Atomic uint64_t*)&(addr)->u.w, (unlocked), memory_order_relaxed);                            \
 } while (0)
 # define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
         MACHINE_FENCE;                                       \
-        (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val, state);    \
+        atomic_store_explicit((_Atomic uint64_t*)&(addr)->u.w, BUILD_UNLOCKED_SYNCVAR(val, state), memory_order_relaxed);    \
 } while (0)
 #else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) */
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do {                \
@@ -172,7 +172,7 @@ loop_start:
         {
             syncvar_t tmp;
 loop_start:
-            tmp = *addr;
+            tmp.u.w = atomic_load_explicit((_Atomic uint64_t*)addr, memory_order_relaxed);
             do {
                 unlocked = tmp;          // may be locked or unlocked, we don't know
                 if (unlocked.u.s.lock == 1) {
@@ -265,7 +265,8 @@ int qthread_syncvar_status(syncvar_t *const v)
          * and the syncvar is unlocked, then I figure I can trust
          * that state and do not need to do a locked atomic operation of any
          * kind (e.g. cas) */
-        syncvar_t local_copy_of_v = *v;
+        syncvar_t local_copy_of_v;
+        local_copy_of_v.u.w = atomic_load_explicit((_Atomic uint64_t*)v, memory_order_relaxed);
         if (local_copy_of_v.u.s.lock == 0) {
             /* short-circuit */
             return (local_copy_of_v.u.s.state & 0x2) ? 0 : 1;
@@ -386,7 +387,8 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict  dest,
          * and the syncvar is both unlocked and full, then I figure I can trust
          * that state and do not need to do a locked atomic operation of any
          * kind (e.g. cas) */
-        syncvar_t local_copy_of_src = *src;
+        syncvar_t local_copy_of_src;
+        local_copy_of_src.u.w = atomic_load_explicit((_Atomic uint64_t*)src, memory_order_relaxed);
         if ((local_copy_of_src.u.s.lock == 0) && ((local_copy_of_src.u.s.state & 2) == 0)) {        /* full and unlocked */
             /* short-circuit */
             if (dest) {
