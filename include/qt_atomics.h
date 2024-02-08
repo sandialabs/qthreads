@@ -1,23 +1,14 @@
 #ifndef QT_ATOMICS_H
 #define QT_ATOMICS_H
 
+#include <stdatomic.h>
 #include <sys/time.h>
 
 #include <qthread/common.h>
 #include <qthread/qthread.h>
 
-#if (__STDC_VERSION__ >= 201112L) && (!defined(__STDC_NO_ATOMICS__))
-#define USE_C11_MEMORY_FENCE
-#include <stdatomic.h>
-#endif
-
-#ifdef USE_C11_MEMORY_FENCE
 #define THREAD_FENCE_MEM_ACQUIRE_IMPL atomic_thread_fence(memory_order_acquire)
 #define THREAD_FENCE_MEM_RELEASE_IMPL atomic_thread_fence(memory_order_release)
-#else
-#define THREAD_FENCE_MEM_ACQUIRE_IMPL MACHINE_FENCE
-#define THREAD_FENCE_MEM_RELEASE_IMPL MACHINE_FENCE
-#endif
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
@@ -746,7 +737,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
 static QINLINE void *qt_internal_atomic_swap_ptr(void **addr,
                                                  void  *newval)
 {   /*{{{*/
-    void *oldval = *addr;
+    void *oldval = atomic_load_explicit((void *_Atomic *)addr, memory_order_relaxed);
     void *tmp;
 
     while ((tmp = qthread_cas_ptr(addr, oldval, newval)) != oldval) {
