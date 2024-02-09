@@ -261,7 +261,7 @@ static void qt_loop_spawner(const size_t start,
             qt_sinc_destroy(sync.sinc);
             break;
         case DONECOUNT:
-            while (dc != threadct) {
+            while (atomic_load_explicit((_Atomic uint64_t*)&dc, memory_order_relaxed) != threadct) {
                 qthread_yield();
             }
             break;
@@ -462,7 +462,7 @@ static QINLINE void qt_loop_balance_inner(const size_t       start,
             qt_sinc_destroy(sync.sinc);
             break;
         case DONECOUNT:
-            while (sync.dc != maxworkers) {
+            while (atomic_load_explicit((_Atomic uint64_t*)&sync.dc, memory_order_relaxed) != maxworkers) {
                 qthread_yield();
             }
             break;
