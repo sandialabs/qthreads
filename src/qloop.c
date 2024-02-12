@@ -799,18 +799,18 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(qqloop_iteration_queue_
                                                          struct qqloop_static_args *const restrict   sa,
                                                          struct qqloop_wrapper_range *const restrict range)
 {                                      /*{{{ */
-    saligned_t                  ret        = iq->start;
-    saligned_t                  ret2       = iq->stop;
+    saligned_t ret = atomic_load_explicit(&iq->start, memory_order_relaxed);
+    saligned_t ret2 = iq->stop;
     saligned_t                  iterations = 0;
     const saligned_t            stop       = iq->stop;
     const qthread_shepherd_id_t sheps      = sa->activesheps;
 
     if (qthread_num_workers() == 1) {
         if (ret < iq->stop) {
-            range->startat = iq->start;
+            range->startat = ret;
             range->stopat  = iq->stop;
             range->step    = iq->step;
-            iq->start      = iq->stop;
+            atomic_store_explicit(&iq->start, iq->stop, memory_order_relaxed);
             return 1;
         } else {
             range->startat = range->stopat = range->step = 0;
@@ -822,12 +822,12 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(qqloop_iteration_queue_
      * process */
     if (ret != ret2) {
         while (ret < iq->stop) {
-            ret        = iq->start;
+            ret        = atomic_load_explicit(&iq->start, memory_order_relaxed);
             iterations = (stop - ret) / sheps;
             if (iterations == 0) {
                 iterations = 1;
             }
-            ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
+            ret2 = qthread_cas((int64_t*)&(iq->start), ret, ret + iterations);
             if (ret == ret2) { break; }
         }
     }
@@ -849,7 +849,7 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
                                                   struct qqloop_static_args *const restrict   sa,
                                                   struct qqloop_wrapper_range *const restrict range)
 {                                      /*{{{ */
-    saligned_t                  ret        = iq->start;
+    saligned_t                  ret        = atomic_load_explicit(&iq->start, memory_order_relaxed);
     saligned_t                  ret2       = iq->stop;
     const saligned_t            stop       = iq->stop;
     saligned_t                  iterations = 0;
@@ -858,10 +858,10 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
 
     if (qthread_num_workers() == 1) {
         if (ret < iq->stop) {
-            range->startat = iq->start;
+            range->startat = ret;
             range->stopat  = iq->stop;
             range->step    = iq->step;
-            iq->start      = iq->stop;
+            atomic_store_explicit(&iq->start, iq->stop, memory_order_relaxed);
             return 1;
         } else {
             range->startat = range->stopat = range->step = 0;
@@ -872,7 +872,7 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
     /* this loop ensures atomicity in figuring out the number of iterations to
      * process */
     while (ret < iq->stop && ret != ret2) {
-        ret = iq->start;
+        ret = atomic_load_explicit(&iq->start, memory_order_relaxed);
         while (ret >= phase && ret < iq->stop) {
             /* set a new phase */
             saligned_t newphase  = (stop + ret) / 2;
@@ -888,7 +888,7 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
         if (iterations == 0) {
             iterations = 1;
         }
-        ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
+        ret2 = qthread_cas((int64_t*)&(iq->start), ret, ret + iterations);
     }
     if (ret < iq->stop) {
         assert(iterations > 0);
@@ -906,13 +906,10 @@ static QINLINE int qqloop_get_iterations_chunked(qqloop_iteration_queue_t *const
                                                  struct qqloop_static_args *const restrict   sa,
                                                  struct qqloop_wrapper_range *const restrict range)
 {                                      /*{{{ */
-    saligned_t ret        = iq->start;
     saligned_t chunk_size = sa->chunksize;
     int        retval     = 1;
+    saligned_t ret = atomic_fetch_add_explicit(&iq->start, chunk_size, memory_order_relaxed) - chunk_size;
 
-    if (ret < iq->stop) {
-        ret = qthread_incr(&(iq->start), chunk_size);
-    }
     if (ret < iq->stop) {
         if (ret + chunk_size > iq->stop) {
             chunk_size = iq->stop - ret;
@@ -951,7 +948,7 @@ static QINLINE int qqloop_get_iterations_timed(qqloop_iteration_queue_t *const r
     }
 
     /* this loop ensures atomicity while figuring out iterations */
-    localstart = iq->start;
+    localstart = atomic_load_explicit(&iq->start, memory_order_relaxed);
     while (localstart < localstop) {
         saligned_t tmp;
         if (loop_time >= 7.5e-7) {     /* KBW: XXX: arbitrary constant */
@@ -960,7 +957,7 @@ static QINLINE int qqloop_get_iterations_timed(qqloop_iteration_queue_t *const r
         if ((localstart + dynamicBlock) > localstop) {
             dynamicBlock = (localstop - localstart);
         }
-        tmp = qthread_cas(&iq->start, localstart, localstart + dynamicBlock);
+        tmp = qthread_cas((int64_t*)&iq->start, localstart, localstart + dynamicBlock);
         if (tmp == localstart) {
             iq->type_specific_data.timed.lastblocks[shep] = dynamicBlock;
             break;
@@ -990,7 +987,7 @@ static QINLINE qqloop_iteration_queue_t *qqloop_create_iq(const size_t          
 {      /*{{{ */
     qqloop_iteration_queue_t *iq = MALLOC(sizeof(qqloop_iteration_queue_t));
 
-    iq->start = startat;
+    atomic_store_explicit(&iq->start, startat, memory_order_relaxed);
     iq->stop  = stopat;
     iq->step  = step;
     iq->type  = type;
