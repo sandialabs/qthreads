@@ -1150,7 +1150,7 @@ void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop)
         /* turning this into a spinlock :P
          * I *would* do readFF, except shepherds can join and leave
          * during the loop */
-        while (*dc < *as) {
+        while (atomic_load_explicit((_Atomic uint64_t*)dc, memory_order_acquire) < *as) {
             qthread_yield();
         }
         qqloop_destroy_iq(loop->stat.iq);
@@ -1175,7 +1175,7 @@ void API_FUNC qt_loop_queue_run_there(qqloop_handle_t      *loop,
         /* turning this into a spinlock :P
          * I *would* do readFF, except shepherds can join and leave
          * during the loop */
-        while (*dc < *as) {
+        while (atomic_load_explicit((_Atomic uint64_t*)dc, memory_order_acquire) < *as) {
             qthread_yield();
         }
         qqloop_destroy_iq(loop->stat.iq);
