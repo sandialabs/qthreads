@@ -132,7 +132,7 @@ static aligned_t qloop_wrapper(void *restrict arg_void)
         default:
             break;
         case DONECOUNT:
-            qthread_incr((aligned_t *)sync, 1);
+            atomic_fetch_add_explicit((_Atomic uint64_t*)sync, 1, memory_order_release);
             break;
     }
 
@@ -462,7 +462,7 @@ static QINLINE void qt_loop_balance_inner(const size_t       start,
             qt_sinc_destroy(sync.sinc);
             break;
         case DONECOUNT:
-            while (atomic_load_explicit((_Atomic uint64_t*)&sync.dc, memory_order_relaxed) != maxworkers) {
+            while (atomic_load_explicit((_Atomic uint64_t*)&sync.dc, memory_order_acquire) != maxworkers) {
                 qthread_yield();
             }
             break;
