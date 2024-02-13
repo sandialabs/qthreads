@@ -853,7 +853,7 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
     saligned_t                  ret2       = iq->stop;
     const saligned_t            stop       = iq->stop;
     saligned_t                  iterations = 0;
-    saligned_t                  phase      = iq->type_specific_data.phase;
+    saligned_t                  phase      = atomic_load_explicit(&iq->type_specific_data.phase, memory_order_relaxed);
     const qthread_shepherd_id_t sheps      = sa->activesheps;
 
     if (qthread_num_workers() == 1) {
@@ -879,9 +879,9 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
             saligned_t chunksize = (stop - newphase) / sheps;
             newphase = ret + (chunksize * sheps);
             if (newphase != phase) {
-                phase = qthread_cas(&(iq->type_specific_data.phase), phase, newphase);
+                phase = qthread_cas((int64_t*)&(iq->type_specific_data.phase), phase, newphase);
             } else {
-                phase = qthread_cas(&(iq->type_specific_data.phase), phase, stop);
+                phase = qthread_cas((int64_t*)&(iq->type_specific_data.phase), phase, stop);
             }
         }
         iterations = (stop - phase) / sheps;
@@ -993,7 +993,7 @@ static QINLINE qqloop_iteration_queue_t *qqloop_create_iq(const size_t          
     iq->type  = type;
     switch (type) {
         case FACTORED:
-            iq->type_specific_data.phase = (startat + stopat) / 2;
+            atomic_store_explicit(&iq->type_specific_data.phase, (startat + stopat) / 2, memory_order_relaxed);
             break;
         case TIMED:
         {
