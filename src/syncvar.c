@@ -246,41 +246,22 @@ int qthread_syncvar_status(syncvar_t *const v)
     eflags_t     e = { 0, 0, 0, 0, 0 };
     unsigned int realret;
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
-    uint64_t ret = qthread_mwaitc(v, 0xff, INT_MAX, &e);
-    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
-    realret = (e.of << 2) | (e.pf << 1) | e.sf;
-    MACHINE_FENCE;
-    v->u.w = BUILD_UNLOCKED_SYNCVAR(ret, realret);
-    return (realret & 0x2) ? 0 : 1;
-
-#else
-# if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||   \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||      \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||\
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64))
-    {
-        /* I'm being optimistic here; this only works if a basic 64-bit load is
-         * atomic (on most platforms it is). Thus, if I've done an atomic read
-         * and the syncvar is unlocked, then I figure I can trust
-         * that state and do not need to do a locked atomic operation of any
-         * kind (e.g. cas) */
-        syncvar_t local_copy_of_v;
-        local_copy_of_v.u.w = atomic_load_explicit((_Atomic uint64_t*)v, memory_order_relaxed);
-        if (local_copy_of_v.u.s.lock == 0) {
-            /* short-circuit */
-            return (local_copy_of_v.u.s.state & 0x2) ? 0 : 1;
-        }
+    /* If I've done an atomic read
+     * and the syncvar is unlocked, then I figure I can trust
+     * that state and do not need to do a locked atomic operation of any
+     * kind (e.g. cas) */
+    syncvar_t local_copy_of_v;
+    local_copy_of_v.u.w = atomic_load_explicit((_Atomic uint64_t*)v, memory_order_relaxed);
+    if (local_copy_of_v.u.s.lock == 0) {
+        /* short-circuit */
+        return (local_copy_of_v.u.s.state & 0x2) ? 0 : 1;
     }
-# endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
     (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
-    realret = v->u.s.state;
-    UNLOCK_THIS_UNMODIFIED_SYNCVAR(v, BUILD_UNLOCKED_SYNCVAR(v->u.s.data, v->u.s.state));
+    local_copy_of_v.u.w = atomic_load_explicit((_Atomic uint64_t*)v, memory_order_relaxed);
+    realret = local_copy_of_v.u.s.state;
+    UNLOCK_THIS_UNMODIFIED_SYNCVAR(v, BUILD_UNLOCKED_SYNCVAR(local_copy_of_v.u.s.data, local_copy_of_v.u.s.state));
     return (realret & 0x2) ? 0 : 1;
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
 }                                      /*}}} */
 
 static aligned_t qthread_syncvar_nonblocker_thread(void *arg)
