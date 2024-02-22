@@ -174,7 +174,7 @@ static inline void qt_feb_schedule(qthread_t          *waiter,
                                    qthread_shepherd_t *shep)
 {
     qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): setting waiter to 'RUNNING'\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id);
-    waiter->thread_state = QTHREAD_STATE_RUNNING;
+    atomic_store_explicit(&waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
     QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
     if ((waiter->flags & QTHREAD_UNSTEALABLE) && (waiter->rdata->shepherd_ptr != shep)) {
         qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): enqueueing waiter in target_shep's ready queue (%p:%i)\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id, waiter->rdata->shepherd_ptr, waiter->rdata->shepherd_ptr->shepherd_id);
@@ -483,7 +483,7 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
         /* schedule */
         qthread_t *waiter = X->waiter;
         qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFWQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
-        if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
+        if (QTHREAD_STATE_NASCENT == atomic_load_explicit(&waiter->thread_state, memory_order_relaxed)) {
             if (*precond_tasks == NULL) {
                 /* create empty head to avoid later checks/branches; use the waiter to find the tail */
                 *precond_tasks           = ALLOC_ADDRRES();
@@ -522,7 +522,7 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
         /* schedule */
         qthread_t *waiter = X->waiter;
         qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
-        if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
+        if (QTHREAD_STATE_NASCENT == atomic_load_explicit(&waiter->thread_state, memory_order_relaxed)) {
             if (*precond_tasks == NULL) {
                 /* create empty head to avoid later checks/branches; use the waiter to find the tail */
                 *precond_tasks           = ALLOC_ADDRRES();
@@ -1003,7 +1003,7 @@ got_m:
         X->next   = m->EFQ;
         m->EFQ    = X;
         qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%i): back to parent (m=%p, X=%p, slice=%u)\n", dest, src, me->thread_id, m, X, lockbin);
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
@@ -1168,7 +1168,7 @@ int API_FUNC qthread_writeFF(aligned_t *restrict       dest,
         X->next   = m->FFWQ;
         m->FFWQ   = X;
         qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): back to parent\n", dest, src, me->thread_id);
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
@@ -1267,7 +1267,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
         X->next   = m->FFQ;
         m->FFQ    = X;
         qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%u): back to parent\n", dest, src, me->thread_id);
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
@@ -1449,7 +1449,7 @@ got_m:
         X->next   = m->FEQ;
         m->FEQ    = X;
         qthread_debug(FEB_DETAILS, "back to parent\n");
-        me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         /* so that the shepherd will unlock it */
         me->rdata->blockedon.addr = m;
@@ -1652,7 +1652,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
             X->waiter       = t;
             X->next         = m->FFQ;
             m->FFQ          = X;
-            t->thread_state = QTHREAD_STATE_NASCENT;
+            atomic_store_explicit(&t->thread_state, QTHREAD_STATE_NASCENT, memory_order_relaxed);
             QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NASCENT);
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             return 1;
@@ -1661,7 +1661,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
     }
 
     // All input preconds are full
-    t->thread_state = QTHREAD_STATE_NEW;
+    atomic_store_explicit(&t->thread_state, QTHREAD_STATE_NEW, memory_order_relaxed);
 #ifdef QTHREAD_PERFORMANCE
     if(t->rdata){
       QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NEW);

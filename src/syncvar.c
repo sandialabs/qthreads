@@ -464,7 +464,7 @@ got_m:
         X->next   = m->FFQ;
         m->FFQ    = X;
         qthread_debug(SYNCVAR_DETAILS, "back to parent\n");
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -793,7 +793,7 @@ got_m:
         X->next   = m->FEQ;
         m->FEQ    = X;
         qthread_debug(SYNCVAR_DETAILS, "back to parent\n");
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -959,7 +959,7 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
 {   /*{{{*/
     assert(waiter);
     assert(shep);
-    waiter->thread_state = QTHREAD_STATE_RUNNING;
+    atomic_store_explicit(&waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
     QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
     if (waiter->flags & QTHREAD_UNSTEALABLE) {
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
@@ -1283,7 +1283,7 @@ got_m:
         X->next   = m->EFQ;
         m->EFQ    = X;
         qthread_debug(SYNCVAR_DETAILS, ": back to parent\n");
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
