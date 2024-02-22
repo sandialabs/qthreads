@@ -181,7 +181,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q){
  * We have 4 basic queue operations, enqueue and dequeue for head and tail */
 static void qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
                                         qthread_t *restrict        t){ 
-  if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
+  if (atomic_load_explicit(&t->thread_state, memory_order_relaxed) == QTHREAD_STATE_TERM_SHEP) {
     atomic_store_explicit(&finalizing, 1, memory_order_relaxed);
   }
   if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
