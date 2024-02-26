@@ -36,6 +36,12 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#include <sanitizer/tsan_interface.h>
+#endif
+#endif
+
 /******************************************************/
 /* Public Headers                                     */
 /******************************************************/
@@ -225,7 +231,79 @@ static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
       VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
   }
 #endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+  atomic_store_explicit(
+    &rdata->tsan_fiber, __tsan_create_fiber(0u), memory_order_relaxed);
+  assert(atomic_load_explicit(&rdata->tsan_fiber, memory_order_relaxed));
+#endif
+#endif
 } /*}}}*/
+
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define qthread_before_swap_to_qthread(t)                                      \
+  do {                                                                         \
+    void *tsan_local_fiber =                                                   \
+      atomic_load_explicit(&t->rdata->tsan_fiber, memory_order_relaxed);       \
+    atomic_store_explicit(&t->rdata->tsan_fiber,                               \
+                          __tsan_get_current_fiber(),                          \
+                          memory_order_relaxed);                               \
+    __tsan_switch_to_fiber(tsan_local_fiber, 0u);                              \
+  } while (0)
+
+#define qthread_after_swap_to_qthread(t)
+
+#define qthread_before_swap_from_qthread(t)                                    \
+  do {                                                                         \
+    void *tsan_local_fiber =                                                   \
+      atomic_load_explicit(&t->rdata->tsan_fiber, memory_order_relaxed);       \
+    atomic_store_explicit(&t->rdata->tsan_fiber,                               \
+                          __tsan_get_current_fiber(),                          \
+                          memory_order_relaxed);                               \
+    __tsan_switch_to_fiber(tsan_local_fiber, 0u);                              \
+  } while (0)
+
+#define qthread_after_swap_from_qthread(t)
+
+#define qthread_before_swap_to_main()                                          \
+  do {                                                                         \
+    void *tsan_local_fiber_main = qlib->tsan_main_fiber;                       \
+    qlib->tsan_main_fiber = __tsan_get_current_fiber();                        \
+    __tsan_switch_to_fiber(tsan_local_fiber_main, 0u);                         \
+  } while (0)
+
+#define qthread_after_swap_to_main()
+
+#define qthread_before_swap_from_main()                                        \
+  do {                                                                         \
+    void *tsan_local_fiber_main = qlib->tsan_main_fiber;                       \
+    qlib->tsan_main_fiber = __tsan_get_current_fiber();                        \
+    __tsan_switch_to_fiber(tsan_local_fiber_main, 0u);                         \
+  } while (0)
+
+#define qthread_after_swap_from_main()
+
+#else
+#define qthread_before_swap_to_qthread(t)
+#define qthread_after_swap_to_qthread(t)
+#define qthread_before_swap_from_qthread(t)
+#define qthread_after_swap_from_qthread(t)
+#define qthread_before_swap_to_main()
+#define qthread_after_swap_to_main()
+#define qthread_before_swap_from_main()
+#define qthread_after_swap_from_main()
+#endif
+#else
+#define qthread_before_swap_to_qthread(t)
+#define qthread_after_swap_to_qthread(t)
+#define qthread_before_swap_from_qthread(t)
+#define qthread_after_swap_from_qthread(t)
+#define qthread_before_swap_to_main()
+#define qthread_after_swap_to_main()
+#define qthread_before_swap_from_main()
+#define qthread_after_swap_from_main()
+#endif
 
 /* the qthread_master() function is the loop responsible for actually
  * executing the work units
@@ -251,6 +329,7 @@ static void *qthread_master(void *arg) {
   qthread_worker_t *me_worker = (qthread_worker_t *)arg;
   qthread_shepherd_t *me = (qthread_shepherd_t *)me_worker->shepherd;
   qthread_shepherd_id_t my_id = me->shepherd_id;
+  if (my_id == 0 && me_worker->worker_id == 0) { qthread_after_swap_to_main(); }
   qt_context_t my_context;
   qt_threadqueue_t *threadqueue;
   qt_threadqueue_private_t *localqueue = NULL;
@@ -439,6 +518,10 @@ static void *qthread_master(void *arg) {
         }
       }
     }
+  }
+
+  if (my_id == 0 && me_worker->worker_id == 0) {
+    qthread_before_swap_from_main();
   }
 
   pthread_exit(NULL);
@@ -714,6 +797,17 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   qlib->mccoy_thread->rdata->stack = NULL;
   qlib->mccoy_thread->rdata->tasklocal_size = 0;
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+  atomic_store_explicit(&qlib->mccoy_thread->rdata->tsan_fiber,
+                        __tsan_get_current_fiber(),
+                        memory_order_relaxed);
+  qlib->tsan_main_fiber = __tsan_create_fiber(0u);
+  assert(atomic_load_explicit(&qlib->mccoy_thread->rdata->tsan_fiber,
+                              memory_order_relaxed) &&
+         qlib->tsan_main_fiber);
+#endif
+#endif
   TLS_SET(shepherd_structs,
           (qthread_shepherd_t *)&(qlib->shepherds[0].workers[0]));
   qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread);
@@ -749,6 +843,9 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
                             sizeof(qt_context_t));
   VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(qt_context_t));
 #endif
+
+  qthread_before_swap_to_main();
+
 #ifdef HAVE_NATIVE_MAKECONTEXT
   qassert(
     swapcontext(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)),
@@ -758,6 +855,9 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
     qt_swapctxt(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)),
     0);
 #endif
+
+  qthread_after_swap_from_main();
+
   assert(hw_par > 0);
   qlib->nworkers_active = hw_par;
 
@@ -1053,6 +1153,14 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
 #ifdef QTHREAD_USE_VALGRIND
   VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->rdata->valgrind_stack_id);
   VALGRIND_STACK_DEREGISTER(qlib->valgrind_masterstack_id);
+#endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+  assert(atomic_load_explicit(&qlib->mccoy_thread->rdata->tsan_fiber,
+                              memory_order_relaxed) &&
+         qlib->tsan_main_fiber);
+  //__tsan_destroy_fiber(qlib->tsan_main_fiber);
+#endif
 #endif
   assert(qlib->mccoy_thread->rdata->stack == NULL);
   if (qlib->mccoy_thread->rdata->tasklocal_size > 0) {
@@ -1382,6 +1490,12 @@ void qthread_thread_free(qthread_t *t) { /*{{{ */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+    assert(atomic_load_explicit(&t->rdata->tsan_fiber, memory_order_relaxed));
+    //__tsan_destroy_fiber(t->rdata->tsan_fiber);
+#endif
+#endif
     if (atomic_load_explicit(&t->flags, memory_order_relaxed) &
         QTHREAD_SIMPLE) {
       FREE_RDATA(t->rdata);
@@ -1452,6 +1566,7 @@ static void qthread_wrapper(unsigned int high, unsigned int low) { /*{{{ */
 static void qthread_wrapper(void *ptr) {
   qthread_t *t = (qthread_t *)ptr;
 #endif
+  if ((t->flags & QTHREAD_SIMPLE) == 0) { qthread_after_swap_to_qthread(t); }
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
   MONITOR_ASM_LABEL(qthread_fence1); // add label for HPCToolkit stack unwind
 #endif
@@ -1594,7 +1709,10 @@ static void qthread_wrapper(void *ptr) {
 #endif
   if ((atomic_load_explicit(&t->flags, memory_order_relaxed) &
        QTHREAD_SIMPLE) == 0) {
+    qthread_before_swap_from_qthread(t);
     qthread_back_to_master2(t);
+    qthread_after_swap_to_qthread(t);
+    qthread_before_swap_from_qthread(t);
   }
 } /*}}} */
 
@@ -1643,6 +1761,9 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
       atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed),
       sizeof(qt_context_t));
 #endif
+
+    qthread_before_swap_to_qthread(t);
+
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(atomic_load_explicit(&t->rdata->return_context,
                                              memory_order_relaxed),
@@ -1654,6 +1775,9 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
                         &t->rdata->context),
             0);
 #endif
+
+    qthread_after_swap_from_qthread(t);
+
   } else {
     assert(t->thread_state == QTHREAD_STATE_NEW);
     atomic_store_explicit(
@@ -2109,6 +2233,7 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
     atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed),
     sizeof(qt_context_t));
 #endif
+  qthread_before_swap_from_qthread(t);
 #ifdef HAVE_NATIVE_MAKECONTEXT
   qassert(swapcontext(&t->rdata->context,
                       atomic_load_explicit(&t->rdata->return_context,
@@ -2120,6 +2245,9 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
                                            memory_order_relaxed)),
           0);
 #endif
+
+  qthread_after_swap_to_qthread(t);
+
 } /*}}} */
 
 void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
