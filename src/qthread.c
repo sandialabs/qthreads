@@ -37,6 +37,12 @@
 #include <errno.h>
 #include <signal.h>
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#include <sanitizer/tsan_interface.h>
+#endif
+#endif
+
 /******************************************************/
 /* Public Headers                                     */
 /******************************************************/
@@ -363,6 +369,12 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
         rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
     }
 #endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+    rdata->tsan_fiber = __tsan_create_fiber(0u);
+    assert(rdata->tsan_fiber);
+#endif
+#endif
 #ifdef QTHREAD_PERFORMANCE
     rdata->performance_data = NULL;
     if(qtperf_should_instrument_qthreads){
@@ -372,6 +384,35 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #endif
 } /*}}}*/
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define qthread_before_swap_to_qthread(t)\
+  void *tsan_return_fiber = __tsan_get_current_fiber();\
+  __tsan_acquire(tsan_return_fiber);\
+  __tsan_switch_to_fiber(t->rdata->tsan_fiber, 0u);
+
+#define qthread_after_swap_to_qthread(t)
+
+#define qthread_before_swap_from_qthread(t)
+
+#define qthread_after_swap_from_qthread(t)\
+  if (tsan_return_fiber) {\
+    __tsan_release(tsan_return_fiber);\
+    __tsan_switch_to_fiber(tsan_return_fiber, 0u);\
+  }
+
+#else
+#define qthread_before_swap_to_qthread(t)
+#define qthread_after_swap_to_qthread(t)
+#define qthread_before_swap_from_qthread(t)
+#define qthread_after_swap_from_qthread(t)
+#endif
+#else
+#define qthread_before_swap_to_qthread(t)
+#define qthread_after_swap_to_qthread(t)
+#define qthread_before_swap_from_qthread(t)
+#define qthread_after_swap_from_qthread(t)
+#endif
 
 /* the qthread_master() function is the loop responsible for actually
  * executing the work units
@@ -1063,6 +1104,13 @@ int API_FUNC qthread_initialize(void)
     qlib->mccoy_thread->rdata->stack          = NULL;
     qlib->mccoy_thread->rdata->tasklocal_size = 0;
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+    qlib->mccoy_thread->rdata->tsan_fiber = __tsan_create_fiber(0u);
+    assert(qlib->mccoy_thread->rdata->tsan_fiber);
+#endif
+#endif
+
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
     TLS_SET(shepherd_structs, (qthread_shepherd_t *)&(qlib->shepherds[0].workers[0]));
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread);
@@ -1104,11 +1152,13 @@ int API_FUNC qthread_initialize(void)
     VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(qt_context_t));
 #endif
     qthread_debug(CORE_DETAILS, "calling swapcontext into master_context\n");
+    qthread_before_swap_to_qthread(qlib->mccoy_thread);
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
 #else
     qassert(qt_swapctxt(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
 #endif
+    qthread_after_swap_from_qthread(qlib->mccoy_thread);
     qthread_debug(CORE_DETAILS, "back from master_context\n");
 
     assert(hw_par > 0);
@@ -1510,7 +1560,6 @@ void API_FUNC qthread_finalize(void)
         {
             int ct = 0;
             print_FEBs(&ct);
-            if (ct != 0) { printf("ct = %i\n", ct); }
             while (ct != 0) ;
         }
 #endif
@@ -1637,6 +1686,14 @@ void API_FUNC qthread_finalize(void)
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->rdata->valgrind_stack_id);
     VALGRIND_STACK_DEREGISTER(qlib->valgrind_masterstack_id);
+#endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+    assert(qlib->mccoy_thread->rdata->tsan_fiber);
+    // Uncommenting this causes a segfault, but we're supposed to destroy the fibers we've created,
+    // so leave it for now and revisit with msan/asan later.
+    //__tsan_destroy_fiber(qlib->mccoy_thread->rdata->tsan_fiber);
+#endif
 #endif
     assert(qlib->mccoy_thread->rdata->stack == NULL);
     if (qlib->mccoy_thread->rdata->tasklocal_size > 0) {
@@ -2026,6 +2083,12 @@ void qthread_thread_free(qthread_t *t)
 #ifdef QTHREAD_USE_VALGRIND
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+        assert(t->rdata->tsan_fiber);
+        __tsan_destroy_fiber(t->rdata->tsan_fiber);
+#endif
+#endif
         if (t->flags & QTHREAD_SIMPLE) {
             qthread_debug(THREAD_DETAILS, "t(%p): releasing rdata %p\n", t, t->rdata);
             FREE_RDATA(t->rdata);
@@ -2096,6 +2159,9 @@ static void qthread_wrapper(void *ptr)
 {
     qthread_t *t = (qthread_t *)ptr;
 #endif
+    if ((t->flags & QTHREAD_SIMPLE) == 0) {
+        qthread_after_swap_to_qthread(t);
+    }
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_fence1); // add label for HPCToolkit stack unwind
 #endif
@@ -2225,6 +2291,7 @@ static void qthread_wrapper(void *ptr)
     MONITOR_ASM_LABEL(qthread_fence2); // add label for HPCToolkit stack unwind
 #endif
     if ((t->flags & QTHREAD_SIMPLE) == 0) {
+        qthread_before_swap_from_qthread(t);
         qthread_back_to_master2(t);
     }
 }                      /*}}} */
@@ -2279,11 +2346,13 @@ void INTERNAL qthread_exec(qthread_t    *t,
 #ifdef QTHREAD_PERFORMANCE
         QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
 #endif /*  ifdef QTHREAD_PERFORMANCE */
+        qthread_before_swap_to_qthread(t);
 #ifdef HAVE_NATIVE_MAKECONTEXT
         qassert(swapcontext(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), &t->rdata->context), 0);
 #else
         qassert(qt_swapctxt(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), &t->rdata->context), 0);
 #endif
+        qthread_after_swap_from_qthread(t);
         RLIMIT_TO_NORMAL(t);
 #ifdef QTHREAD_PERFORMANCE
         QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
@@ -2348,11 +2417,13 @@ void API_FUNC qthread_yield_(int k)
                         qthread_debug(SHEPHERD_DETAILS,
                                 "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
                         QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
+                        qthread_before_swap_to_qthread(t);
 #ifdef HAVE_NATIVE_MAKECONTEXT
                         qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
 #else
                         qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
 #endif
+                        qthread_after_swap_from_qthread(t);
                         qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
                         RLIMIT_TO_NORMAL(t);
                         QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
@@ -2923,11 +2994,13 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
     VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
     VALGRIND_MAKE_MEM_DEFINED(atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed), sizeof(qt_context_t));
 #endif
+    qthread_before_swap_from_qthread(t);
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(&t->rdata->context, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed)), 0);
 #else
     qassert(qt_swapctxt(&t->rdata->context, atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed)), 0);
 #endif
+    qthread_after_swap_to_qthread(t);
     RLIMIT_TO_TASK(t);
 #ifdef QTHREAD_PERFORMANCE
     QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
