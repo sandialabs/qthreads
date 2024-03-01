@@ -55,7 +55,7 @@ typedef struct {
 } qt_threadqueue_internal;
 
 typedef struct {
-  size_t n;
+  _Atomic size_t n__;
   cacheline buf; //ensure
 } w_ind;
 
@@ -75,8 +75,8 @@ qthread_t *_Atomic mccoy = NULL;
 /* Memory Management and Initialization/Shutdown */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 
-#define mycounter(q) (q->w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)].n)
-#define myqueue(q) (q->t + mycounter(q))
+#define mycounter__(q) (q->w_inds[qthread_worker(NULL) % (qlib->nshepherds * qlib->nworkerspershep)].n__)
+#define myqueue(q) (q->t + atomic_load_explicit(&mycounter__(q), memory_order_relaxed))
 
 static qt_threadqueue_t* alloc_threadqueue(void){
   qt_threadqueue_t* t = (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues);
@@ -119,7 +119,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void){
     }
   }
   for(size_t i=0; i<qlib->nshepherds * qlib->nworkerspershep; i++){
-    qe->w_inds[i].n = i % qe->num_queues;
+    atomic_store_explicit(&qe->w_inds[i].n__, i % qe->num_queues, memory_order_relaxed);
   }
   QTHREAD_COND_INIT(qe->cond);
   return qe;
@@ -192,7 +192,7 @@ static void qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
     atomic_store_explicit(&mccoy, t, memory_order_relaxed);
   } else {
     qt_threadqueue_internal* q = myqueue(qe);
-    mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
+    atomic_store_explicit(&mycounter__(qe), (atomic_load_explicit(&mycounter__(qe), memory_order_relaxed) + 1) % qe->num_queues, memory_order_relaxed);
     qt_threadqueue_node_t *node = alloc_tqnode();
     node->value = t;
     node->next = NULL;
@@ -233,7 +233,7 @@ static void qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
   }
 
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
+  atomic_store_explicit(&mycounter__(qe), (atomic_load_explicit(&mycounter__(qe), memory_order_relaxed) + 1) % qe->num_queues, memory_order_relaxed);
   qt_threadqueue_node_t *node = alloc_tqnode();
   node->value     = t;
   node->prev = NULL;
@@ -259,7 +259,7 @@ static void qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
 
 static qt_threadqueue_node_t *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){                                     
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
+  atomic_store_explicit(&mycounter__(qe), (atomic_load_explicit(&mycounter__(qe), memory_order_relaxed) + 1) % qe->num_queues, memory_order_relaxed);
   qt_threadqueue_node_t *node;
   
   // If there is no work or we can't get the lock, fail
@@ -282,7 +282,7 @@ static qt_threadqueue_node_t *qt_threadqueue_dequeue_tail(qt_threadqueue_t *qe){
 
 static qt_threadqueue_node_t *qt_threadqueue_dequeue_head(qt_threadqueue_t *qe){                                     
   qt_threadqueue_internal* q = myqueue(qe);
-  mycounter(qe) = (mycounter(qe) + 1) % qe->num_queues;
+  atomic_store_explicit(&mycounter__(qe), (atomic_load_explicit(&mycounter__(qe), memory_order_relaxed) + 1) % qe->num_queues, memory_order_relaxed);
   qt_threadqueue_node_t *node;
   
   // If there is no work or we can't get the lock, fail
