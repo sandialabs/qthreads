@@ -184,7 +184,7 @@ static void qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
   if (atomic_load_explicit(&t->thread_state, memory_order_relaxed) == QTHREAD_STATE_TERM_SHEP) {
     atomic_store_explicit(&finalizing, 1, memory_order_relaxed);
   }
-  if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
+  if (atomic_load_explicit(&t->flags__, memory_order_relaxed) & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
     if(atomic_load_explicit(&mccoy, memory_order_relaxed)) {
       printf("mccoy thread non-null and trying to set!\n");
       exit(-1);
@@ -210,7 +210,7 @@ static void qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
   }
   // we need to wake up all threads when finalizing and if pushing the mccoy
   // thread to make sure we get worker 0
-  if(atomic_load_explicit(&finalizing, memory_order_relaxed) || t->flags & QTHREAD_REAL_MCCOY){
+  if(atomic_load_explicit(&finalizing, memory_order_relaxed) || atomic_load_explicit(&t->flags__, memory_order_relaxed) & QTHREAD_REAL_MCCOY){
     QTHREAD_COND_LOCK(qe->cond);
     QTHREAD_COND_BCAST(qe->cond);
     QTHREAD_COND_UNLOCK(qe->cond);
@@ -223,7 +223,7 @@ static void qt_threadqueue_enqueue_tail(qt_threadqueue_t *restrict qe,
 
 static void qt_threadqueue_enqueue_head(qt_threadqueue_t *restrict qe,
                                         qthread_t *restrict        t){   
-  if (t->flags & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
+  if (atomic_load_explicit(&t->flags__, memory_order_relaxed) & QTHREAD_REAL_MCCOY) { // only needs to be on worker 0 for termination
     if(atomic_load_explicit(&mccoy, memory_order_relaxed)) {
       printf("mccoy thread non-null and trying to set!\n");
       exit(-1);

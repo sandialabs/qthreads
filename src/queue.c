@@ -115,7 +115,7 @@ static void qthread_queue_internal_launch(qthread_t          *t,
     assert(t);
     assert(cur_shep);
     atomic_store_explicit(&t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-    if ((t->flags & QTHREAD_UNSTEALABLE) && (t->rdata->shepherd_ptr != cur_shep)) {
+    if ((atomic_load_explicit(&t->flags__, memory_order_relaxed) & QTHREAD_UNSTEALABLE) && (t->rdata->shepherd_ptr != cur_shep)) {
         qthread_debug(FEB_DETAILS, "qthread(%p:%i) enqueueing in target_shep's ready queue (%p:%i)\n", t, (int)t->thread_id, t->rdata->shepherd_ptr, (int)t->rdata->shepherd_ptr->shepherd_id);
         qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
     } else
