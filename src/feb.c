@@ -177,7 +177,7 @@ static inline void qt_feb_schedule(qthread_t          *waiter,
     qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): setting waiter to 'RUNNING'\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id);
     atomic_store_explicit(&waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
     QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
-    if ((waiter->flags & QTHREAD_UNSTEALABLE) && (waiter->rdata->shepherd_ptr != shep)) {
+    if ((atomic_load_explicit(&waiter->flags__, memory_order_relaxed) & QTHREAD_UNSTEALABLE) && (waiter->rdata->shepherd_ptr != shep)) {
         qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): enqueueing waiter in target_shep's ready queue (%p:%i)\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id, waiter->rdata->shepherd_ptr, waiter->rdata->shepherd_ptr->shepherd_id);
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
     } else
@@ -1705,13 +1705,13 @@ static filter_code qt_feb_tf_call_cb(const qt_key_t            addr,
     void             *tls;
 
     if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-        if (waiter->flags & QTHREAD_BIG_STRUCT) {
+        if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) & QTHREAD_BIG_STRUCT) {
             tls = &waiter->data[qlib->qthread_argcopy_size];
         } else {
             tls = waiter->data;
         }
     } else {
-        if (waiter->flags & QTHREAD_BIG_STRUCT) {
+        if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) & QTHREAD_BIG_STRUCT) {
             tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
         } else {
             tls = *(void **)&waiter->data[0];
