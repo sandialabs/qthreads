@@ -80,33 +80,33 @@ arm_linux_clang_task:
   timeout_in: 5m
   matrix:
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: hwloc
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: hwloc
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: hwloc
   install_deps_script: |
@@ -114,7 +114,7 @@ arm_linux_clang_task:
     apt-get install -y software-properties-common
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
     apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
-    apt-get install -y clang
+    apt-get install -y clang-18
     apt-get install -y autoconf automake libtool
     apt-get install -y hwloc libhwloc-dev
   build_script: |
