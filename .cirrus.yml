@@ -113,7 +113,7 @@ arm_linux_clang_task:
     apt-get update -y
     apt-get install -y software-properties-common
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-    apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
+    apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
     apt-get install -y clang
     apt-get install -y autoconf automake libtool
     apt-get install -y hwloc libhwloc-dev
