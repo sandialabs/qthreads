@@ -65,6 +65,7 @@ typedef enum bt {
 typedef struct {
     pthread_mutex_t lock;
     pthread_cond_t condition;
+    uint32_t completed;
     void           *a;
     void           *b;
     blocker_type    type;
@@ -295,6 +296,7 @@ static aligned_t qthread_syncvar_blocker_thread(void *arg)
         case INCR: a->retval       = qthread_syncvar_incrF(a->a, *(int64_t *)a->b); break;
     }
     pthread_mutex_lock(&a->lock);
+    a->completed = 1u;
     pthread_cond_signal(&a->condition);
     pthread_mutex_unlock(&a->lock);
     return 0;
@@ -304,7 +306,7 @@ static int qthread_syncvar_nonblocker_func(void        *dest,
                                         void        *src,
                                         blocker_type t)
 {   /*{{{*/
-    qthread_syncvar_blocker_t args = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, dest, src, t, QTHREAD_SUCCESS };
+    qthread_syncvar_blocker_t args = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0u, dest, src, t, QTHREAD_SUCCESS };
 
     qthread_fork(qthread_syncvar_nonblocker_thread, &args, NULL);
     return args.retval;
@@ -314,11 +316,11 @@ static int qthread_syncvar_blocker_func(void        *dest,
                                         void        *src,
                                         blocker_type t)
 {   /*{{{*/
-    qthread_syncvar_blocker_t args = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, dest, src, t, QTHREAD_SUCCESS };
+    qthread_syncvar_blocker_t args = { PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, 0u, dest, src, t, QTHREAD_SUCCESS };
 
     pthread_mutex_lock(&args.lock);
     qthread_fork(qthread_syncvar_blocker_thread, &args, NULL);
-    pthread_cond_wait(&args.condition, &args.lock);
+    while (!args.completed) pthread_cond_wait(&args.condition, &args.lock);
     pthread_mutex_unlock(&args.lock);
     pthread_cond_destroy(&args.condition);
     pthread_mutex_destroy(&args.lock);
