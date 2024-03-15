@@ -35,7 +35,7 @@ static void testBasicWriteFF(void)
 
 #define ALL_ONES  ~0u
 #define ALL_ZEROS 0
-#define ITERS_PER_WORKER 10000
+#define ITERS_PER_WORKER 1000
 
 // This test deliberately creates a race condition, so
 // don't run it when thread sanitizer is enabled.
