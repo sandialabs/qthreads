@@ -1796,19 +1796,24 @@ size_t API_FUNC qthread_stackleft(void)
     const qthread_t *f = qthread_internal_self();
 
     if ((f != NULL) && (f->rdata->stack != NULL)) {
-        assert((size_t)&f > (size_t)f->rdata->stack &&
-               (size_t)&f < ((size_t)f->rdata->stack + qlib->qthread_stack_size));
+#ifdef __INTEL_COMPILER
+        size_t current = (size_t)&f;
+#else
+        size_t current = (size_t)__builtin_frame_address(0);
+#endif
+        assert(current > (size_t)f->rdata->stack &&
+               current < ((size_t)f->rdata->stack + qlib->qthread_stack_size));
 #ifdef STACK_GROWS_DOWN
         /* not tested */
         assert(((size_t)(f->rdata->stack) + qlib->qthread_stack_size) -
-               (size_t)(&f) < qlib->qthread_stack_size);
+               current < qlib->qthread_stack_size);
         return ((size_t)(f->rdata->stack) + qlib->qthread_stack_size) -
-               (size_t)(&f);
+               current;
 
 #else
-        assert((size_t)(&f) - (size_t)(f->rdata->stack) <
+        assert(current - (size_t)(f->rdata->stack) <
                qlib->qthread_stack_size);
-        return (size_t)(&f) - (size_t)(f->rdata->stack);
+        return current - (size_t)(f->rdata->stack);
 #endif
     } else {
         return 0;
