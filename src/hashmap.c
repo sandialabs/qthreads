@@ -147,10 +147,13 @@ qt_hash INTERNAL qt_hash_create(int needSync)
         if (needSync) {
             ret->lock = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE));
             QTHREAD_FASTLOCK_INIT_PTR(ret->lock);
+            QTHREAD_FASTLOCK_LOCK(ret->lock);
+            qt_hash_internal_create(ret, 100);
+            QTHREAD_FASTLOCK_UNLOCK(ret->lock);
         } else {
             ret->lock = NULL;
+            qt_hash_internal_create(ret, 100);
         }
-        qt_hash_internal_create(ret, 100);
     }
     return ret;
 } /*}}}*/

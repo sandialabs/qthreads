@@ -59,20 +59,16 @@
 # define QTHREAD_FASTLOCK_SETUP() do { } while (0)
 # define QTHREAD_FASTLOCK_ATTRVAR
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
-    aligned_t enter;                 /* and not call pthreads spin_lock -- hard to debug */
-    aligned_t exit;                  /* near the lock under gdb -- 4/1/11 akp */
+    aligned_t _Atomic enter;                 /* and not call pthreads spin_lock -- hard to debug */
+    aligned_t _Atomic exit;                  /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
-# define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
-# define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
-# define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = qthread_incr(&(x)->enter, 1); \
-                                        while (val != (x)->exit) SPINLOCK_BODY(); \
-                                           THREAD_FENCE_MEM_ACQUIRE; /* spin waiting for my turn */ }
-# define QTHREAD_FASTLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
-					                       THREAD_FENCE_MEM_RELEASE; \
-                                           (x)->exit++; /* allow next guy's turn */ \
-                                        } while (0)
+# define QTHREAD_FASTLOCK_INIT(x)     { atomic_store_explicit(&(x).enter, 0u, memory_order_release); atomic_store_explicit(&(x).exit, 0u, memory_order_release); }
+# define QTHREAD_FASTLOCK_INIT_PTR(x) { atomic_store_explicit(&(x)->enter, 0u, memory_order_release); atomic_store_explicit(&(x)->exit, 0u, memory_order_release); }
+# define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = atomic_fetch_add_explicit(&(x)->enter, 1u, memory_order_relaxed); \
+                                        while (val != atomic_load_explicit(&(x)->exit, memory_order_acquire)) SPINLOCK_BODY(); /* spin waiting for turn */ }
+# define QTHREAD_FASTLOCK_UNLOCK(x)   do { atomic_fetch_add_explicit(&(x)->exit, 1u, memory_order_release); /* notify next waiting thread */} while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
