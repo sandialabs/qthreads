@@ -451,7 +451,7 @@ got_m:
         X->next   = m->FFQ;
         m->FFQ    = X;
         qthread_debug(SYNCVAR_DETAILS, "back to parent\n");
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -782,7 +782,7 @@ got_m:
         X->next   = m->FEQ;
         m->FEQ    = X;
         qthread_debug(SYNCVAR_DETAILS, "back to parent\n");
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -948,9 +948,9 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
 {   /*{{{*/
     assert(waiter);
     assert(shep);
-    waiter->thread_state = QTHREAD_STATE_RUNNING;
+    atomic_store_explicit(&waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
     QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data, QTHREAD_STATE_RUNNING);
-    if (waiter->flags & QTHREAD_UNSTEALABLE) {
+    if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) & QTHREAD_UNSTEALABLE) {
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
     } else {
 #ifdef QTHREAD_USE_SPAWNCACHE
@@ -1272,7 +1272,7 @@ got_m:
         X->next   = m->EFQ;
         m->EFQ    = X;
         qthread_debug(SYNCVAR_DETAILS, ": back to parent\n");
-        me->thread_state          = QTHREAD_STATE_FEB_BLOCKED;
+        atomic_store_explicit(&me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
         QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data, QTHREAD_STATE_FEB_BLOCKED);
         me->rdata->blockedon.addr = m;
         QTHREAD_WAIT_TIMER_START();
@@ -1535,13 +1535,13 @@ static filter_code qt_syncvar_tf_call_cb(const qt_key_t            addr,
     void                 *tls;
 
     if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-        if (waiter->flags & QTHREAD_BIG_STRUCT) {
+        if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) & QTHREAD_BIG_STRUCT) {
             tls = &waiter->data[qlib->qthread_argcopy_size];
         } else {
             tls = waiter->data;
         }
     } else {
-        if (waiter->flags & QTHREAD_BIG_STRUCT) {
+        if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) & QTHREAD_BIG_STRUCT) {
             tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
         } else {
             tls = *(void **)&waiter->data[0];
