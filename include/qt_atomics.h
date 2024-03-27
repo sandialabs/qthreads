@@ -136,10 +136,9 @@ extern pthread_mutexattr_t _fastlock_attr;
 # define QTHREAD_TRYLOCK_INIT(x)     { (x).u = 0; }
 # define QTHREAD_TRYLOCK_INIT_PTR(x) { (x)->u = 0; }
 # define QTHREAD_TRYLOCK_LOCK(x)     { uint32_t val = qthread_incr(&(x)->s.users, 1); \
-                                       while (val != (x)->s.ticket) SPINLOCK_BODY(); \
-                                          THREAD_FENCE_MEM_ACQUIRE; /* spin waiting for my turn */ }
+                                       while (val != atomic_load_explicit((_Atomic uint32_t *)&(x)->s.ticket, memory_order_acquire)) SPINLOCK_BODY();}
 # define QTHREAD_TRYLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
-					                      THREAD_FENCE_MEM_RELEASE; \
+					  THREAD_FENCE_MEM_RELEASE; \
                                           qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
                                         } while (0)
 # define QTHREAD_TRYLOCK_DESTROY(x)
@@ -147,7 +146,9 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
 {
-    qt_spin_trylock_t newcmp, cmp = *(x);
+    qt_spin_trylock_t newcmp, cmp;
+    uint64_t tmp = atomic_load_explicit((_Atomic uint64_t*)x, memory_order_relaxed);
+    cmp = *(qt_spin_trylock_t*)&tmp;
 
     if (cmp.s.users != cmp.s.ticket) {
         return 0;
@@ -157,7 +158,6 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
     newcmp.s.users = newcmp.s.ticket + 1;
 
     if(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u) { 
-        THREAD_FENCE_MEM_ACQUIRE; 
         return 1;
     }
     return 0;
