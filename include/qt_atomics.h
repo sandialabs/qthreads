@@ -136,8 +136,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 # define QTHREAD_TRYLOCK_INIT(x)     { (x).u = 0; }
 # define QTHREAD_TRYLOCK_INIT_PTR(x) { (x)->u = 0; }
 # define QTHREAD_TRYLOCK_LOCK(x)     { uint32_t val = qthread_incr(&(x)->s.users, 1); \
-                                       while (val != atomic_load_explicit((_Atomic uint32_t *)&(x)->s.ticket, memory_order_acquire)) SPINLOCK_BODY();\
-                                       THREAD_FENCE_MEM_ACQUIRE;}
+                                       while (val != atomic_load_explicit((_Atomic uint32_t *)&(x)->s.ticket, memory_order_acquire)) SPINLOCK_BODY();}
 # define QTHREAD_TRYLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
 					  THREAD_FENCE_MEM_RELEASE; \
                                           qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
