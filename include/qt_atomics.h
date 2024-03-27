@@ -158,7 +158,6 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
     newcmp.s.users = newcmp.s.ticket + 1;
 
     if(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u) { 
-        THREAD_FENCE_MEM_ACQUIRE; 
         return 1;
     }
     return 0;
