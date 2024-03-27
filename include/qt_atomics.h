@@ -147,7 +147,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
 {
     qt_spin_trylock_t newcmp, cmp;
-    uint64_t tmp = atomic_load_explicit((_Atomic uint64_t*)x, memory_order_acquire);
+    uint64_t tmp = atomic_load_explicit((_Atomic uint64_t*)x, memory_order_relaxed);
     cmp = *(qt_spin_trylock_t*)&tmp;
 
     if (cmp.s.users != cmp.s.ticket) {
