@@ -1,8 +1,8 @@
 #ifndef QT_EUREKAS_H
 #define QT_EUREKAS_H
 
-#include "qt_visibility.h"
 #include "qt_qthread_t.h"
+#include "qt_visibility.h"
 
 /* Unexpected task destruction/cleanup */
 void INTERNAL qthread_internal_assassinate(qthread_t *t);

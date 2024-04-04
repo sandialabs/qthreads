@@ -15,20 +15,14 @@ int qthread_multinode_multistop(void);
 int qthread_multinode_rank(void);
 int qthread_multinode_size(void);
 
-int qthread_multinode_register(uint32_t  tag,
-                               qthread_f f);
-int qthread_multinode_action_uid(qthread_f f,
-                                 uint32_t *tag);
-int qthread_multinode_action_ptr(uint32_t   tag,
-                                 qthread_f *ptr);
+int qthread_multinode_register(uint32_t tag, qthread_f f);
+int qthread_multinode_action_uid(qthread_f f, uint32_t *tag);
+int qthread_multinode_action_ptr(uint32_t tag, qthread_f *ptr);
 
-int qthread_fork_remote(qthread_f   f,
-                        const void *arg,
-                        aligned_t  *ret,
-                        int         rank,
-                        size_t      arg_len);
+int qthread_fork_remote(
+  qthread_f f, void const *arg, aligned_t *ret, int rank, size_t arg_len);
 
 Q_ENDCXX /* */
 
 #endif // ifndef QTHREAD_QTHREAD_MULTINODE_H
-/* vim:set expandtab: */
+  /* vim:set expandtab: */
