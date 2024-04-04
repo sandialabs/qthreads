@@ -187,7 +187,7 @@ static inline void qt_feb_schedule(qthread_t *waiter,
     &waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
   QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data,
                              QTHREAD_STATE_RUNNING);
-  if ((atomic_load_explicit(&waiter->flags__, memory_order_relaxed) &
+  if ((atomic_load_explicit(&waiter->flags, memory_order_relaxed) &
        QTHREAD_UNSTEALABLE) &&
       (waiter->rdata->shepherd_ptr != shep)) {
     qthread_debug(FEB_DETAILS,
@@ -1850,14 +1850,14 @@ static filter_code qt_feb_tf_call_cb(qt_key_t const addr,
   void *tls;
 
   if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-    if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) &
+    if (atomic_load_explicit(&waiter->flags, memory_order_relaxed) &
         QTHREAD_BIG_STRUCT) {
       tls = &waiter->data[qlib->qthread_argcopy_size];
     } else {
       tls = waiter->data;
     }
   } else {
-    if (atomic_load_explicit(&waiter->flags__, memory_order_relaxed) &
+    if (atomic_load_explicit(&waiter->flags, memory_order_relaxed) &
         QTHREAD_BIG_STRUCT) {
       tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
     } else {

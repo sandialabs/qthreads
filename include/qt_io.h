@@ -31,8 +31,8 @@ void qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job);
 static inline int qt_blockable(void) {
   qthread_t *t = qthread_internal_self();
 
-  if ((t != NULL) && atomic_load_explicit(&t->flags__, memory_order_relaxed) &
-                       QTHREAD_SIMPLE) {
+  if ((t != NULL) &&
+      atomic_load_explicit(&t->flags, memory_order_relaxed) & QTHREAD_SIMPLE) {
     t = NULL;
   }
   return (t != NULL);
