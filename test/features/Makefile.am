@@ -39,7 +39,8 @@ EXTRA_PROGRAMS = wavefront
 
 if ENABLE_CXX_TESTS
 TESTS += cxx_qt_loop \
-		 cxx_qt_loop_balance
+		 cxx_qt_loop_balance \
+		 cxx_qt_stdexec
 endif
 
 check_PROGRAMS = $(TESTS)
