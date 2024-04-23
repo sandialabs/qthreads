@@ -109,6 +109,8 @@ cxx_qt_loop_SOURCES = cxx_qt_loop.cpp
 
 cxx_qt_loop_balance_SOURCES = cxx_qt_loop_balance.cpp
 
+cxx_qt_stdexec_SOURCES = cxx_qt_stdexec.cpp
+
 wavefront_SOURCES = wavefront.c
 
 eureka_SOURCES = eureka.c
