@@ -26,14 +26,16 @@ struct qthreads_scheduler {
     operation_state &operator=(operation_state &&) = delete;
     operation_state &operator=(operation_state const &) = delete;
 
-    static long unsigned int task(void *arg) noexcept {
+    static aligned_t task(void *arg) noexcept {
       auto *os = static_cast<operation_state *>(arg);
       stdexec::set_value(std::move(os->receiver));
       return 0;
     }
 
     friend void tag_invoke(stdexec::start_t, operation_state &os) noexcept {
-      int r = qthread_fork(&task, &os, NULL);
+      aligned_t ret = 0;
+      int r = qthread_fork(&task, &os, &ret);
+      qthread_readFF(NULL, &ret);
 
       if (r != QTHREAD_SUCCESS) {
         stdexec::set_error(std::move(os.receiver), r);
