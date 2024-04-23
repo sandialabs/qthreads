@@ -28,6 +28,7 @@ struct qthreads_scheduler {
 
     static aligned_t task(void *arg) noexcept {
       auto *os = static_cast<operation_state *>(arg);
+      printf("Hello from qthreads in task! id = %i\n", qthread_id());
       stdexec::set_value(std::move(os->receiver));
       return 0;
     }
@@ -92,7 +93,7 @@ int main(int argc, char **argv) {
 
   stdexec::sender auto s =
     stdexec::schedule(qthreads::qthreads_scheduler{}) | stdexec::then([] {
-      printf("Hello from qthreads! id = %i\n", qthread_id());
+      printf("Hello from qthreads in then-functor! id = %i\n", qthread_id());
     });
   stdexec::sync_wait(std::move(s));
 
