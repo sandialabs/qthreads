@@ -75,7 +75,7 @@ using std::memory_order_relaxed;
  *          EXT = rc
  *          EXT_NUMBER = 1
  */
-#define QTHREAD_VERSION "1.19"
+#define QTHREAD_VERSION "1.20"
 
 /* * QTHREAD_NUMVERSION = [MAJ] * 10000000 + [MIN] * 100000 + [REV] * 1000
  *                      + [EXT] * 100 + [EXT_NUMBER]
@@ -90,7 +90,7 @@ using std::memory_order_relaxed;
  * digit for EXT, and 2 digits for EXT_NUMBER.  For example, 1.17.1rc1 is
  * converted to the numeric version 011701201.
  */
-#define QTHREAD_NUMVERSION 011900000
+#define QTHREAD_NUMVERSION 012000000
 
 #define QTHREADS_GET_VERSION(MAJOR, MINOR, REVISION, TYPE, PATCH) \
     (((MAJOR) * 10000000) + ((MINOR) * 100000) + ((REVISION) * 1000) + ((TYPE) * 100) + (PATCH))
