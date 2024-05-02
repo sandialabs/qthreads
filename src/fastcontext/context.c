@@ -169,8 +169,22 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
 
 #endif /* ifdef NEEDPOWERMAKECONTEXT */
 
+// Macro for excluding a function from thread sanitizer.
+// Currently this is just used for qt_swapctxt.
+// Something about thread sanitizer's instrumentation is
+// incompatible with our context switching.
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define QT_SKIP_THREAD_SANITIZER __attribute__((disable_sanitizer_instrumentation))
+#else
+#define QT_SKIP_THREAD_SANITIZER
+#endif
+#else
+#define QT_SKIP_THREAD_SANITIZER
+#endif
+
 #ifdef NEEDSWAPCONTEXT
-int INTERNAL qt_swapctxt(uctxt_t *oucp,
+QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp,
                          uctxt_t *ucp)
 {
     /* note that my getcontext implementation has only two possible return

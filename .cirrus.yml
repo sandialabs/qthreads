@@ -42,7 +42,7 @@ freebsd_task:
 
 arm_linux_task:
   arm_container:
-    image: gcc:latest
+    image: gcc:13-bookworm
   timeout_in: 5m
   matrix:
     env:
@@ -76,45 +76,50 @@ arm_linux_task:
 
 arm_linux_clang_task:
   arm_container:
-    image: gcc:latest
+    image: gcc:13-bookworm
   timeout_in: 5m
   matrix:
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: hwloc
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: hwloc
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang
-      CXX: clang++
+      CC: clang-18
+      CXX: clang++-18
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: hwloc
   install_deps_script: |
     apt-get update -y
     apt-get install -y software-properties-common
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-    apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
-    apt-get install -y clang
+    wget https://apt.llvm.org/llvm-snapshot.gpg.key
+    gpg --no-default-keyring --keyring ./tmp.gpg --import llvm-snapshot.gpg.key
+    gpg --no-default-keyring --keyring ./tmp.gpg --export --output llvm-snapshot.gpg
+    rm tmp.gpg
+    cp llvm-snapshot.gpg /etc/apt/trusted.gpg.d/llvm-snapshot.gpg # This is for CI so no need to do something more complicated to restrict key use to a specific repo.
+    apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-18 main'
+    apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-18 main' # Something's buggy upstream but running this twice fixes it.
+    apt-get install -y clang-18
     apt-get install -y autoconf automake libtool
     apt-get install -y hwloc libhwloc-dev
   build_script: |

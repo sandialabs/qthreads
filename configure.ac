@@ -937,7 +937,7 @@ int main() {
 
 AS_IF([test "x$with_default_stack_size" != "x"],
       [qthread_cv_stack_size=$with_default_stack_size],
-      [qthread_cv_stack_size=16384])
+      [qthread_cv_stack_size=32768])
 
 AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size], [What size stacks to use by default])
 

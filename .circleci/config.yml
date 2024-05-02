@@ -27,7 +27,7 @@ jobs:
           make -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
   arm_clang:
     parameters:
@@ -39,8 +39,8 @@ jobs:
       image: ubuntu-2204:2023.10.1
     resource_class: arm.medium
     environment:
-      CC: clang-17
-      CXX: clang++-17
+      CC: clang-18
+      CXX: clang++-18
     steps:
       - checkout
       - run: |
@@ -49,15 +49,15 @@ jobs:
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
-          sudo apt-get install -y clang-17
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
+          sudo apt-get install -y clang-18
       - run: |
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
   arm_sanitizers:
     parameters:
@@ -71,11 +71,13 @@ jobs:
       image: ubuntu-2204:2023.10.1
     resource_class: arm.medium
     environment:
-      CC: clang-17
-      CXX: clang++-17
-      CFLAGS: "-fsanitize=<< parameters.sanitizer >>"
-      CXXFLAGS: "-fsanitize=<< parameters.sanitizer >>"
-      LDFLAGS: "-fsanitize=<< parameters.sanitizer >>"
+      CC: clang-18
+      CXX: clang++-18
+      CFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
+      CXXFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
+      LDFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
+      QTHREAD_STACK_SIZE: 524288
+      ASAN_OPTIONS: "check_initialization_order=1"
     steps:
       - checkout
       - run: |
@@ -84,15 +86,15 @@ jobs:
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
-          sudo apt-get install -y clang-17
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
+          sudo apt-get install -y clang-18
       - run: |
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
       - run:
           command: timeout --foreground -k 10s 4m make check
-          no_output_timeout: 30s
+          no_output_timeout: 120s
 
   arm_acfl:
     parameters:
@@ -129,7 +131,7 @@ jobs:
           command: |
               export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
               timeout --foreground -k 10s 4m make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
   musl:
     parameters:
@@ -152,7 +154,7 @@ jobs:
           make -j2
       - run:
           command: make check
-          no_output_timeout: 30s
+          no_output_timeout: 60s
 
 workflows:
   build_and_test:
