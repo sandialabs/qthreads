@@ -1,5 +1,5 @@
 /** \file performance.h
- * 
+ *
  * A performance measuring API for QThreads. This file contains the
  * declarations for a set of functions that can be used to implement
  * fine-grained timing measurement for the QThreads library. You can
@@ -24,10 +24,10 @@
  * timing data for the states to inspect your data. The API also
  * includes functions for printing the data out in either a labeled
  * list format or a CSV tabular format suitable for importing into
- * other analytical software. 
+ * other analytical software.
  *
- * Future work: 
- *  - Implement aggregated state groups (groups that aggregate data 
+ * Future work:
+ *  - Implement aggregated state groups (groups that aggregate data
  *    from many contributing threads)
  *  - Add additional qthreads internal state tracking (currently only
  *    thread state and worker state transitions are tracked).
@@ -36,27 +36,24 @@
  * \version 0.1
  */
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifndef QT_PERFORMANCE_H
 #define QT_PERFORMANCE_H
-#include<stddef.h>
-#include<stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #ifndef PERFDBG
-#  define PERFDBG 0
+#define PERFDBG 0
 #endif
 
-#ifndef __cplusplus
-typedef unsigned char bool;
-#endif
 typedef size_t qtperfid_t;
 typedef unsigned long long qtperfcounter_t;
 typedef unsigned long qttimestamp_t;
-static const qtperfid_t QTPERF_INVALID_STATE = (qtperfid_t)(-1);
-
+static qtperfid_t const QTPERF_INVALID_STATE = (qtperfid_t)(-1);
 
 struct qtperf_perf_list_s;
 
@@ -68,20 +65,20 @@ typedef struct qtstategroup_s {
   size_t num_states;
   /// Human-readable name for this state group, used in output to make
   /// it clear what is being reported.
-  char* name;
+  char *name;
   /// Array of human-readable names for the states. This is
   /// optional. If not provided, the library will just report
   /// numerical names for the states.
-  char** state_names;
+  char **state_names;
   /// The number of instances of this state group (length of the
   /// counters list)
   size_t num_counters;
   /// Address of the tail end of the list, so that new counters can be
   /// inserted at the end.
-  struct qtperf_perf_list_s** next_counter;
+  struct qtperf_perf_list_s **next_counter;
   /// A list of all performance counters that use this group for their
   /// state definitions.
-  struct qtperf_perf_list_s* counters;
+  struct qtperf_perf_list_s *counters;
 } qtstategroup_t;
 
 /** qtperf_group_list_t is the linked list that keeps track of all of
@@ -91,7 +88,7 @@ typedef struct qtstategroup_s {
  */
 typedef struct qtperf_group_list_s {
   qtstategroup_t group;
-  struct qtperf_group_list_s* next;
+  struct qtperf_group_list_s *next;
 } qtperf_group_list_t;
 
 /** qtperf_piggyback_list_t is the linked list of all piggyback
@@ -104,9 +101,9 @@ typedef struct qtperf_group_list_s {
  *  to the QThreads library and should not be touched by user code.
  */
 typedef struct qtperf_piggyback_list_s {
-  struct qtperfdata_s* target_data;
+  struct qtperfdata_s *target_data;
   qtperfid_t target_state;
-  struct qtperf_piggyback_list_s* next;
+  struct qtperf_piggyback_list_s *next;
 } qtperf_piggyback_list_t;
 
 /** qtperfdata_counter_t records the actual timing information. This
@@ -116,18 +113,18 @@ typedef struct qtperf_piggyback_list_s {
  */
 typedef struct qtperfctr_s {
   // 1 unless it's an aggregate target.
-  size_t num_contributors; 
+  size_t num_contributors;
   /// A reference to the qtstategroup_t that defines the states for
   /// this counter.
-  qtstategroup_t* state_group;
+  qtstategroup_t *state_group;
   /// Number of states in this counter's state group. This is here to
   /// speed up state entry by avoiding a dereference of the state
   /// group pointer.
   size_t num_states;
   /// represent the total time spent in each state.
-  qtperfcounter_t* data;
+  qtperfcounter_t *data;
   /// A spin lock gate to ensure exclusive access for updates
-  volatile uint32_t busy;// 1 if somebody is using this structure, else 0
+  uint32_t volatile busy; // 1 if somebody is using this structure, else 0
 } qtperfctr_t;
 
 /** qtperfdata_t holds the current state data for each thread. Every
@@ -137,20 +134,20 @@ typedef struct qtperfctr_s {
     counter, the counter pointer will be shared between all of the
     sharing threads.
  */
-typedef struct qtperfdata_s{
+typedef struct qtperfdata_s {
   qtperfid_t current_state;
   qttimestamp_t time_entered;
   // This is set to true if this struct is the owner of the
   // qtperfctr_t pointer it holds (for safe deallocation)
   bool ctr_owner;
   // only used if num_contributors > 1
-  volatile uint32_t busy; 
+  uint32_t volatile busy;
   /// the actual timing data. May be shared if it's aggregated
-  qtperfctr_t* counters;
+  qtperfctr_t *counters;
   /// An array of lists of piggyback relationships - when a
   /// piggybacked state is entered, all of its piggybackers will be
   /// entered as well
-  qtperf_piggyback_list_t** piggybacks;
+  qtperf_piggyback_list_t **piggybacks;
 } qtperfdata_t;
 
 /** qtperf_perf_list_t is a linked list of performance trackers. This
@@ -159,9 +156,8 @@ typedef struct qtperfdata_s{
  */
 typedef struct qtperf_perf_list_s {
   qtperfdata_t performance_data;
-  struct qtperf_perf_list_s* next;
+  struct qtperf_perf_list_s *next;
 } qtperf_perf_list_t;
-
 
 /** qtperf_iterator_t is a structure that supports iteration through
  *  the performance data structures. The iterator will start at the
@@ -174,23 +170,22 @@ typedef struct qtperf_perf_list_s {
 typedef struct qtperf_iterator_s {
   /// Proceed by groups, all counters will be traversed for a group
   /// before the next group is entered.
-  qtperf_group_list_t* current_group;
+  qtperf_group_list_t *current_group;
   /// Counters within the current group. This pointer stores the
   /// current location within that list.
-  qtperf_perf_list_t* current;
+  qtperf_perf_list_t *current;
 } qtperf_iterator_t;
-
 
 //--------------- WORKER INSTRUMENTATION ----------------------------
 /** worker_state_t defines the set of states that a qthreads worker
  *  can transition between.
-*/
+ */
 typedef enum {
   /// Worker thread being created
   WKR_INIT,
   /// Worker thread is executing code for a qthread task
   WKR_QTHREAD_ACTIVE,
-  /// Worker thread is executing shepherd overhead 
+  /// Worker thread is executing shepherd overhead
   WKR_SHEPHERD,
   /// Worker thread is idle waiting for something to do.
   WKR_IDLE,
@@ -202,47 +197,51 @@ typedef enum {
 
 /** qtperf_should_instrument_workers is a flag to tell the library
  * whether or not to add instrumentation to the worker threads as they
- * are created 
-*/
+ * are created
+ */
 extern bool qtperf_should_instrument_workers;
 
 /** qtperf_workers_group is the state group that contains the state
  *  transition information for instrumenting workers.
  *  \see [qtperf_set_instrument_workers]
  */
-extern qtstategroup_t* qtperf_workers_group;
+extern qtstategroup_t *qtperf_workers_group;
 
-//--------------- QTHREAD INSTRUMENTATION ---------------------------- 
+//--------------- QTHREAD INSTRUMENTATION ----------------------------
 /** qtperf_should_instrument_qthreads is a flag to tell the library to
  * add instrumentation data to qthreads as they are created.
  * @see qtperf_set_instrument_qthreads
  */
 extern bool qtperf_should_instrument_qthreads;
 /** qtperf_qthreads_group is the state group for tracking internal
- *  state changes for qthreads 
+ *  state changes for qthreads
  */
-extern qtstategroup_t* qtperf_qthreads_group;
-
+extern qtstategroup_t *qtperf_qthreads_group;
 
 //---------------- PERFORMANCE API -----------------------------------
 /** @brief Create a new state group with given names and states.
  *
- * This function creates a new state group. 
- * @param num_states The number of states in this state group. Should be the largest state id plus 1
+ * This function creates a new state group.
+ * @param num_states The number of states in this state group. Should be the
+ * largest state id plus 1
  * @param group_name The human-readable name for this group. Required.
- * @param state_names An array of human-readable strings for state names. Optional (NULL to skip)
+ * @param state_names An array of human-readable strings for state names.
+ * Optional (NULL to skip)
  */
-qtstategroup_t* qtperf_create_state_group(size_t num_states, const char* group_name, const char** state_names);
+qtstategroup_t *qtperf_create_state_group(size_t num_states,
+                                          char const *group_name,
+                                          char const **state_names);
 
 /** @brief Create performance data to track state transitions in a group.
  *
  * This function creates a new performance data structure and
  * associates it with the given group
  *
- * @param state_group A pointer to the state group that this counter should implement.
+ * @param state_group A pointer to the state group that this counter should
+ * implement.
  * @see qtperf_create_state_group
- */ 
-qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
+ */
+qtperfdata_t *qtperf_create_perfdata(qtstategroup_t *state_group);
 
 /** @brief Create performance data to track state transitions in an
  * aggregated group.
@@ -257,18 +256,21 @@ qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
  * function to the aggregate argument of future calls of this
  * function.
  *
- * @param state_group A pointer to the state group that this counter should implement.
- * @param aggregate A pointer to a qtperfctr_t struct that is shared between multiple loggers
+ * @param state_group A pointer to the state group that this counter should
+ * implement.
+ * @param aggregate A pointer to a qtperfctr_t struct that is shared between
+ * multiple loggers
  * @see qtperf_create_state_group
- */ 
-qtperfdata_t* qtperf_create_aggregated_perfdata(qtstategroup_t* state_group, qtperfctr_t* aggregate);
+ */
+qtperfdata_t *qtperf_create_aggregated_perfdata(qtstategroup_t *state_group,
+                                                qtperfctr_t *aggregate);
 
 /** @brief Return the current time
- * 
+ *
  * This function returns the current time stamp. Time stamps are
  * calculated using clock_gettime(CLOCK_MONOTONIC_RAW), and are
  * limited to microsecond precision currently.
- */ 
+ */
 qttimestamp_t qtperf_now(void);
 
 /** @brief Turn data collection on.
@@ -309,14 +311,14 @@ void qtperf_free_data(void);
  * This function is used to look up the name associated with a state
  * id for a particular state group. If the state group doesn't have
  * names defined, this will return NULL so be careful.
- * 
+ *
  * @param group the group that defines the state id in question
  * @param state_id the id number of the state
  * @see qtperf_create_state_group
  * @see qtperf_print_results
  * @see qtperf_print_delimited
  */
-const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id);
+char const *qtperf_state_name(qtstategroup_t *group, qtperfid_t state_id);
 
 /** @brief Signal a state transition
  *
@@ -335,28 +337,28 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state_id);
  * struct for it using qtperf_create_perfdata. Then, each time your
  * thread switches between states, simply call qtperf_enter_state with
  * the new state id and the library will track the total time spent in
- * each state. 
+ * each state.
  *
  * Tracking can be temporarily disabled and enabled globally using
  * qtperf_stop and qtperf_start.
  *
  * @param data The performance data struct returned by qtperf_create_perfdata
- * @param state_id The id number of the state being entered. Time will be recorded 
- *    for the old state at the instant the new state is entered
+ * @param state_id The id number of the state being entered. Time will be
+ * recorded for the old state at the instant the new state is entered
  * @see qtperf_create_state_group
  * @see qtperf_create_perfdata
  * @see qtperf_start
  * @see qtperf_stop
  */
-void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
-
+void qtperf_enter_state(qtperfdata_t *data, qtperfid_t state_id);
 
 /** qtperf_enter_state_from does the same thing as qtperf_enter_state,
     except that you can explicitly set the state you're coming
     from. This is used by the aggregate collection system so that
     transitions can be recorded for state groups that share perfdata.
  */
-/* void qtperf_enter_state_from(qtperfdata_t* data, qtperfid_t from_state_id, qtperfid_t to_state_id);*/
+/* void qtperf_enter_state_from(qtperfdata_t* data, qtperfid_t from_state_id,
+ * qtperfid_t to_state_id);*/
 
 /** @brief Get an iterator for inspecting performance data
  *
@@ -386,7 +388,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
  * reports on findings. If you need to use a different orderint for
  * your traversal, you can access the lists directly (avoid this if
  * possible though).
- * 
+ *
  * In order to use the iterators without requiring any allcations,
  * this function expects you to create a qtperf_iterator_t *on the
  * stack* in the function that calls this function, and then also
@@ -394,7 +396,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
  * *address* of that pointer to this function. Each time the iterator
  * is updated, the pointer that you have saved will be updated. When
  * that pointer is NULL, you have reached the end of the data.
- * 
+ *
  * An example of how to use the iterator API:
  * @code
    void process_my_data(){
@@ -405,7 +407,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
      while(data != NULL){
          // do something with the data
          data = qtperf_iter_next(&iter);
-     } 
+     }
    }
  * @endcode
  *
@@ -414,7 +416,7 @@ void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state_id);
  * @see qtperf_iter_end
  * @see qtperf_iter_deref
  */
-void qtperf_iter_begin(qtperf_iterator_t** iter);
+void qtperf_iter_begin(qtperf_iterator_t **iter);
 
 /** @brief Increment the iterator and retrieve the current data pointer
  *
@@ -431,33 +433,34 @@ void qtperf_iter_begin(qtperf_iterator_t** iter);
  * @see qtperf_iter_end
  * @see qtperf_iter_deref
  */
-qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter);
+qtperfdata_t *qtperf_iter_next(qtperf_iterator_t **iter);
 
 /** @brief Return the data pointer referenced by the iterator
  *
  * This function retrieves the current data pointer, or returns NULL
  * if you're already at the end. See the documentation for
  * qtperf_iter_begin for an example of typical iterator usage.
- * 
+ *
  * @param iter The iterator pointer (not the address of it this time)
  * @see qtperf_iter_begin
  * @see qtperf_iter_next
  * @see qtperf_iter_end
  */
-qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter);
+qtperfdata_t *qtperf_iter_deref(qtperf_iterator_t *iter);
 
-/** @brief Returns a value that can be used to test whether the iterator is finished.
+/** @brief Returns a value that can be used to test whether the iterator is
+ * finished.
  *
  * This function is an alternative method of detecting when the
  * iterator is done. You can check to see if your iterator is equal to
  * qtperf_iter_end(), and if it is, you stop. Currently, this function
- * just returns NULL, but at some point it's possible that may change. 
+ * just returns NULL, but at some point it's possible that may change.
  *
  * @see qtperf_iter_next
  * @see qtperf_iter_begin
  * @see qtperf_iter_deref
  */
-qtperf_iterator_t* qtperf_iter_end(void);
+qtperf_iterator_t *qtperf_iter_end(void);
 
 /** @brief Enable or disable worker data collection
  *
@@ -466,7 +469,7 @@ qtperf_iterator_t* qtperf_iter_end(void);
  * function with 1 as the argument *before* calling
  * qthread_initialize. This should not be changed after
  * qthread_initialized has been called.
- * 
+ *
  * @param yesno Use 1 if you want to collect data, zero otherwise
  */
 void qtperf_set_instrument_workers(bool yesno);
@@ -511,17 +514,23 @@ void qtperf_print_results(void);
  * @code
    ./myprogram | tee >(egrep '^*" > stars.csv) >(egrep '^+' > pluses.csv)
  * @endcode
- * 
+ *
  * @param group The state group containing the instances you want to print
- * @param delim A string that should be printed between each performance counter in a row
- * @param print_headers Use 1 if you want to print the state names as table headers, zero to skip
- * @param row_prefix This string will be printed as the first column of each row to make grepping easier
+ * @param delim A string that should be printed between each performance counter
+ in a row
+ * @param print_headers Use 1 if you want to print the state names as table
+ headers, zero to skip
+ * @param row_prefix This string will be printed as the first column of each row
+ to make grepping easier
  * @see qtperf_print_results
  */
-void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print_headers,const char* row_prefix);
+void qtperf_print_delimited(qtstategroup_t *group,
+                            char const *delim,
+                            bool print_headers,
+                            char const *row_prefix);
 
 /** @brief Return total time spent by instances of this state group
- * 
+ *
  * This function adds up all of the time for all of the instances of
  * the given state group and returns the result. This is used by
  * qtperf_print_results to indicate the amount of processor time used
@@ -534,10 +543,10 @@ void qtperf_print_delimited(qtstategroup_t* group, const char* delim, bool print
  * (otherwise your own quiescent state will be added to the total
  * time, and you'll get *exactly* the number of threads as your
  * parallelism estimate).
- * 
+ *
  * @param group The state group to sum over.
  */
-qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group);
+qtperfcounter_t qtperf_total_group_time(qtstategroup_t *group);
 
 /** @brief Return the total time recorded in this perfdata struct
  *
@@ -548,7 +557,7 @@ qtperfcounter_t qtperf_total_group_time(qtstategroup_t* group);
  *
  * @param data The pointer to the qtperfdata_t struct to sum over
  */
-qtperfcounter_t qtperf_total_time(qtperfdata_t* data);
+qtperfcounter_t qtperf_total_time(qtperfdata_t *data);
 
 /** @brief Print the performance data for a single group in list format
  *
@@ -560,7 +569,7 @@ qtperfcounter_t qtperf_total_time(qtperfdata_t* data);
  * @see qtperf_print_results
  * @see qtperf_enter_state
  */
-void qtperf_print_group(qtstategroup_t* group);
+void qtperf_print_group(qtstategroup_t *group);
 
 /** @brief Print the performance data for a single instance in list format
  *
@@ -572,14 +581,17 @@ void qtperf_print_group(qtstategroup_t* group);
  * recorded data (i.e. were never entered) using the second parameter.
  *
  * @param perfdata The data to print
- * @param show_states_with_zero_time One if you want to print states with no elapsed time, zero otherwise
+ * @param show_states_with_zero_time One if you want to print states with no
+ * elapsed time, zero otherwise
  * @see qtperf_enter_state
  * @see qtperf_print_group
  * @see qtperf_print_results
  */
-void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_time);
+void qtperf_print_perfdata(qtperfdata_t *perfdata,
+                           bool show_states_with_zero_time);
 
-/** @brief Make one state transition cause other state transitions as a side effect
+/** @brief Make one state transition cause other state transitions as a side
+ * effect
  *
  * This function allows you to have a state transition for one
  * instance trigger state transitions for other instances
@@ -590,60 +602,66 @@ void qtperf_print_perfdata(qtperfdata_t* perfdata, bool show_states_with_zero_ti
  * to measure the overhead imposed by various parts of the qthreads
  * library, and also need to correlate it with other events in your
  * own code, this is probably the easiest way to proceed.
- * 
+ *
  * \warning Note that you have *very* limited stack space in qthread
  * tasks, so having a large number of piggyback states will probably
  * cause trouble for you because each piggyback calls
  * qtperf_enter_state again. The typical number of piggybacks should
  * be zero, use this only in the case where you can't get the data to
  * work in another way.
- *  
- * @param source_data The qtperfdata_t structure that should cause other transitions
+ *
+ * @param source_data The qtperfdata_t structure that should cause other
+ * transitions
  * @param trigger_state The specific state that should cause other transitions
- * @param piggyback_data The qtperfdata_t that wants to be notified of a transition
+ * @param piggyback_data The qtperfdata_t that wants to be notified of a
+ * transition
  * @param piggyback_state The state that should be entered on the piggyback_data
  * @see qtperf_enter_state
  */
-void qtperf_piggyback_state(qtperfdata_t* source_data, qtperfid_t trigger_state,
-                            qtperfdata_t* piggyback_data, qtperfid_t piggyback_state);
+void qtperf_piggyback_state(qtperfdata_t *source_data,
+                            qtperfid_t trigger_state,
+                            qtperfdata_t *piggyback_data,
+                            qtperfid_t piggyback_state);
 /** @brief return the data counters for the current thread
- * 
+ *
  * This function returns the internal qtperfdata_t for the currently
  * executing qthread. You must call qtperf_set_instrument_qthreads(1)
  * before qthread_initialize or this function will simply return NULL.
  *
  * @see qtperf_set_instrument_qthreads
  */
-qtperfdata_t* qtperf_get_qthread_data(void);
+qtperfdata_t *qtperf_get_qthread_data(void);
 
 #ifdef QTPERF_TESTING
-#include<stdarg.h>
-#include<stddef.h>
-#include<setjmp.h>
-#include<string.h>
-#include<cmocka.h>
-#include<ctype.h>
+#include <cmocka.h>
+#include <ctype.h>
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <string.h>
 #define QTPERF_ASSERT(...) assert_true(__VA_ARGS__)
 
 /// Internal - verify that the state names array is well-formed
-bool qtp_validate_names(const char** names, size_t count);
+bool qtp_validate_names(char const **names, size_t count);
 /// Internal - verify that the qtstategroup_t is well-formed
-bool qtp_validate_state_group(qtstategroup_t*);
+bool qtp_validate_state_group(qtstategroup_t *);
 /// Internal - verify that the piggyback list is well-formed
-bool qtp_validate_piggyback_list(qtperf_piggyback_list_t*);
+bool qtp_validate_piggyback_list(qtperf_piggyback_list_t *);
 /// Internal - verify that the piggyback lists are all well-formed
-bool qtp_validate_piggybacks(qtperf_piggyback_list_t**, size_t);
+bool qtp_validate_piggybacks(qtperf_piggyback_list_t **, size_t);
 /// Internal - verify that the perfctr struct is well-formed
-bool qtp_validate_perfctr(qtperfctr_t* ctr);
+bool qtp_validate_perfctr(qtperfctr_t *ctr);
 /// Internal - verify that the perfdata struct is well-formed
-bool qtp_validate_perfdata(qtperfdata_t*);
+bool qtp_validate_perfdata(qtperfdata_t *);
 /// Internal - ensure qtperf_perf_list_t is well-formed
-bool qtp_validate_perf_list(qtperf_perf_list_t* list, qtperf_perf_list_t** next, size_t expected_items);
+bool qtp_validate_perf_list(qtperf_perf_list_t *list,
+                            qtperf_perf_list_t **next,
+                            size_t expected_items);
 /// Internal - verify that the group list is well-formed
 bool qtp_validate_group_list(void);
 
 /** @brief Verify that the performance data is internally consistent.
- * 
+ *
  * This function checks the data structures used by qtperf to ensure
  * that they are consistent. You should be able to call it at any
  * time, as long as another call into qtperf is not running
@@ -663,32 +681,34 @@ bool qtperf_check_invariants(void);
 
 #endif // ifdef QTPERF_TESTING
 
-
 // Convenience macros to limit the prevalence of ifndef/endif blocks
 // in the main code
 #ifdef QTHREAD_PERFORMANCE
 #define QTPERF_ENTER_STATE(...) qtperf_enter_state(__VA_ARGS__)
-#define QTPERF_WORKER_ENTER_STATE(pdata,state) do{      \
-    if(qtperf_should_instrument_workers){               \
-      QTPERF_ASSERT(pdata != NULL);                     \
-      qtperf_enter_state(pdata, state);                 \
-    } } while(0)
-#define QTPERF_QTHREAD_ENTER_STATE(pdata,state) do{     \
-    if(qtperf_should_instrument_qthreads){              \
-        QTPERF_ASSERT(pdata != NULL);                   \
-        qtperf_enter_state(pdata, state);               \
-    }} while(0)
+#define QTPERF_WORKER_ENTER_STATE(pdata, state)                                \
+  do {                                                                         \
+    if (qtperf_should_instrument_workers) {                                    \
+      QTPERF_ASSERT(pdata != NULL);                                            \
+      qtperf_enter_state(pdata, state);                                        \
+    }                                                                          \
+  } while (0)
+#define QTPERF_QTHREAD_ENTER_STATE(pdata, state)                               \
+  do {                                                                         \
+    if (qtperf_should_instrument_qthreads) {                                   \
+      QTPERF_ASSERT(pdata != NULL);                                            \
+      qtperf_enter_state(pdata, state);                                        \
+    }                                                                          \
+  } while (0)
 
 #else
-# define QTPERF_ENTER_STATE(...)
-# define QTPERF_QTHREAD_ENTER_STATE(...)
-# define QTPERF_WORKER_ENTER_STATE(...)
+#define QTPERF_ENTER_STATE(...)
+#define QTPERF_QTHREAD_ENTER_STATE(...)
+#define QTPERF_WORKER_ENTER_STATE(...)
 #endif // ifdef QTHREAD_PERFORMANCE
-
 
 #endif
 
-    /* Declarations of this file */
+/* Declarations of this file */
 #ifdef __cplusplus
 }
 #endif

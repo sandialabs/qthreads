@@ -1,5 +1,4 @@
 BasedOnStyle: LLVM
-ArrayInitializerAlignmentStyle: AIAS_Right
 AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
@@ -9,7 +8,6 @@ AttributeMacros: ['Q_UNUSED', 'STACKLEFT_NOINLINE']
 BinPackArguments: false
 BinPackParameters: false
 BreakArrays: false
-BreakBeforeConceptDeclarationsStyle: Always
 BreakConstructorInitializers: AfterColon
 BreakInheritanceList: AfterColon
 ConstructorInitializerIndentWidth: 2
@@ -21,7 +19,6 @@ InsertNewlineAtEOF: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 KeepEmptyLinesAtEOF: true
 QualifierAlignment: Right
-QualifierOrder: ['inline', 'static', 'friend', 'constexpr', 'type', 'const', 'volatile' , 'restrict' ]
 RemoveSemicolon: true
 SeparateDefinitionBlocks: Always
 SortIncludes: CaseInsensitive

@@ -86,36 +86,40 @@
  */
 
 #ifndef LOOP_STEP
-# define LOOP_STEP 1
+#define LOOP_STEP 1
 #endif
 
 #ifdef LOOP
 
-# define CALL_LOOP() mt_loop_returns<RET_TYPE, ARG_TYPES, LOOP_TYPE> \
-        (RET_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
+#define CALL_LOOP()                                                            \
+  mt_loop_returns<RET_TYPE, ARG_TYPES, LOOP_TYPE>(                             \
+    RET_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
-# undef LOOP
+#undef LOOP
 
 #elif (defined VOID_LOOP)
 
-# define CALL_LOOP() mt_loop<ARG_TYPES, LOOP_TYPE> \
-        (FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
+#define CALL_LOOP()                                                            \
+  mt_loop<ARG_TYPES, LOOP_TYPE>(                                               \
+    FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
-# undef VOID_LOOP
+#undef VOID_LOOP
 
 #elif (defined MEMBER_LOOP)
 
-# define CALL_LOOP() mt_mfun_loop_returns<CLASS_NAME, RET_TYPE, ARG_TYPES, LOOP_TYPE> \
-        (OBJ_PTR, RET_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
+#define CALL_LOOP()                                                            \
+  mt_mfun_loop_returns<CLASS_NAME, RET_TYPE, ARG_TYPES, LOOP_TYPE>(            \
+    OBJ_PTR, RET_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
-# undef MEMBER_LOOP
+#undef MEMBER_LOOP
 
 #elif (defined VOID_MEMBER_LOOP)
 
-# define CALL_LOOP() mt_mfun_loop<CLASS_NAME, ARG_TYPES, LOOP_TYPE> \
-        (OBJ_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
+#define CALL_LOOP()                                                            \
+  mt_mfun_loop<CLASS_NAME, ARG_TYPES, LOOP_TYPE>(                              \
+    OBJ_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
-# undef VOID_MEMBER_LOOP
+#undef VOID_MEMBER_LOOP
 
 #endif // ifdef LOOP
 
@@ -130,13 +134,13 @@ CALL_LOOP();
 #undef LOOP_STEP
 
 #ifdef RET_TYPE
-# undef RET_TYPE
-# undef RET_PTR
+#undef RET_TYPE
+#undef RET_PTR
 #endif
 
 #ifdef CLASS_NAME
-# undef CLASS_NAME
-# undef OBJ_PTR
+#undef CLASS_NAME
+#undef OBJ_PTR
 #endif
 
 #undef CALL_LOOP
