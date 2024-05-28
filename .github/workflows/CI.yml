@@ -8,7 +8,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        gcc_version: [9, 10, 11, 12]
+        gcc_version: [9, 10, 11, 12, 13]
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
     env:
@@ -16,6 +16,8 @@ jobs:
       CXX: g++-${{ matrix.gcc_version }}
     steps:
     - uses: actions/checkout@v3
+    - if: ${{ matrix.gcc_version == '13' }}
+      run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
     - name: install compiler
       run: sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
     - if: ${{ matrix.topology != 'no' }}
@@ -59,7 +61,7 @@ jobs:
       CXX: clang++-${{ matrix.clang_version }}
     steps:
     - uses: actions/checkout@v3
-    - if: ${{ matrix.clang_version == '16' || matrix.clang_version == '17' }}
+    - if: ${{ matrix.clang_version == '16' || matrix.clang_version == '17' || matrix.clang_version == '18' }}
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
         sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.clang_version }} main' && break || sleep 1
@@ -246,7 +248,7 @@ jobs:
     - if:  ${{ ! matrix.use_libcxx }}
       run: |
         sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
-        sudo apt-get install gcc-13 g++-13
+        sudo apt-get install gcc-14 g++-14
     - name: install compiler
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
@@ -281,15 +283,15 @@ jobs:
           - compiler: gcc
             use_libcxx: true
     env:
-      CC: ${{ matrix.compiler == 'gcc' && 'gcc-13' || 'clang-18' }}
-      CXX: ${{ matrix.compiler == 'gcc' && 'g++-13' || 'clang++-18' }}
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc-14' || 'clang-18' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++-14' || 'clang++-18' }}
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
     - uses: actions/checkout@v3
     - run: |
         sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
-        sudo apt-get install gcc-13 g++-13
+        sudo apt-get install gcc-14 g++-14
     - if: ${{ matrix.compiler == 'clang' }}
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1

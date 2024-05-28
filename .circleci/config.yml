@@ -12,13 +12,13 @@ jobs:
       image: ubuntu-2204:2023.10.1
     resource_class: arm.medium
     environment:
-      CC: gcc-13
-      CXX: g++-13
+      CC: gcc-14
+      CXX: g++-14
     steps:
       - checkout
       - run: |
           sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
-          sudo apt-get install -y gcc-13 g++-13
+          sudo apt-get install -y gcc-14 g++-14
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
       - run: |
@@ -45,7 +45,7 @@ jobs:
       - checkout
       - run: |
           sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
-          sudo apt-get install -y gcc-13 g++-13
+          sudo apt-get install -y gcc-14 g++-14
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
@@ -82,7 +82,7 @@ jobs:
       - checkout
       - run: |
           sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
-          sudo apt-get install -y gcc-13 g++-13
+          sudo apt-get install -y gcc-14 g++-14
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
