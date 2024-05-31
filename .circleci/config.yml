@@ -9,7 +9,7 @@ jobs:
       topology:
         type: string
     machine:
-      image: ubuntu-2204:2023.10.1
+      image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
       CC: gcc-14
@@ -36,7 +36,7 @@ jobs:
       topology:
         type: string
     machine:
-      image: ubuntu-2204:2023.10.1
+      image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
       CC: clang-18
@@ -68,7 +68,7 @@ jobs:
       sanitizer:
         type: string
     machine:
-      image: ubuntu-2204:2023.10.1
+      image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
       CC: clang-18
