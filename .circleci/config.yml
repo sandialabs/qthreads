@@ -17,7 +17,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
+          sudo apt-add-repository -y universe
           sudo apt-get install -y gcc-14 g++-14
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
@@ -44,7 +44,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
+          sudo apt-add-repository -y universe
           sudo apt-get install -y gcc-14 g++-14
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
@@ -81,7 +81,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          sudo apt-add-repository -y 'ppa:ubuntu-toolchain-r/test'
+          sudo apt-add-repository -y universe
           sudo apt-get install -y gcc-14 g++-14
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
