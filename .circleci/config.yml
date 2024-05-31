@@ -114,22 +114,22 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
-          wget -O acfl.tar https://developer.arm.com/-/media/Files/downloads/hpc/arm-compiler-for-linux/23-10/arm-compiler-for-linux_23.10_Ubuntu-22.04_aarch64.tar
+          wget -O acfl.tar https://developer.arm.com/-/media/Files/downloads/hpc/arm-compiler-for-linux/24-04/arm-compiler-for-linux_24.04_Ubuntu-22.04_aarch64.tar
           tar -vxf acfl.tar
-          ./arm-compiler-for-linux_23.10_Ubuntu-22.04/arm-compiler-for-linux_23.10_Ubuntu-22.04.sh -a -f -s acfl
+          ./arm-compiler-for-linux_24.04_Ubuntu-22.04/arm-compiler-for-linux_24.04_Ubuntu-22.04.sh -a -f -s acfl
           rm acfl.tar
-          sudo apt install -y ./acfl/gcc-12.2.0_Ubuntu-22.04.deb ./acfl/arm-linux-compiler-23.10_Ubuntu-22.04.deb
+          sudo apt install -y ./acfl/gcc-13.2.0_Ubuntu-22.04.deb ./acfl/arm-linux-compiler-24.04_Ubuntu-22.04.deb
           rm -rf acfl
-          export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
+          export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
           armclang -v
       - run: |
-          export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
+          export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
       - run:
           command: |
-              export PATH=$PATH:/opt/arm/arm-linux-compiler-23.10_Ubuntu-22.04/bin
+              export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
               timeout --foreground -k 10s 4m make check
           no_output_timeout: 60s
 
