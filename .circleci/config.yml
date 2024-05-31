@@ -103,7 +103,7 @@ jobs:
       topology:
         type: string
     machine:
-      image: ubuntu-2204:2023.10.1
+      image: ubuntu-2204:2024.04.4
     resource_class: arm.medium
     environment:
       CC: armclang
