@@ -42,7 +42,7 @@ freebsd_task:
 
 arm_linux_task:
   arm_container:
-    image: gcc:13-bookworm
+    image: gcc:14-bookworm
   timeout_in: 5m
   matrix:
     env:
@@ -76,7 +76,7 @@ arm_linux_task:
 
 arm_linux_clang_task:
   arm_container:
-    image: gcc:13-bookworm
+    image: gcc:14-bookworm
   timeout_in: 5m
   matrix:
     env:
