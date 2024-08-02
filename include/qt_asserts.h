@@ -58,7 +58,8 @@
     if (!(assertion)) { goto tag; }                                            \
   } while (0)
 #define qassert_aligned(variable, alignment)
-#define qgoto(tag) tag:
+#define qgoto(tag)                                                             \
+  tag:
 #define tassert(foo)
 #else // ifdef QTHREAD_NO_ASSERTS
 #define ASSERT_ONLY(x) x
