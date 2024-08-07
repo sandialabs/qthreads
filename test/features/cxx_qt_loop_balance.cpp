@@ -1,6 +1,9 @@
-#include <qthread/qloop.hpp>
-#include <qthread/qthread.h>
 #include <stdio.h>
+
+// Include this first to check that it's safe to be included by itself since some downstream libraries do that.
+#include <qthread/qthread.hpp>
+
+#include <qthread/qloop.hpp>
 
 #include "argparsing.h"
 

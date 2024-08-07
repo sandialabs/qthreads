@@ -7,116 +7,24 @@
 
 class syncvar;
 
-class uint60_t {
-public:
-  friend class syncvar;
-
-  uint60_t(void) { v = 0; }
-
-  uint60_t(uint64_t u) {
-    assert((u >> 60) == 0);
-    v = u & (uint64_t)0xfffffffffffffffULL;
-  }
-
-  uint60_t(double d) {
-    uint64_t v2 = 0;
-    DBL64TODBL60(d, v2);
-    v = v2;
-  }
-
-  uint60_t(int64_t i) {
-    assert((i >> 60) == 0 || (i >> 59) == 31);
-    v = INT64TOINT60(i);
-  }
-
-  ~uint60_t(void) { ; }
-
-  operator uint64_t() const { return v; }
-
-  operator int64_t() const { return INT60TOINT64((uint64_t)v); }
-
-  operator double() const {
-    double tmp;
-    uint64_t v2 = v;
-    DBL60TODBL64(v2, tmp);
-    return tmp;
-  }
-
-  uint60_t &operator=(uint60_t that) {
-    v = that.v;
-    return *this;
-  }
-
-  uint60_t &operator+(uint60_t that) {
-    v += that.v;
-    return *this;
-  }
-
-  uint60_t &operator-(uint60_t that) {
-    v -= that.v;
-    return *this;
-  }
-
-  uint60_t &operator*(uint60_t that) {
-    v *= that.v;
-    return *this;
-  }
-
-  uint60_t &operator/(uint60_t that) {
-    v /= that.v;
-    return *this;
-  }
-
-  uint60_t &operator%(uint60_t that) {
-    v %= that.v;
-    return *this;
-  }
-
-  uint60_t &operator^(uint60_t that) {
-    v ^= that.v;
-    return *this;
-  }
-
-  uint60_t &operator|(uint60_t that) {
-    v |= that.v;
-    return *this;
-  }
-
-  uint60_t &operator&(uint60_t that) {
-    v &= that.v;
-    return *this;
-  }
-
-  uint60_t &operator<<(uint64_t that) {
-    v <<= that;
-    return *this;
-  }
-
-  uint60_t &operator>>(uint64_t that) {
-    v >>= that;
-    return *this;
-  }
-
-  uint64_t v : 60;
-};
-
 class syncvar {
 public:
-  QINLINE syncvar(void) {
+  QINLINE syncvar(void) noexcept {
     // Doing it this way because extended initializers (e.g.
     // SYNCVAR_STATIC_INITIALIZER) are not (yet) supported by C++
     the_syncvar_t.u.w = 0;
   }
 
-  QINLINE syncvar(uint60_t const &val) { the_syncvar_t.u.s.data = val.v; }
+  QINLINE syncvar(uint64_t const &val) noexcept {
+    assert(!(val & 0xf000000000000000ull));
+    the_syncvar_t.u.s.data = val;
+  }
 
-  QINLINE syncvar(syncvar const &val) {
+  QINLINE syncvar(syncvar const &val) noexcept {
     the_syncvar_t.u.w = val.the_syncvar_t.u.w;
   }
 
   QINLINE syncvar(syncvar_t const &val) { the_syncvar_t.u.w = val.u.w; }
-
-  virtual ~syncvar(void) { ; }
 
   int empty(void) { return qthread_syncvar_empty(&the_syncvar_t); }
 
@@ -124,7 +32,8 @@ public:
 
   uint64_t readFF(void) {
     uint64_t ret = 0;
-    readFF(&ret);
+    int status = readFF(&ret);
+    assert(status == QTHREAD_SUCCESS);
     return ret;
   }
 
@@ -132,25 +41,10 @@ public:
     return qthread_syncvar_readFF(dest, &the_syncvar_t);
   }
 
-  int readFF(int64_t *const dest) {
-    uint64_t tmp_dest = 0;
-    int ret = readFF(&tmp_dest);
-    *dest = INT60TOINT64(tmp_dest);
-    return ret;
-  }
-
-  int readFF(double *const dest) {
-    uint64_t tmp_dest = 0;
-    double tmp_dest_dbl = 0;
-    int ret = readFF(&tmp_dest);
-    DBL60TODBL64(tmp_dest, tmp_dest_dbl);
-    *dest = tmp_dest_dbl;
-    return ret;
-  }
-
   uint64_t readFE(void) {
     uint64_t ret = 0;
-    readFE(&ret);
+    int status = readFE(&ret);
+    assert(status == QTHREAD_SUCCESS);
     return ret;
   }
 
@@ -158,27 +52,14 @@ public:
     return qthread_syncvar_readFE(dest, &the_syncvar_t);
   }
 
-  int readFE(int64_t *const dest) {
-    uint64_t tmp_dest = 0;
-    int ret = readFE(&tmp_dest);
-    *dest = INT60TOINT64(tmp_dest);
-    return ret;
-  }
-
-  int readFE(double *const dest) {
-    uint64_t tmp_dest = 0;
-    double tmp_dest_dbl = 0;
-    int ret = readFE(&tmp_dest);
-    DBL60TODBL64(tmp_dest, tmp_dest_dbl);
-    *dest = tmp_dest_dbl;
-    return ret;
-  }
-
-  int writeF(uint60_t const src) {
+  /*********/
+  int writeF(uint64_t src) {
+    assert(!(src & 0xf000000000000000ull));
     return qthread_syncvar_writeF_const(&the_syncvar_t, src);
   }
 
-  int writeEF(uint60_t const src) {
+  int writeEF(uint64_t const src) {
+    assert(!(src & 0xf000000000000000ull));
     return qthread_syncvar_writeEF_const(&the_syncvar_t, src);
   }
 
@@ -190,133 +71,12 @@ public:
 
   uint64_t read() const { return the_syncvar_t.u.s.data; }
 
-  void write(uint60_t const src) { the_syncvar_t.u.s.data = src.v; }
+  void write(uint64_t const src) {
+    assert(!(src & 0xf000000000000000ull));
+    the_syncvar_t.u.s.data = src;
+  }
 protected:
   syncvar_t the_syncvar_t;
 };
-
-#define _QT_ALL_OPS_(macro)                                                    \
-  macro(+) macro(-) macro(*) macro(/) macro(%) macro(^) macro(|) macro(&)      \
-    macro(<<) macro(>>)
-
-class loose_syncvar : public syncvar {
-  /************************/
-  /* overloaded operators */
-  /************************/
-
-  /* assignment operator */
-  QINLINE loose_syncvar &operator=(loose_syncvar const &val) {
-    if (this != &val) {
-      the_syncvar_t.u.w = val.the_syncvar_t.u.w;
-      the_syncvar_t.u.s.lock = 0;
-    }
-    return *this;
-  }
-
-  QINLINE loose_syncvar &operator=(uint64_t const &val) {
-    the_syncvar_t.u.s.data = val;
-    return *this;
-  }
-
-  /* compound assignment operators */
-#define OVERLOAD_ASSIGNMENT_OPERATOR(op)                                       \
-  QINLINE loose_syncvar &operator op##=(const uint64_t & val) {                \
-    the_syncvar_t.u.s.data op## = val;                                         \
-    return *this;                                                              \
-  }
-  _QT_ALL_OPS_(OVERLOAD_ASSIGNMENT_OPERATOR)
-#undef OVERLOAD_ASSIGNMENT_OPERATOR
-
-  QINLINE loose_syncvar &operator++() { // prefix (++x)
-    return *this += 1;
-  }
-
-  QINLINE loose_syncvar &operator--() { // prefix (--x)
-    return *this -= 1;
-  }
-
-  QINLINE loose_syncvar operator++(int) { // postfix (x++)
-    loose_syncvar before = *this;
-    this->operator++();
-    return before;
-  }
-
-  QINLINE loose_syncvar operator--(int) { // postfix (x--)
-    loose_syncvar before = *this;
-    this->operator--();
-    return before;
-  }
-
-  /* binary arithmetic */
-#define OVERLOAD_BINARY_ARITHMETIC_OPERATOR(op)                                \
-  QINLINE uint64_t operator op(const uint64_t &val) const {                    \
-    uint64_t tmp = read();                                                     \
-    return tmp op## = val;                                                     \
-  }
-  _QT_ALL_OPS_(OVERLOAD_BINARY_ARITHMETIC_OPERATOR)
-#undef OVERLOAD_BINARY_ARITHMETIC_OPERATOR
-
-  /* cast operators */
-  operator uint64_t() const { return read(); }
-};
-
-class strict_syncvar : public syncvar {
-  /************************/
-  /* overloaded operators */
-  /************************/
-
-  /* assignment operator */
-  QINLINE strict_syncvar &operator=(uint64_t const &val) {
-    writeF(val);
-    return *this;
-  }
-
-  /* compound assignment operators */
-#define OVERLOAD_ASSIGNMENT_OPERATOR(op)                                       \
-  QINLINE strict_syncvar &operator op##=(const uint64_t & val) {               \
-    uint64_t myval;                                                            \
-    readFE(&myval);                                                            \
-    myval op## = val;                                                          \
-    writeEF(myval);                                                            \
-    return *this;                                                              \
-  }
-  _QT_ALL_OPS_(OVERLOAD_ASSIGNMENT_OPERATOR)
-#undef OVERLOAD_ASSIGNMENT_OPERATOR
-
-  QINLINE strict_syncvar &operator++() { // prefix (++x)
-    return *this += 1;
-  }
-
-  QINLINE strict_syncvar &operator--() { // prefix (--x)
-    return *this -= 1;
-  }
-
-  QINLINE strict_syncvar operator++(int) { // postfix (x++)
-    strict_syncvar before = *this;
-    this->operator++();
-    return before;
-  }
-
-  QINLINE strict_syncvar operator--(int) { // postfix (x--)
-    strict_syncvar before = *this;
-    this->operator--();
-    return before;
-  }
-
-  /* binary arithmetic */
-#define OVERLOAD_BINARY_ARITHMETIC_OPERATOR(op)                                \
-  QINLINE uint64_t operator op(const uint64_t &val) {                          \
-    uint64_t myval;                                                            \
-    readFF(&myval);                                                            \
-    return myval op## = val;                                                   \
-  }
-  _QT_ALL_OPS_(OVERLOAD_BINARY_ARITHMETIC_OPERATOR)
-#undef OVERLOAD_BINARY_ARITHMETIC_OPERATOR
-
-  /* cast operators */
-  operator uint64_t() { return readFF(); }
-};
-
-#undef _QT_ALL_OPS_
 
 #endif
