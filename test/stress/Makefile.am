@@ -14,7 +14,8 @@ TESTS = \
 		task_spawn \
 		test_spawn_simple \
 		precond_spawn_simple \
-		lock_acq_rel
+		lock_acq_rel \
+		feb_as_fence
 
 if HAVE_LIBM
 TESTS += subteams_uts
