@@ -1127,7 +1127,9 @@ int API_FUNC qthread_writeEF(aligned_t *restrict dest,
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
+#ifndef QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
     MACHINE_FENCE;
+#endif
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
 #ifdef QTHREAD_USE_EUREKAS
@@ -1300,7 +1302,9 @@ int API_FUNC qthread_writeFF(aligned_t *restrict dest,
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
+#ifndef QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
     MACHINE_FENCE;
+#endif
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
 #ifdef QTHREAD_USE_EUREKAS
@@ -1414,7 +1418,9 @@ int API_FUNC qthread_readFF(aligned_t *restrict dest,
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
+#ifndef QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
     MACHINE_FENCE;
+#endif
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
 #ifdef QTHREAD_USE_EUREKAS
     qt_eureka_check(0);
@@ -1600,7 +1606,9 @@ int API_FUNC qthread_readFE(aligned_t *restrict dest,
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
+#ifndef QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
     MACHINE_FENCE;
+#endif
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
 #ifdef QTHREAD_USE_EUREKAS
     qt_eureka_check(0);
