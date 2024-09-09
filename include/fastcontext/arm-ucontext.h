@@ -7,8 +7,7 @@
 #endif
 
 #include <stddef.h>
-
-#include "qthread/qthread-int.h" /* for uint32_t */
+#include <stdint.h>
 
 #include "qt_visibility.h"
 

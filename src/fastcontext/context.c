@@ -7,12 +7,11 @@
 #endif
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h> /* for memmove(), per C89 */
 
 #include "fastcontext/taskimpl.h"
-
-#include <qthread-int.h>
 
 #include "qthread/common.h"
 

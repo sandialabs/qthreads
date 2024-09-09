@@ -3,11 +3,9 @@
 #endif
 
 /* System Headers */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-/* System Compatibility Header */
-#include "qthread-int.h"
 
 /* Installed Headers */
 #include "qthread/barrier.h"

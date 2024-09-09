@@ -6,8 +6,7 @@
 #include <stdarg.h> /* for the qt_makectxt prototype */
 #endif
 #include <stddef.h> /* for size_t, per C89 */
-
-#include "qthread-int.h"
+#include <stdint.h>
 
 #define setcontext(u) qt_setmctxt(&(u)->mc)
 #define getcontext(u) qt_getmctxt(&(u)->mc)

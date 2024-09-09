@@ -2,9 +2,9 @@
 #include "config.h"
 #endif
 
-/* System Headers */
-#include <qthread/qthread-int.h> /* for uint64_t */
+#include <stdint.h>
 
+/* System Headers */
 #ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h> /* for SYS_accept and others */
 #include <unistd.h>
