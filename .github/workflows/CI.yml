@@ -219,6 +219,9 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
+        export CFLAGS="-I$(brew --prefix)/include $CFLAGS"
+        export CXXFLAGS="-I$(brew --prefix)/include $CXXFLAGS"
+        export LDFLAGS="-L$(brew --prefix)/lib $LDFLAGS"
         ./autogen.sh
         ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j3
