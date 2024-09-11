@@ -5,15 +5,40 @@ osx_m1_task:
   matrix:
     env:
       QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: binders
     env:
       QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: binders
     env:
       QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: no
+    env:
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: hwloc
+    env:
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: binders
   install_deps_script: |
     brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+    if [ "$QTHREADS_TOPOLOGY" != "no" ]; then brew install hwloc; fi
   build_script: |
+    export CFLAGS="-I$(brew --prefix)/include $CFLAGS"
+    export CXXFLAGS="-I$(brew --prefix)/include $CXXFLAGS"
+    export LDFLAGS="-L$(brew --prefix)/lib $LDFLAGS"
     ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
+    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
   test_script: |
     gtimeout --foreground 3m make check
@@ -52,17 +77,26 @@ arm_linux_task:
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: hwloc
     env:
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: binders
+    env:
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: no
     env:
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: hwloc
     env:
+      QTHREADS_SCHEDULER: sherwood
+      QTHREADS_TOPOLOGY: binders
+    env:
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: no
     env:
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: hwloc
+    env:
+      QTHREADS_SCHEDULER: distrib
+      QTHREADS_TOPOLOGY: binders
   install_deps_script: |
     apt-get update -y
     apt-get install -y autoconf automake libtool
