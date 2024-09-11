@@ -189,13 +189,6 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       qthread_gcc_inline_assign='"bis [$]31,[$]31,%0" : "=&r"(ret)'
     ;;
 
-	tile-*)
-      AS_IF([test "$ac_cv_sizeof_long" = "4"],
-            [qthread_cv_asm_arch="TILE"],
-            [qthread_cv_asm_arch="TILEGX"])
-	  qthread_gcc_inline_assign='"movei %0, 5" : "=&r"(ret)'
-	;;
-
 	armv7l-*)
 	  qthread_cv_asm_arch="ARM"
 	  qthread_gcc_inline_assign='"movt %0, #5" : "=&r"(ret)'

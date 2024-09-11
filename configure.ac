@@ -294,11 +294,11 @@ AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
                              interfaces include no, hwloc, hwloc_v2, binders, lgrp, libnuma,
-                             libnumaV2, mach, plpa, sys, and, tilera.])],
+                             libnumaV2, mach, plpa, and sys.])],
             [AS_IF([test "x$with_topology" = xyes],
                    [with_topology=none_specified])
              case "$with_topology" in
-                 hwloc|binders|hwloc_v2|lgrp|libnuma|libnumaV2|mach|no|plpa|sys|tilera) ;;
+                 hwloc|binders|hwloc_v2|lgrp|libnuma|libnumaV2|mach|no|plpa|sys) ;;
                  none_specified) ;;
                  *)
                  AC_MSG_ERROR([Unsupported topology library ($with_topology)])
@@ -989,10 +989,6 @@ AS_IF([test "x$qthread_topo" != xno],
                                     [qthread_topo=libnumaV2],
                                     [AS_IF([test "x$qthread_topo" != xno],
                                            [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xtilera],
-             [QTHREAD_CHECK_TILETOPO([qthread_topo=tilera],
-                                     [AS_IF([test "x$qthread_topo" != xno],
-                                            [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        # Third, check any others.
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xmach],
              [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],

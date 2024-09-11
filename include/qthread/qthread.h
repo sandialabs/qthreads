@@ -699,8 +699,7 @@ static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT)
   return qthread_fincr_(operand, incr);
 
-#elif QTHREAD_ATOMIC_CAS && (!defined(HAVE_GCC_INLINE_ASSEMBLY) ||             \
-                             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
+#elif QTHREAD_ATOMIC_CAS && !defined(HAVE_GCC_INLINE_ASSEMBLY)
   union {
     float f;
     uint32_t i;
@@ -861,7 +860,6 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
   return qthread_dincr_(operand, incr);
 
 #elif QTHREAD_ATOMIC_CAS && (!defined(HAVE_GCC_INLINE_ASSEMBLY) ||             \
-                             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX) ||      \
                              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32))
   union {
     uint64_t i;

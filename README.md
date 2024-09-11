@@ -169,16 +169,3 @@ use those compilers, you probably need to configure with
 
 *******************************************************
 
-## NOTE FOR TILERA USERS
-The Tilera cache coherency protocols, as of the TileGX boards, appear to be
-somewhat buggy for large multithreaded programs. And by buggy I mean they cause
-kernel panics (at least, I haven't been able to demonstrate data corruption
-yet). Thankfully, you can pick from several cache coherency protocols, and one
-of them is more stable than the default. What I have found that seems to be
-*more* stable, if not perfectly stable, is to force the cache coherency
-protocol to hashed. The way you do this is with a boot argument to the Tilera
-kernel. The tile-monitor command I use is this:
-
-	`tile-monitor --net <tilera> --hvx ucache_hash=all --`
-
-Good luck!

@@ -107,8 +107,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                         \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                              \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||                              \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||                        \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO))
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
@@ -141,8 +140,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
                                unsigned char const statemask,
                                unsigned int timeout,
                                eflags_t *restrict const err) { /*{{{ */
-#if ((QTHREAD_ASSEMBLY_ARCH != QTHREAD_TILEPRO) &&                             \
-     (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32))
+#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   syncvar_t unlocked;
 #endif
   syncvar_t locked;
@@ -156,21 +154,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
   e.zf = 0;
   e.cf = 1;
   do {
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
-    uint32_t low, high;
-    int32_t *addrptr = (int32_t *)addr;
-    /* note that the tilera is little-endian, otherwise this would be
-     * addrptr+1 */
-    while ((low = __insn_tns(addrptr)) == 1) {
-      if (timeout-- <= 0) { goto errexit; }
-      SPINLOCK_BODY();
-    }
-    /* now addrptr[0] is 1 and low is the "real" (unlocked) addrptr[0]
-     * value. */
-    high = addrptr[1];
-    locked.u.w = (((uint64_t)high) << 32) | low;
-    MACHINE_FENCE;
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     /* This applies for any 32-bit architecture with a valid 32-bit CAS
      * (though I'm making some big-endian assumptions at the moment) */
     uint32_t low_unlocked, low_locked;
@@ -191,7 +175,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
       if (timeout-- <= 0) { goto errexit; }
     } while (1);
     locked.u.w = addr->u.w; // I locked it, so I can read it
-#else  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
+#else  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
     {
       syncvar_t tmp;
     loop_start:
@@ -213,7 +197,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
         if (timeout-- <= 0) { goto errexit; }
       } while (1);
     }
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
     /***************************************************
      * now locked == unlocked, and the lock bit is set *
      ***************************************************/
@@ -229,10 +213,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
       return locked.u.s.data;
     } else {
       /* this is NOT a state of interest, so unlock the locked bit */
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
-      MACHINE_FENCE;
-      addrptr[0] = low;
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
       MACHINE_FENCE;
       addrptr[1] = low_unlocked;
 #else

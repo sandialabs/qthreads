@@ -118,7 +118,6 @@ EXTRA_DIST += \
 			 affinity/libnuma.c \
 			 affinity/libnumaV2.c \
 			 affinity/mach.c \
-			 affinity/tilera.c \
 			 affinity/plpa.c \
 			 affinity/lgrp.c \
 			 affinity/shepcomp.h

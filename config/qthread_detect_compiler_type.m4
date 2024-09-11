@@ -30,8 +30,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl These compilers have been caught pretending to be GNU GCC
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__TILECC__],[qthread_cv_c_compiler_type=TileCC])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__INTEL_COMPILER],[qthread_cv_c_compiler_type=Intel])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__clang__],[qthread_cv_c_compiler_type=Clang])])
@@ -201,8 +199,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
   [AC_LANG_PUSH([C++])
 
    dnl These compilers have been caught pretending to be GNU G++
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__TILECC__],[qthread_cv_cxx_compiler_type=TileCC])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__INTEL_COMPILER],[qthread_cv_cxx_compiler_type=Intel])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
