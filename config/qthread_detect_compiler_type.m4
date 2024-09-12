@@ -40,10 +40,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 		AS_IF([test "x$qthread_cv_c_compiler_type" = "xLLVM"],
 		      [_QTHREAD_CHECK_IFDEF([__APPLE_CC__],[qthread_cv_c_compiler_type=Apple-LLVM])])
 		])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__CONVEY],[qthread_cv_c_compiler_type=Convey])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__PATHCC__],[qthread_cv_c_compiler_type=EKOPath])])
 
    dnl GCC is one of the most common
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
@@ -201,10 +197,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([__clang__],[qthread_cv_cxx_compiler_type=Clang])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__llvm__],[qthread_cv_cxx_compiler_type=LLVM])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__CONVEY],[qthread_cv_cxx_compiler_type=Convey])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__PATHCC__],[qthread_cv_cxx_compiler_type=EKOPath])])
 
    dnl GCC is one of the most common
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
