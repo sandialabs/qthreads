@@ -9,7 +9,6 @@ AC_CACHE_CHECK([for x86 cache line size],
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1
 #define QTHREAD_AMD64       2
-#define QTHREAD_IA64        3
 #define QTHREAD_ALPHA       4
 #define QTHREAD_MIPS        5
 #define QTHREAD_POWERPC32   6
@@ -21,8 +20,7 @@ AC_CACHE_CHECK([for x86 cache line size],
 ],[
 int op = 1, eax, ebx, ecx, edx, cachelinesize;
 FILE *f;
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 || \
-    QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32
 # ifdef __PIC__
 __asm__("push %%ebx\n\t"
 "cpuid\n\t"
@@ -43,8 +41,7 @@ __asm__("cpuid"
 cachelinesize = 8*((ebx>>8)&0xff);
 if (cachelinesize == 0) {
 	op = 2;
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 || \
-    QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32
 __asm__("push %%ebx\n\t"
 "cpuid\n\t"
 "mov %%ebx, %1\n\t"

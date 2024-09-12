@@ -150,8 +150,7 @@ QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp) {
   Q_PREFETCH(ucp, 0, 0);
   if (getcontext(oucp) == 0) {
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                                \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                               \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64))
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64))
     Q_PREFETCH((void *)ucp->mc.mc_esp, 1, 3);
 #endif
     setcontext(ucp);

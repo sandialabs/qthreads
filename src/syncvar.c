@@ -106,7 +106,6 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                         \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                         \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                              \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||                              \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
@@ -386,7 +385,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
   QTHREAD_FEB_TIMER_START(febblock);
 
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                               \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||                                \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                           \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) ||                         \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
@@ -407,10 +405,10 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
       return QTHREAD_SUCCESS;
     }
   }
-#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                      \
-          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == \
-          QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)  \
-          || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH  \
+#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||      \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||  \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH  \
           == QTHREAD_ARMV8_A64)) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
   qthread_debug(SYNCVAR_DETAILS,
@@ -530,11 +528,10 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
 
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF_NB); }
 
-#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                               \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||                                \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                           \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||                          \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                 \
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||      \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||  \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||        \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64))
   {
     /* I'm being optimistic here; this only works if a basic 64-bit load is
@@ -550,11 +547,11 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
       return QTHREAD_SUCCESS;
     }
   }
-#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                      \
-          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == \
-          QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)  \
-          || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || (QTHREAD_ASSEMBLY_ARCH  \
-          == QTHREAD_ARMV8_A64)) */
+#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||       \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||   \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)  || \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||         \
+              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, 1, &e);
   qthread_debug(SYNCVAR_DETAILS,
                 "2 src(%p) = %x, ret = %x\n",

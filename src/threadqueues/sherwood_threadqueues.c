@@ -224,7 +224,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                               \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||                                \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                           \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
   /* only works if a basic load is atomic */
@@ -237,9 +236,9 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
   tmp = q->qlength;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   return tmp;
-#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                      \
-          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == \
-          QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) \
+#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))  \
         */
 } /*}}}*/
 

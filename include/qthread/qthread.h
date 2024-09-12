@@ -22,14 +22,6 @@ using std::memory_order_relaxed;
 #include <stdio.h> /* for fprintf() */
 #endif
 
-#ifdef QTHREAD_NEEDS_IA64INTRIN
-#ifdef HAVE_IA64INTRIN_H
-#include <ia64intrin.h>
-#elif defined(HAVE_IA32INTRIN_H)
-#include <ia32intrin.h>
-#endif
-#endif
-
 #include "common.h"
 #include "qthread-int.h"
 
@@ -779,23 +771,6 @@ static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
   } while (oldval.i != newval.i);
   return oldval.f;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  union {
-    float f;
-    uint32_t i;
-  } oldval, newval, res;
-
-  do {
-    oldval.f = *(float volatile *)operand;
-    newval.f = oldval.f + incr;
-    __asm__ __volatile__("mov ar.ccv=%0;;" ::"rO"(oldval.i));
-    __asm__ __volatile__("cmpxchg4.acq %0=[%1],%2,ar.ccv"
-                         : "=r"(res.i)
-                         : "r"(operand), "r"(newval.i)
-                         : "memory");
-  } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
-  return oldval.f;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   union {
@@ -971,23 +946,6 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
       : "r"(operand), "r"(oldval.i)
       : "memory");
   } while (oldval.d != newval.d);
-  return oldval.d;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  union {
-    uint64_t i;
-    double d;
-  } oldval, newval, res;
-
-  do {
-    oldval.d = *(double volatile *)operand;
-    newval.d = oldval.d + incr;
-    __asm__ __volatile__("mov ar.ccv=%0;;" ::"rO"(oldval.i));
-    __asm__ __volatile__("cmpxchg8.acq %0=[%1],%2,ar.ccv"
-                         : "=r"(res.i)
-                         : "r"(operand), "r"(newval.i)
-                         : "memory");
-  } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
   return oldval.d;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
@@ -1197,30 +1155,6 @@ static QINLINE uint32_t qthread_incr32(uint32_t *operand,
   } while (oldval != newval);
   return oldval;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  uint32_t res;
-
-  if (incr == 1) {
-    asm volatile("fetchadd4.rel %0=[%1],1" : "=r"(res) : "r"(operand));
-  } else {
-    uint32_t old, newval;
-
-    do {
-      old = *operand; /* atomic, because operand is aligned */
-      newval = old + incr;
-      asm volatile("mov ar.ccv=%0;;"
-                   : /* no output */
-                   : "rO"(old));
-
-      /* separate so the compiler can insert its junk */
-      asm volatile("cmpxchg4.acq %0=[%1],%2,ar.ccv"
-                   : "=r"(res)
-                   : "r"(operand), "r"(newval)
-                   : "memory");
-    } while (res != old); /* if res!=old, the calc is out of date */
-  }
-  return res;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                               \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
@@ -1337,30 +1271,6 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
   } while (oldval != newval);
 #endif // ifdef QTHREAD_ATOMIC_CAS
   return oldval;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  uint64_t res;
-
-  if (incr == 1) {
-    asm volatile("fetchadd8.rel %0=%1,1" : "=r"(res) : "m"(*operand));
-  } else {
-    uint64_t old, newval;
-
-    do {
-      old = *operand; /* atomic, because operand is aligned */
-      newval = old + incr;
-      asm volatile("mov ar.ccv=%0;;"
-                   : /* no output */
-                   : "rO"(old));
-
-      /* separate so the compiler can insert its junk */
-      asm volatile("cmpxchg8.acq %0=[%1],%2,ar.ccv"
-                   : "=r"(res)
-                   : "r"(operand), "r"(newval)
-                   : "memory");
-    } while (res != old); /* if res!=old, the calc is out of date */
-  }
-  return res;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   union {
@@ -1503,15 +1413,6 @@ static QINLINE uint32_t qthread_cas32(uint32_t *operand,
                        : "cc", "memory");
   return newv;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  uint32_t retval;
-  __asm__ __volatile__("mov ar.ccv=%0;;" : : "rO"(oldval));
-  __asm__ __volatile__("cmpxchg4.acq %0=[%1],%2,ar.ccv"
-                       : "=r"(retval)
-                       : "r"(operand), "r"(newval)
-                       : "memory");
-  return retval;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   uint32_t retval;
@@ -1581,15 +1482,6 @@ static QINLINE uint64_t qthread_cas64(uint64_t *operand,
                        : "r"(operand), "r"(oldval)
                        : "cc", "memory");
   return newv;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  uint32_t retval;
-  __asm__ __volatile__("mov ar.ccv=%0;;" : : "rO"(oldval));
-  __asm__ __volatile__("cmpxchg8.acq %0=[%1],%2,ar.ccv"
-                       : "=r"(retval)
-                       : "r"(operand), "r"(newval)
-                       : "memory");
-  return retval;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   union {

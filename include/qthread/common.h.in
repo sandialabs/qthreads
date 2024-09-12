@@ -59,12 +59,6 @@
 /* builtin incr supported */
 #undef QTHREAD_ATOMIC_INCR
 
-/* ia64intrin.h available */
-#undef HAVE_IA64INTRIN_H
-
-/* if ia64intrin is needed */
-#undef QTHREAD_NEEDS_IA64INTRIN
-
 /* specifying data alignment is allowed */
 #undef QTHREAD_ALIGNEDDATA_ALLOWED
 
@@ -113,7 +107,6 @@
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1
 #define QTHREAD_AMD64       2
-#define QTHREAD_IA64        3
 #define QTHREAD_ALPHA       4
 #define QTHREAD_MIPS        5
 #define QTHREAD_POWERPC32   6

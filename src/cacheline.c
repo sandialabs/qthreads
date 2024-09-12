@@ -208,11 +208,6 @@ static void figure_out_cacheline_size(void) { /*{{{ */
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) ||                         \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
   cacheline_bytes = 128;
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-#ifdef DEBUG_CPUID
-  printf("IA64 does not support CPUID; but is usually 128\n");
-#endif
-  cacheline_bytes = 128; // Itanium L2/L3 are 128, L1 is 64
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                               \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #if !defined(HAVE_GCC_INLINE_ASSEMBLY)

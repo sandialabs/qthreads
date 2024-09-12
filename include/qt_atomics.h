@@ -4,14 +4,6 @@
 #include <stdatomic.h>
 #include <sys/time.h>
 
-#ifdef QTHREAD_NEEDS_IA64INTRIN
-#ifdef HAVE_IA64INTRIN_H
-#include <ia64intrin.h>
-#elif defined(HAVE_IA32INTRIN_H)
-#include <ia32intrin.h>
-#endif
-#endif
-
 #include <qthread/common.h>
 #include <qthread/qthread.h>
 
@@ -455,15 +447,6 @@ qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
                        : "cc", "memory");
   return nv;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  void **retval;
-  __asm__ __volatile__("mov ar.ccv=%0;;" : : "rO"(oldv));
-  __asm__ __volatile__("cmpxchg4.acq %0=[%1],%2,ar.ccv"
-                       : "=r"(retval)
-                       : "r"(ptr), "r"(newv)
-                       : "memory");
-  return retval;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   void **retval;
@@ -687,46 +670,6 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
 #endif
                          : "memory");
   } while (oldval != newval);
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-#if QTHREAD_SIZEOF_ALIGNED_T == 8
-  int64_t res, old, new;
-
-  do {
-    old = *operand; /* atomic, because operand is aligned */
-    new = old + 1;
-    new *= (new < max);
-    asm volatile("mov ar.ccv=%0;;"
-                 : /* no output */
-                 : "rO"(old));
-
-    /* separate so the compiler can insert its junk */
-    asm volatile("cmpxchg8.acq %0=[%1],%2,ar.ccv"
-                 : "=r"(res)
-                 : "r"(operand), "r"(new)
-                 : "memory");
-  } while (res != old); /* if res==old, new is out of date */
-  retval = old;
-
-#else  /* 32-bit aligned_t */
-  int32_t res, old, new;
-
-  do {
-    old = *operand; /* atomic, because operand is aligned */
-    new = old + 1;
-    new *= (new < max);
-    asm volatile("mov ar.ccv=%0;;"
-                 : /* no output */
-                 : "rO"(old));
-
-    /* separate so the compiler can insert its junk */
-    asm volatile("cmpxchg4.acq %0=[%1],%2,ar.ccv"
-                 : "=r"(res)
-                 : "r"(operand), "r"(new)
-                 : "memory");
-  } while (res != old); /* if res==old, new is out of date */
-  retval = old;
-#endif /* if QTHREAD_SIZEOF_ALIGNED_T == 8 */
 
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) &&                              \
        (QTHREAD_SIZEOF_ALIGNED_T == 4)) ||                                     \

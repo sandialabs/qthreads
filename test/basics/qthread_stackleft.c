@@ -38,11 +38,7 @@ static aligned_t alldone;
 static STACKLEFT_NOINLINE size_t thread2(size_t left, size_t depth) {
   size_t foo = qthread_stackleft();
   iprintf("leveli%i: %zu bytes left\n", (int)depth, foo);
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-  assert(foo <= left);
-#else
   assert(foo < left);
-#endif
   if (depth < 5) { thread2(foo, depth + 1); }
   return 1;
 }
