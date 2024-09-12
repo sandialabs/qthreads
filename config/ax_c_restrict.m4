@@ -68,8 +68,6 @@
 # the same family, and in the presence of varying compiler options.  If only
 # plain "restrict" works, do nothing.  Here are some variants:
 # - GCC supports both __restrict and __restrict__
-# - older DEC Alpha C compilers support only __restrict
-# - _Restrict is the only spelling accepted by Sun WorkShop 6 update 2 C
 # Otherwise, define "restrict" to be empty.
 AN_IDENTIFIER([restrict], [AX_C_RESTRICT])
 AC_DEFUN([AX_C_RESTRICT],

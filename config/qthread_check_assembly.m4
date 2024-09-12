@@ -78,68 +78,6 @@ rm -rf conftest*
 unset qthread_assemble
 ])dnl
 
-
-dnl #################################################################
-dnl
-dnl QTHREAD_CHECK_INLINE_GCC
-dnl
-dnl Check if the compiler is capable of doing GCC-style inline
-dnl assembly.  Some compilers emit a warning and ignore the inline
-dnl assembly (xlc on OS X) and compile without error.  Therefore,
-dnl the test attempts to run the emited code to check that the
-dnl assembly is actually run.  To run this test, one argument to
-dnl the macro must be an assembly instruction in gcc format to move 
-dnl the value 0 into the register containing the variable ret.  
-dnl For PowerPC, this would be:
-dnl
-dnl   "li %0,0" : "=&r"(ret)
-dnl
-dnl DEFINE QTHREAD_GCC_INLINE_ASSEMBLY to 0 or 1 depending on GCC
-dnl                support
-dnl
-dnl #################################################################
-AC_DEFUN([QTHREAD_CHECK_INLINE_C_GCC],[
-  AC_CACHE_CHECK([support for __asm__ __volatile__],
-	             [qt_cv_asm_volatile],
-				 [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]],[[__asm__ __volatile__ ("":::"memory");]])],
-					             [qt_cv_asm_volatile=yes],
-								 [qt_cv_asm_volatile=no])])
-  AC_CACHE_CHECK([$CC support for GCC inline assembly],[qt_cv_gcc_inline_assembly],[
-  assembly="$1"
-  asm_result="unknown"
-  AS_IF([test ! "$assembly" = ""],
-        [AC_RUN_IFELSE([AC_LANG_SOURCE([[
-int main(void) {
-int ret = 1;
-__asm__ __volatile__ ($assembly);
-return ret;
-}]])],
-      [asm_result="yes"], [asm_result="no"], 
-      [asm_result="unknown"])],
-	    [assembly="test skipped - assuming no"])
-
-  # if we're cross compiling, just try to compile and figure good enough
-  AS_IF([test "$asm_result" = "unknown"],
-    [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-int main(void)
-{
-int ret = 1;
-__asm__ __volatile__ ($assembly);
-return ret;
-}]])],
-      [asm_result="yes"], [asm_result="no"])
-  ])
-  qt_cv_gcc_inline_assembly="$asm_result"
-  unset assembly asm_result])
-
-
-  AS_IF([test "x$qt_cv_gcc_inline_assembly" = "xyes"],
-    [AC_DEFINE([HAVE_GCC_INLINE_ASSEMBLY], [1],
-       [Whether C compiler supports GCC style inline assembly])
-     $2], [$3])
-])dnl
-
-
 AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
   AC_REQUIRE([AM_PROG_AS])
   AC_CHECK_SIZEOF([long])
@@ -189,9 +127,6 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
     ;;
 
   esac
-
-  # now that we know our architecture, try to inline assemble
-  QTHREAD_CHECK_INLINE_C_GCC([$qthread_gcc_inline_assign], [$1], [$2])
 
   AC_MSG_CHECKING([for asssembly architecture])
   AC_MSG_RESULT([$qthread_cv_asm_arch])
