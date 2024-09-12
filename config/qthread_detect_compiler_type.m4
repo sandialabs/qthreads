@@ -86,8 +86,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__AZTEC_C__],[qthread_cv_c_compiler_type=Aztec])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__TURBO_C__],[qthread_cv_c_compiler_type=Borland])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DECC],[qthread_cv_c_compiler_type=Compaq])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__convexc__],[qthread_cv_c_compiler_type=Convex])])
@@ -213,8 +211,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([__MINGW64__],[qthread_cv_cxx_compiler_type=MinGW64])])
 
    dnl Now detect the rarer ones
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__BORLANDC__],[qthread_cv_cxx_compiler_type=Borland])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__COMO__],[qthread_cv_cxx_compiler_type=Comeau])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
