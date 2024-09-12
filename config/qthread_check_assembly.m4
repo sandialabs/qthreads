@@ -179,11 +179,6 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       qthread_gcc_inline_assign='"movl [$]0, %0" : "=&r"(ret)'
     ;;
 
-    alpha-*|alphaev[[4-8]]-*|alphaev56-*|alphaev6[[78]]-*)
-      qthread_cv_asm_arch="ALPHA"
-      qthread_gcc_inline_assign='"bis [$]31,[$]31,%0" : "=&r"(ret)'
-    ;;
-
 	armv7l-*)
 	  qthread_cv_asm_arch="ARM"
 	  qthread_gcc_inline_assign='"movt %0, #5" : "=&r"(ret)'
