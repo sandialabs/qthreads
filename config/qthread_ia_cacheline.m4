@@ -9,7 +9,6 @@ AC_CACHE_CHECK([for x86 cache line size],
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1
 #define QTHREAD_AMD64       2
-#define QTHREAD_MIPS        5
 #define QTHREAD_POWERPC32   6
 #define QTHREAD_POWERPC64   7
 #define QTHREAD_SPARCV9_32  8
