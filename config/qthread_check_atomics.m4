@@ -18,9 +18,6 @@ AS_IF([test "x$enable_builtin_atomics" != xno],
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS-32],
   [qthread_cv_atomic_CAS32],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 #include <stdint.h> /* for uint32_t */
 
@@ -35,9 +32,6 @@ return (int)foo;
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS-64],
   [qthread_cv_atomic_CAS64],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 #include <stdint.h> /* for uint64_t */
 
@@ -52,9 +46,6 @@ return foo;
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS-ptr],
   [qthread_cv_atomic_CASptr],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 
 int main(void)
@@ -121,9 +112,6 @@ AC_CACHE_CHECK([whether compiler supports builtin atomic incr],
   [qthread_cv_atomic_incr],
   [AS_IF([test "$1" -eq 8],
          [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 #include <stdint.h> /* for uint64_t */
 
@@ -136,9 +124,6 @@ return foo;
 		   [qthread_cv_atomic_incr="yes"],
 		   [qthread_cv_atomic_incr="no"])],
          [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 #include <stdint.h> /* for uint32_t */
 
@@ -156,9 +141,6 @@ AS_IF([test "$qthread_cv_atomic_incr" = "yes"],
 	      [qt_cv_atomic_incr_works],
 		  [AS_IF([test "$1" -eq 8],
          [AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 #include <stdint.h> /* for uint64_t */
 
@@ -189,9 +171,6 @@ return 0;
 		   [qt_cv_atomic_incr_works="no"],
 		   [qt_cv_atomic_incr_works="assuming yes"])],
          [AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#if HAVE_IA32INTRIN_H
-# include <ia32intrin.h>
-#endif
 #include <stdlib.h>
 #include <stdint.h> /* for uint32_t */
 
