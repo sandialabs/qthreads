@@ -445,9 +445,6 @@ AS_IF([test "x$enable_picky" = xyes],
          Intel)
            CFLAGS="-Wall -wd981 -wd1572 -wd869 $CFLAGS"
            ;;
-         PortlandGroup)
-           CFLAGS="-Minform=inform $CFLAGS"
-           ;;
          IBM_XL)
            CFLAGS="-q64 $CFLAGS"
            ;;
@@ -461,9 +458,6 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          Intel)
            CXXFLAGS="-Wall -wd981 $CXXFLAGS"
-           ;;
-         PortlandGroup)
-           CXXFLAGS="-Minform=inform $CXXFLAGS"
            ;;
          IBM_XL)
            CXXFLAGS="-q64 $CXXFLAGS"

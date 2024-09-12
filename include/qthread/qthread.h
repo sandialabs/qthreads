@@ -877,19 +877,10 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
      * unit to use). */
     oldval.d = *(double volatile *)operand;
     newval.d = oldval.d + incr;
-#ifdef __PGI
-    __asm__ __volatile__("lock; cmpxchgq %1, (%2)\n\t"
-                         "mov %%rax,(%0)" ::"r"(&retval.i),
-                         "r"(newval.i),
-                         "r"(operand),
-                         "a"(oldval.i)
-                         : "memory");
-#else
     __asm__ __volatile__("lock; cmpxchgq %1, (%2)"
                          : "=a"(retval.i)
                          : "r"(newval.i), "r"(operand), "0"(oldval.i)
                          : "memory");
-#endif // ifdef __PGI
   } while (retval.i != oldval.i);
   return oldval.d;
 
@@ -1160,21 +1151,10 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
   uint64_t retval = incr;
 
-#ifdef __PGI
-  /* this is a workaround for a bug in the PGI compiler where the width of
-   * retval is not respected and %eax is used instead of %rax */
-  __asm__ __volatile__("lock xaddq %0, (%2)\n\t"
-                       "mov %0,(%1)" ::"r"(incr),
-                       "r"(&retval),
-                       "r"(operand)
-                       : "memory");
-#else
   __asm__ __volatile__("lock ; xaddq %0, (%1);"
                        : "+r"(retval)
                        : "r"(operand)
                        : "memory");
-#endif // ifdef __PGI
-
   return retval;
 
 #else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -1314,19 +1294,6 @@ static QINLINE uint64_t qthread_cas64(uint64_t *operand,
    * [lock] cmpxchg reg, reg/mem
    *                src, dest
    */
-#ifdef __PGI
-  /* this is a workaround for a bug in the PGI compiler where the width of
-   * retval is not respected and %eax is used instead of %rax */
-  uint64_t retval;
-  __asm__ __volatile__("lock cmpxchg %1,(%2)\n\t"
-                       "mov %%rax,(%0)" ::"r"(&retval),
-                       "r"(newval),
-                       "r"(operand),
-                       "a"(oldval) /* load into RAX */
-                       : "cc", "memory");
-  return retval;
-
-#else
   uint64_t retval;
   __asm__ __volatile__(
     "lock; cmpxchg %1,(%2)"
@@ -1334,7 +1301,6 @@ static QINLINE uint64_t qthread_cas64(uint64_t *operand,
     : "r"(newval), "r"(operand), "a"(oldval) /* load into RAX */
     : "cc", "memory");
   return retval;
-#endif // ifdef __PGI
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
   /* In general, RISC doesn't provide a way to do 64 bit operations from 32
    * bit code. Sorry! */

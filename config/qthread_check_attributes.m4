@@ -100,14 +100,12 @@ AC_DEFUN([QTHREAD_BUILTIN_PREFETCH],[dnl
 AC_CACHE_CHECK(
  [support for __builtin_prefetch],
  [qt_cv_builtin_prefetch],
- [AS_IF([test "$qthread_cv_c_compiler_type" == PortlandGroup],
-        [qt_cv_builtin_prefetch=no],
-		[AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+ [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 int x;]],[[
 __builtin_prefetch(&x, 0, 0);
 return malloc(x)?1:0;]])],
  [qt_cv_builtin_prefetch=yes],
- [qt_cv_builtin_prefetch=no])])])
+ [qt_cv_builtin_prefetch=no])])
  AS_IF([test "x$qt_cv_builtin_prefetch" = xyes],
  	   [AC_DEFINE([HAS_BUILTIN_PREFETCH], [1], [define if compiler supports __builtin_prefetch])
 	   $1], [$2])

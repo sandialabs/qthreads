@@ -136,15 +136,6 @@ For example, `Collect<mt_loop_traits::Add>` is rougly equivalent to the followin
 ```
 ******************************************************
 
-##NOTE FOR PGI USERS
-pgcc needs the `-c9x` flag in order to correctly process variadic macros (which
-are used in qthread.c) and the PRIuMAX format definitions (used in `qalloc.c`).
-Use the CFLAGS variable to add this flag. Note that pgcc's support for the full
-C90/C99 standards is lousy, so most C90/C99 features that COULD be used are
-avoided.
-
-******************************************************
-
 ##NOTE FOR IBM XL USERS
 make check will probably fail with the error:
 

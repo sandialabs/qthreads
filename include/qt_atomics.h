@@ -434,19 +434,10 @@ qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
    * instantiates cmpxchg for 8-byte registers, and IA32 never has 64-bit
    * pointers
    */
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && defined(__PGI)
-  __asm__ __volatile__("lock; cmpxchg %1,(%2)\n\t"
-                       "mov %%rax,(%0)" ::"r"(&retval),
-                       "r"(newv),
-                       "r"(ptr),
-                       "a"(oldv) /* load into RAX */
-                       : "cc", "memory");
-#else
   __asm__ __volatile__("lock; cmpxchg %1,(%2)"
                        : "=a"(retval)                   /* store from RAX */
                        : "r"(newv), "r"(ptr), "a"(oldv) /* load into RAX */
                        : "cc", "memory");
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && defined(__PGI) */
   return retval;
 
 #else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */

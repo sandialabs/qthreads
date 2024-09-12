@@ -68,8 +68,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__xlc__],[qthread_cv_c_compiler_type=IBM_XL])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__PGI],[qthread_cv_c_compiler_type=PortlandGroup])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__CYGWIN__],[qthread_cv_c_compiler_type=Cygwin])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__MINGW32__],[qthread_cv_c_compiler_type=MinGW32])])
@@ -211,8 +209,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
    dnl A few common compilers (to detect quickly)
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__xlC__],[qthread_cv_cxx_compiler_type=IBM_XL])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__PGI],[qthread_cv_cxx_compiler_type=PortlandGroup])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__CYGWIN__],[qthread_cv_cxx_compiler_type=Cygwin])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
