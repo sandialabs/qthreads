@@ -70,8 +70,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl A few common compilers (to detect quickly)
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__SUNPRO_C],[qthread_cv_c_compiler_type=SunStudio])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__OPEN64__],[qthread_cv_c_compiler_type=Open64])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__xlc__],[qthread_cv_c_compiler_type=IBM_XL])])
@@ -221,8 +219,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
 		])])
 
    dnl A few common compilers (to detect quickly)
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__SUNPRO_CC],[qthread_cv_cxx_compiler_type=SunStudio])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__OPEN64__],[qthread_cv_cxx_compiler_type=Open64])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],

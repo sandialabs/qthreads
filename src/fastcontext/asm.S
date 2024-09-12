@@ -641,6 +641,6 @@ SET:
 	bx      lr
 #endif
 
-#if defined(__ELF__) && !defined(__SUNPRO_C)
+#if defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif
