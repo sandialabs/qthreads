@@ -421,32 +421,6 @@ qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
                        : "cc", "memory");
   return result;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-  void *nv = newv;
-  __asm__ __volatile__("cas [%1], %2, %0"
-                       : "=&r"(nv)
-                       : "r"(ptr),
-                         "r"(oldv)
-#if !defined(__SUNPRO_C) && !defined(__SUNPRO_CC)
-                           ,
-                         "0"(nv)
-#endif
-                       : "cc", "memory");
-  return nv;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  void *nv = newv;
-  __asm__ __volatile__("casx [%1], %2, %0"
-                       : "=&r"(nv)
-                       : "r"(ptr),
-                         "r"(oldv)
-#if !defined(__SUNPRO_C) && !defined(__SUNPRO_CC)
-                           ,
-                         "0"(nv)
-#endif
-                       : "cc", "memory");
-  return nv;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   void **retval;
@@ -606,70 +580,6 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
                : "=&b"(retval), "=&r"(compd), "=&r"(incrd)
                : "r"(operand), "r"(max)
                : "cc", "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) ||                         \
-  ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) &&                            \
-   (QTHREAD_SIZEOF_ALIGNED_T == 4))
-
-  uint32_t oldval, newval;
-
-  /* newval = *operand; */
-  do {
-    /* you *should* be able to move the *operand reference outside the
-     * loop and use the output of the CAS (namely, newval) instead.
-     * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-     * that, the while() comparison uses a temporary register value for
-     * newval that has nothing to do with the output of the CAS
-     * instruction. (See how obviously wrong that is?) For some reason that
-     * I haven't been able to figure out, moving the *operand reference
-     * inside the loop fixes that problem, even at -O2 optimization. */
-    retval = oldval = *operand;
-    newval = oldval + 1;
-    newval *= (newval < max);
-
-    /* if (*operand == oldval)
-     * swap(newval, *operand)
-     * else
-     * newval = *operand
-     */
-    __asm__ __volatile__("cas [%1] , %2, %0" /* */
-                         : "=&r"(newval)
-                         : "r"(operand), "r"(oldval), "0"(newval)
-                         : "memory");
-  } while (oldval != newval);
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  aligned_t oldval, newval;
-
-  /* newval = *operand; */
-  do {
-    /* you *should* be able to move the *operand reference outside the
-     * loop and use the output of the CAS (namely, newval) instead.
-     * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-     * that, the while() comparison uses a temporary register value for
-     * newval that has nothing to do with the output of the CAS
-     * instruction. (See how obviously wrong that is?) For some reason that
-     * I haven't been able to figure out, moving the *operand reference
-     * inside the loop fixes that problem, even at -O2 optimization. */
-    retval = oldval = *operand;
-    newval = oldval + 1;
-    newval *= (newval < max);
-
-    /* if (*operand == oldval)
-     * swap(newval, *operand)
-     * else
-     * newval = *operand
-     */
-    __asm__ __volatile__("casx [%1] , %2, %0"
-                         : "=&r"(newval)
-                         : "r"(operand),
-                           "r"(oldval)
-#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-                             ,
-                           "0"(newval)
-#endif
-                         : "memory");
-  } while (oldval != newval);
 
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) &&                              \
        (QTHREAD_SIZEOF_ALIGNED_T == 4)) ||                                     \

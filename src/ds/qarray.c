@@ -38,8 +38,7 @@ qarray_internal_segment_shep(qarray const *a,
   char *ptr = (((char *)segment_head) + (a->segment_size * a->unit_size));
 
   qassert_ret(a->dist_type == DIST, NULL);
-  /* ensure that it's 4-byte aligned
-   * (mandatory on Sparc, good idea elsewhere) */
+  /* ensure that it's 4-byte aligned */
   if (((uintptr_t)ptr) & 3) { ptr += 4 - (((uintptr_t)ptr) & 3); }
   /* first, do we have the space? */
   qassert_ret((((ptr + sizeof(qthread_shepherd_id_t) - 1) <
@@ -419,24 +418,12 @@ static qarray *qarray_create_internal(size_t const count,
 } /*}}} */
 
 qarray *qarray_create(size_t const count, size_t const obj_size) { /*{{{ */
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32 ||                             \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
-  return qarray_create_internal(count, obj_size, DIST_STRIPES, 0, 0);
-
-#else
   return qarray_create_internal(count, obj_size, FIXED_HASH, 0, 0);
-#endif
 } /*}}} */
 
 qarray *qarray_create_tight(size_t const count,
                             size_t const obj_size) { /*{{{ */
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32 ||                             \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
-  return qarray_create_internal(count, obj_size, DIST_STRIPES, 1, 0);
-
-#else
   return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 0);
-#endif
 } /*}}} */
 
 qarray *qarray_create_configured(size_t const count,

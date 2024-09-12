@@ -14,8 +14,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
   (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
 #if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                              \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 uint32_t qthread_incr32_(uint32_t *op, int32_t const incr) { /*{{{ */
   unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
   uint32_t retval;
@@ -110,9 +109,7 @@ uint64_t qthread_cas64_(uint64_t *operand,
   return retval;
 } /*}}} */
 
-#else /* if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==      \
-         QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)   \
-       */
+#else /* if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
 #error Building this file erroneously.
 #endif /* if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==     \
           QTHREAD_POWERPC32) */

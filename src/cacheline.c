@@ -205,9 +205,6 @@ static void figure_out_cacheline_size(void) { /*{{{ */
   } else {
     cacheline_bytes = 128; // G5
   }
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) ||                         \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  cacheline_bytes = 128;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                               \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #if !defined(HAVE_GCC_INLINE_ASSEMBLY)

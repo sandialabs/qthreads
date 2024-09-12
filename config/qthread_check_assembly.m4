@@ -81,30 +81,6 @@ unset qthread_assemble
 
 dnl #################################################################
 dnl
-dnl QTHREAD_CHECK_SPARCV8PLUS
-dnl
-dnl #################################################################
-AC_DEFUN([QTHREAD_CHECK_SPARCV8PLUS],[
-    AC_MSG_CHECKING([if have Sparc v8+/v9 support])
-    sparc_result=0
-    QTHREAD_TRY_ASSEMBLE([$qthread_cv_asm_text
-	casa [%o0] 0x80, %o1, %o2],
-                [sparc_result=1],
-                [sparc_result=0])
-    if test "$sparc_result" = "1" ; then
-        AC_MSG_RESULT([yes])
-        ifelse([$1],,:,[$1])
-    else
-        AC_MSG_RESULT([no])
-        ifelse([$2],,:,[$2])
-    fi
-
-    unset sparc_result
-])dnl
-
-
-dnl #################################################################
-dnl
 dnl QTHREAD_CHECK_INLINE_GCC
 dnl
 dnl Check if the compiler is capable of doing GCC-style inline
@@ -212,15 +188,6 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       qthread_gcc_inline_assign='"A_%=: li %0,0" : "=&r"(ret)'
     ;;
 
-    sparc*-*)
-      # SPARC v9 (and above) are the only ones with 64bit support
-      # if compiling 32 bit, see if we are v9 (aka v8plus) or
-      # earlier (casa is v8+/v9). 
-      AS_IF([test "$ac_cv_sizeof_long" = "4"],
-            [QTHREAD_CHECK_SPARCV8PLUS([qthread_cv_asm_arch="SPARCV9_32"])],
-            [qthread_cv_asm_arch="SPARCV9_64"])
-      qthread_gcc_inline_assign='"mov 0,%0" : "=&r"(ret)'
-    ;;
   esac
 
   # now that we know our architecture, try to inline assemble

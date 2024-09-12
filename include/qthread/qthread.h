@@ -668,9 +668,7 @@ int qthread_spinlocks_destroy(qthread_spinlock_t *a);
 int qthread_lock_init(aligned_t const *a, bool const is_recursive);
 int qthread_lock_destroy(aligned_t *a);
 
-#if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                              \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+#if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 uint32_t qthread_incr32_(uint32_t *, int32_t);
 uint64_t qthread_incr64_(uint64_t *, int64_t);
 float qthread_fincr_(float *, float);
@@ -743,34 +741,6 @@ static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
 
   return retval.f;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||                         \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-  union {
-    float f;
-    uint32_t i;
-  } oldval, newval;
-
-  /* newval.f = *operand; */
-  do {
-    /* you *should* be able to move the *operand reference outside the
-     * loop and use the output of the CAS (namely, newval) instead.
-     * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-     * that, the while() comparison uses a temporary register value for
-     * newval that has nothing to do with the output of the CAS
-     * instruction. (See how obviously wrong that is?) For some reason that
-     * I haven't been able to figure out, moving the *operand reference
-     * inside the loop fixes that problem, even at -O2 optimization. */
-    oldval.f = *(float volatile *)operand;
-    newval.f = oldval.f + incr;
-    __asm__ __volatile__(
-      "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-      "cas [%1], %2, %0"
-      : "+r"(newval.i)
-      : "r"(operand), "r"(oldval.i)
-      : "cc", "memory");
-  } while (oldval.i != newval.i);
-  return oldval.f;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   union {
@@ -834,8 +804,7 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
   return qthread_dincr_(operand, incr);
 
-#elif QTHREAD_ATOMIC_CAS && (!defined(HAVE_GCC_INLINE_ASSEMBLY) ||             \
-                             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32))
+#elif QTHREAD_ATOMIC_CAS && !defined(HAVE_GCC_INLINE_ASSEMBLY)
   union {
     uint64_t i;
     double d;
@@ -888,65 +857,6 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
     : "cc", "memory");
 
   return retval.d;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-  union {
-    uint64_t i;
-    double d;
-  } oldval, newval;
-
-  newval.d = *(double volatile *)operand;
-  do {
-    /* this allows the compiler to be as flexible as possible with register
-     * assignments */
-    uint64_t tmp1;
-    uint64_t tmp2;
-
-    oldval.d = newval.d;
-    newval.d += incr;
-    __asm__ __volatile__(
-      "ldd %0, %1\n\t"
-      "ldx %4, %2\n\t"
-      "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-      "sllx %1, 0x20, %1\n\t"
-      "sllx %2, 0x20, %2\n\t"
-      "casx [%3], %2, %1\n\t"
-      "srlx %1, 0x20, %1\n\t"
-      "std %1, %0"
-      /* h means 64-BIT REGISTER
-       * (probably unnecessary, but why take chances?) */
-      : "=m"(newval.i), "=h"(tmp1), "=h"(tmp2)
-      : "r"(operand), "m"(oldval.i)
-      : "memory");
-  } while (oldval.i != newval.i);
-  return oldval.d;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  union {
-    uint64_t i;
-    double d;
-  } oldval, newval;
-
-  /*newval.d = *operand; */
-  do {
-    /* you *should* be able to move the *operand reference outside the
-     * loop and use the output of the CAS (namely, newval) instead.
-     * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-     * that, the while() comparison uses a temporary register value for
-     * newval that has nothing to do with the output of the CAS
-     * instruction. (See how obviously wrong that is?) For some reason that
-     * I haven't been able to figure out, moving the *operand reference
-     * inside the loop fixes that problem, even at -O2 optimization. */
-    oldval.d = *(double volatile *)operand;
-    newval.d = oldval.d + incr;
-    __asm__ __volatile__(
-      "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-      "casx [%1], %2, %0"
-      : "+r"(newval.i)
-      : "r"(operand), "r"(oldval.i)
-      : "memory");
-  } while (oldval.d != newval.d);
-  return oldval.d;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
   union {
@@ -1128,33 +1038,6 @@ static QINLINE uint32_t qthread_incr32(uint32_t *operand,
 
   return retval;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) ||                         \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  uint32_t oldval, newval;
-
-  /* newval = *operand; */
-  do {
-    /* you *should* be able to move the *operand reference outside the
-     * loop and use the output of the CAS (namely, newval) instead.
-     * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-     * that, the while() comparison uses a temporary register value for
-     * newval that has nothing to do with the output of the CAS
-     * instruction. (See how obviously wrong that is?) For some reason that
-     * I haven't been able to figure out, moving the *operand reference
-     * inside the loop fixes that problem, even at -O2 optimization. */
-    oldval = *operand;
-    newval = oldval + incr;
-    /* newval always gets the value of *operand; if it's
-     * the same as oldval, then the swap was successful */
-    __asm__ __volatile__(
-      "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-      "cas [%1] , %2, %0"
-      : "+r"(newval)
-      : "r"(operand), "r"(oldval)
-      : "cc", "memory");
-  } while (oldval != newval);
-  return oldval;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                               \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
@@ -1177,8 +1060,7 @@ static QINLINE uint32_t qthread_incr32(uint32_t *operand,
 static QINLINE uint64_t qthread_incr64(uint64_t *operand,
                                        uint64_t incr) { /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                              \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
   return qthread_incr64_(operand, incr);
 
 #elif defined(QTHREAD_ATOMIC_INCR)
@@ -1195,8 +1077,7 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
 
 #elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
 #error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
-#else // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==
-      // QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+#else // if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   uint64_t retval;
   uint64_t incrd = incrd; /* no initializing */
@@ -1211,66 +1092,6 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
                : "cc", "memory");
 
   return retval;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-  uint64_t oldval, newval = *operand;
-
-  do {
-    /* this allows the compiler to be as flexible as possible with register
-     * assignments */
-    uint64_t tmp1 = tmp1;
-    uint64_t tmp2 = tmp2;
-
-    oldval = newval;
-    newval += incr;
-    /* newval always gets the value of *operand; if it's
-     * the same as oldval, then the swap was successful */
-    __asm__ __volatile__(
-      "ldx %0, %1\n\t"
-      "ldx %4, %2\n\t"
-      "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-      "casx [%3] , %2, %1\n\t"
-      "stx %1, %0"
-      /* h means 64-BIT REGISTER
-       * (probably unnecessary, but why take chances?) */
-      : "=m"(newval), "=&h"(tmp1), "=&h"(tmp2)
-      : "r"(operand), "m"(oldval)
-      : "cc", "memory");
-  } while (oldval != newval);
-  return oldval;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  uint64_t oldval, newval;
-
-#ifdef QTHREAD_ATOMIC_CAS
-  newval = *operand;
-  do {
-    oldval = newval;
-    newval = __sync_val_compare_and_swap(operand, oldval, oldval + incr);
-  } while (oldval != newval);
-#else
-  do {
-    /* you *should* be able to move the *operand reference outside the
-     * loop and use the output of the CAS (namely, newval) instead.
-     * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-     * that, the while() comparison uses a temporary register value for
-     * newval that has nothing to do with the output of the CAS
-     * instruction. (See how obviously wrong that is?) For some reason that
-     * I haven't been able to figure out, moving the *operand reference
-     * inside the loop fixes that problem, even at -O2 optimization. */
-    oldval = *operand;
-    newval = oldval + incr;
-    /* newval always gets the value of *operand; if it's
-     * the same as oldval, then the swap was successful */
-    __asm__ __volatile__(
-      "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-      "casx [%1] , %2, %0"
-      : "+r"(newval)
-      : "r"(operand), "r"(oldval)
-      : "cc", "memory");
-  } while (oldval != newval);
-#endif // ifdef QTHREAD_ATOMIC_CAS
-  return oldval;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   union {
@@ -1359,8 +1180,7 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
 #else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #error Unimplemented assembly architecture for qthread_incr64
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==
-       // QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+#endif // if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 } /*}}} */
 
 static QINLINE int64_t qthread_incr_xx(void *addr,
@@ -1402,16 +1222,6 @@ static QINLINE uint32_t qthread_cas32(uint32_t *operand,
                        : "r"(oldval), "r"(newval), "r"(operand)
                        : "cc", "memory");
   return result;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) ||                         \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  uint32_t newv = newval;
-  __asm__ __volatile__("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-                       "cas [%1], %2, %0"
-                       : "+r"(newv)
-                       : "r"(operand), "r"(oldval)
-                       : "cc", "memory");
-  return newv;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
@@ -1457,31 +1267,6 @@ static QINLINE uint64_t qthread_cas64(uint64_t *operand,
                        : "r"(oldval), "r"(newval), "r"(operand)
                        : "cc", "memory");
   return result;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-  uint64_t tmp1 = tmp1;
-  uint64_t tmp2 = tmp2;
-  uint64_t newv = newval;
-  __asm__ __volatile__("ldx %0, %1\n\t"
-                       "ldx %4, %2\n\t"
-                       "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-                       "casx [%3], %2, %1\n\t"
-                       "stx %1, %0"
-                       /* h means 64-BIT REGISTER
-                        * (probably unneecessary, but why take chances?) */
-                       : "+m"(newv), "=&h"(tmp1), "=&h"(tmp2)
-                       : "r"(operand), "m"(oldval)
-                       : "cc", "memory");
-  return newv;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-  uint64_t newv = newval;
-  __asm__ __volatile__("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
-                       "casx [%1], %2, %0"
-                       : "+r"(newv)
-                       : "r"(operand), "r"(oldval)
-                       : "cc", "memory");
-  return newv;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
   union {
