@@ -72,10 +72,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__MINGW64__],[qthread_cv_c_compiler_type=MinGW64])])
 
-   dnl Now detect the rarer ones
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__USLC__],[qthread_cv_c_compiler_type=USL])])
-
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [qthread_cv_c_compiler_type=unknown])
    AC_LANG_POP([C])
