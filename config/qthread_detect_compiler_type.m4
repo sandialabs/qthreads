@@ -182,8 +182,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__FCC_VERSION],[qthread_cv_cxx_compiler_type=Fujitsu])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__ghs__],[qthread_cv_cxx_compiler_type=GreenHill])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__HP_aCC],[qthread_cv_cxx_compiler_type=HP])])
