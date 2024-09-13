@@ -134,29 +134,4 @@ For example, `Collect<mt_loop_traits::Add>` is rougly equivalent to the followin
     retval += function(args);
   }
 ```
-******************************************************
-
-##NOTE FOR IBM XL USERS
-make check will probably fail with the error:
-
-`xlc++: 1501-210 command option t contains an incorrect subargument`
-`.../.libs/libqthread.so: could not read symbols: Invalid operation`
-
-This does not mean that the library did not compile correctly, but instead
-means that your libtool is probably broken (most are). The problem seems to be
-that the wrapper script (testloop) is created with incorrect arguments to
-xlc++. The other wrapper scripts (e.g. test1/test2/test3/testq) all have the
-correct arguments, and if you modify testloop so that $relink_command uses the
-`-Wl,--rpath -Wl,directory` syntax rather than the `-rpath,directory` syntax,
-it would work just fine.
-
-*******************************************************
-
-## NOTE FOR IBM BLUEGENE/P GCC USERS
-Old versions of GCC do not handle builtin atomics correctly on this platform.
-The non-existence of `__sync_fetch_and_add()` cannot be reliably detected, so to
-use those compilers, you probably need to configure with
-`--disable-internal-spinlock`.
-
-*******************************************************
 
