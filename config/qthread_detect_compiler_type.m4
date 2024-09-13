@@ -74,8 +74,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__CC65__],[qthread_cv_c_compiler_type=CC65])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([_DICE],[qthread_cv_c_compiler_type=Dice])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DCC__],[qthread_cv_c_compiler_type=Diab])])
