@@ -74,12 +74,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__KEIL__],[qthread_cv_c_compiler_type=KeilCARM])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__C166__],[qthread_cv_c_compiler_type=KeilC166])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__C51__],[qthread_cv_c_compiler_type=KeilC51])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__LCC__],[qthread_cv_c_compiler_type=LCC])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__HIGHC__],[qthread_cv_c_compiler_type=MetaWare])])
@@ -173,12 +167,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__KCC],[qthread_cv_cxx_compiler_type=KAI])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__KEIL__],[qthread_cv_cxx_compiler_type=KeilCARM])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__C166__],[qthread_cv_cxx_compiler_type=KeilC166])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__C51__],[qthread_cv_cxx_compiler_type=KeilC51])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__LCC__],[qthread_cv_cxx_compiler_type=LCC])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
