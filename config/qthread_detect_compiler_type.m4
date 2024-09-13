@@ -84,8 +84,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__PACIFIC__],[qthread_cv_c_compiler_type=Pacific])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([_PACC_VER],[qthread_cv_c_compiler_type=Palm])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__POCC__],[qthread_cv_c_compiler_type=Pelles])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__RENESAS__],[qthread_cv_c_compiler_type=Renesas])])
@@ -153,8 +151,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([__MINGW64__],[qthread_cv_cxx_compiler_type=MinGW64])])
 
    dnl Now detect the rarer ones
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([_PACC_VER],[qthread_cv_cxx_compiler_type=Palm])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__RENESAS__],[qthread_cv_cxx_compiler_type=Renesas])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
