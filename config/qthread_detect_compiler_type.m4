@@ -110,8 +110,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__WATCOMC__],[qthread_cv_cxx_compiler_type=Watcom])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__ZTC__],[qthread_cv_cxx_compiler_type=Zortech])])
 
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
