@@ -74,8 +74,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__DCC__],[qthread_cv_c_compiler_type=Diab])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DMC__],[qthread_cv_c_compiler_type=DigitalMars])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__SYSC__],[qthread_cv_c_compiler_type=Dignus])])
@@ -189,8 +187,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([__MINGW64__],[qthread_cv_cxx_compiler_type=MinGW64])])
 
    dnl Now detect the rarer ones
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__DCC__],[qthread_cv_cxx_compiler_type=Diab])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DMC__],[qthread_cv_cxx_compiler_type=DigitalMars])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
