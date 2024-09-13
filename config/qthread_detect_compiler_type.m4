@@ -74,8 +74,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__DECC],[qthread_cv_c_compiler_type=Compaq])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__convexc__],[qthread_cv_c_compiler_type=Convex])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([_CRAYC],[qthread_cv_c_compiler_type=Cray])])
@@ -201,8 +199,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__COMO__],[qthread_cv_cxx_compiler_type=Comeau])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__DECCXX__],[qthread_cv_cxx_compiler_type=Compaq])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DCC__],[qthread_cv_cxx_compiler_type=Diab])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
