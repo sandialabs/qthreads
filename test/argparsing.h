@@ -101,8 +101,6 @@ static ARGP_Atomic(int) verbose;
 #if defined(SILENT_ARGPARSING)
 #warning Silencing iprintf() output.
 #define iprintf(...)
-#elif defined(__CYGWIN32__)
-#define iprintf printf
 #else
 static void iprintf(char const *restrict format, ...) {
   if (atomic_load_explicit(&verbose, memory_order_relaxed)) {

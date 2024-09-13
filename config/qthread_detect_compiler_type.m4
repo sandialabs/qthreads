@@ -64,14 +64,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 			  ])
 	 ])])
 
-   dnl A few common compilers (to detect quickly)
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__CYGWIN__],[qthread_cv_c_compiler_type=Cygwin])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__MINGW32__],[qthread_cv_c_compiler_type=MinGW32])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__MINGW64__],[qthread_cv_c_compiler_type=MinGW64])])
-
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [qthread_cv_c_compiler_type=unknown])
    AC_LANG_POP([C])
@@ -99,14 +91,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
 		AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xGNU"],
 			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[4],[qthread_cv_cxx_compiler_type=GNU4])])
 		])])
-
-   dnl A few common compilers (to detect quickly)
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__CYGWIN__],[qthread_cv_cxx_compiler_type=Cygwin])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__MINGW32__],[qthread_cv_cxx_compiler_type=MinGW32])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__MINGW64__],[qthread_cv_cxx_compiler_type=MinGW64])])
 
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [qthread_cv_cxx_compiler_type=unknown])
