@@ -74,8 +74,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__VOSC__],[qthread_cv_c_compiler_type=StratusVOS])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__TenDRA__],[qthread_cv_c_compiler_type=TenDRA])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__TI_COMPILER_VERSION__],[qthread_cv_c_compiler_type=TexasInstruments])])
