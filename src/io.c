@@ -3,8 +3,8 @@
 #endif
 
 /* System Headers */
-#include <qthread/qthread-int.h> /* for uint64_t */
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdio.h>    /* for fprintf() */
 #include <stdlib.h>   /* for abort() */
 #include <sys/time.h> /* for gettimeofday() */

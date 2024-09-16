@@ -2,7 +2,9 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
 #include <stdlib.h>
+
 /* System Headers */
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h> /* for memalign() */
@@ -12,8 +14,6 @@
 #else
 static QINLINE int getpagesize() { return 4096; }
 #endif
-
-#include <qthread/qthread-int.h> /* for uintptr_t */
 
 /* Internal Headers */
 #include "qt_alloc.h"

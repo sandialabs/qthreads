@@ -15,7 +15,7 @@ using std::memory_order_relaxed;
 
 #include <limits.h> /* for UINT_MAX (C89) */
 #include <stdbool.h>
-
+#include <stdint.h>
 #include <string.h> /* for memcpy() */
 
 #ifndef QTHREAD_NOALIGNCHECK
@@ -31,7 +31,6 @@ using std::memory_order_relaxed;
 #endif
 
 #include "common.h"
-#include "qthread-int.h"
 
 /*****************************************************************************
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

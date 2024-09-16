@@ -5,7 +5,7 @@
 
 /* System Headers */
 #include <limits.h>              /* for INT_MAX */
-#include <qthread/qthread-int.h> /* for uint64_t */
+#include <stdint.h>
 
 /* API Headers */
 #include "qthread/qthread.h"

@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+
 /* System Headers */
 #ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h> /* for SYS_accept and others */
@@ -17,7 +19,6 @@
 
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
-#include "qthread/qthread-int.h"
 
 /* Internal Headers */
 #include "qt_asserts.h"

@@ -3,6 +3,7 @@
 #endif
 
 /* System Headers */
+#include <stdint.h>
 #include <time.h>
 
 #ifdef HAVE_SYS_SYSCALL_H
@@ -11,7 +12,6 @@
 #endif
 
 /* API Headers */
-#include "qthread/qthread-int.h"
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 

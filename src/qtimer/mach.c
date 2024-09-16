@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -9,7 +10,6 @@
 
 #include "qt_alloc.h"
 #include "qt_atomics.h" /* for SPINLOCK_BODY() */
-#include "qthread-int.h"
 #include "qthread/qthread.h" /* for aligned_t */
 #include "qthread/qtimer.h"
 

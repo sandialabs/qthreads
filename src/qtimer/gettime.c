@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+
 #if TIME_WITH_SYS_TIME
 #include <sys/time.h>
 #include <time.h>
@@ -17,7 +19,6 @@
 #endif
 
 #include <qthread/hash.h>        /* for qt_hash64() */
-#include <qthread/qthread-int.h> /* for uint64_t */
 #include <qthread/qtimer.h>
 
 #include "qt_alloc.h"

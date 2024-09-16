@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+
 /* System Headers */
 #include <sys/types.h>
 
@@ -12,7 +14,6 @@
 
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
-#include "qthread/qthread-int.h"
 
 /* Internal Headers */
 #include "qt_asserts.h"

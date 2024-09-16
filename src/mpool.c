@@ -6,6 +6,7 @@
 #include <pthread.h>
 
 #include <stddef.h> /* for size_t (according to C89) */
+#include <stdint.h>
 #include <stdlib.h> /* for calloc() and malloc() */
 #include <string.h>
 
@@ -34,7 +35,6 @@
 #include "qt_mpool.h"
 #include "qt_subsystems.h"
 #include "qt_visibility.h"
-#include <qthread/qthread-int.h> /* for uintptr_t */
 
 /* Seems SLIGHTLY faster without TLS, and a whole lot safer and cleaner */
 #ifdef TLS

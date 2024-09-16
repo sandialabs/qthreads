@@ -3,14 +3,14 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
 #include <stdlib.h>
+
 #ifdef HAVE_GETPAGESIZE
 #include <unistd.h>
 #else
 static QINLINE int getpagesize() { return 4096; }
 #endif
-
-#include <qthread/qthread-int.h> /* for uint_fast16_t */
 
 #include "chpl-linefile-support.h"
 #include "chpl-mem.h"

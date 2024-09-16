@@ -1,9 +1,8 @@
 #ifndef QT_THREADQUEUES_H
 #define QT_THREADQUEUES_H
+#include <stdint.h>
 
 #include <sys/types.h> /* for ssize_t (according to P90) */
-
-#include "qthread-int.h"
 
 #include "qt_filters.h"
 #include "qt_mpool.h"

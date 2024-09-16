@@ -8,11 +8,9 @@
 // here and had no available F/E implementation - 12/17/09 akp
 
 /* System Headers */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-/* System Compatibility Header */
-#include "qthread-int.h"
 
 /* Public Headers */
 #include "qthread/barrier.h"

@@ -378,12 +378,12 @@ AC_ARG_ENABLE([lf-febs],
 AC_ARG_WITH([cacheline-width],
             [AS_HELP_STRING([--with-cacheline-width=bytes],
                             [Specify the cacheline width for the target
-                             machine. Defaults to 64. Used only for optimizing
+                             machine. Defaults to 256. Used only for optimizing
                              internal data structure layout;
                              qthread_cacheline() still detects this at
                              runtime.])],
             [],
-            [with_cacheline_width=64])
+            [with_cacheline_width=256])
 
 AC_ARG_ENABLE([multinode],
           [AS_HELP_STRING([--enable-multinode],
@@ -587,7 +587,6 @@ AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_HEADER_TIME
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h unistd.h sys/syscall.h])
-AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
 AC_SYS_LARGEFILE
 
 QTHREAD_CHECK_FUNCTION

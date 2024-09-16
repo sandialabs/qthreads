@@ -6,8 +6,7 @@
 #endif
 
 #include <stddef.h>
-
-#include "qthread-int.h" /* for uintptr_t (standin for C99's stdint.h) */
+#include <stdint.h>
 
 #include "qt_visibility.h"
 

@@ -11,9 +11,9 @@
 /* System Headers                                     */
 /******************************************************/
 #include <limits.h>              /* for INT_MAX */
-#include <qthread/qthread-int.h> /* for UINT8_MAX */
 #include <stdarg.h>              /* for va_list, va_start() and va_end() */
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* for malloc() and abort() */
 #include <string.h> /* for memset() */
