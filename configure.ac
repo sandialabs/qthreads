@@ -39,7 +39,6 @@ CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
 AC_CANONICAL_HOST
-AC_PROG_SED
 AC_PATH_PROG([timelimit_path],[timelimit])
 
 ## ----------------- ##
