@@ -668,8 +668,6 @@ AC_CHECK_FUNCS([strtol memalign posix_memalign memset memmove munmap memcpy fsta
 QTHREAD_CHECK_QSORT
 AC_CHECK_DECLS([MADV_ACCESS_LWP],[],[],[[#include <sys/types.h>
 #include <sys/mman.h>]])
-AX_CHECK_PAGE_ALIGNED_MALLOC
-QTHREAD_CHECK_WORKING_VALLOC
 QTHREAD_CHECK_ASSERT([],[AC_MSG_ERROR([assert() does not seem to work])])
 
 AC_CACHE_SAVE
