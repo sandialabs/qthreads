@@ -7,16 +7,7 @@
 
 #include "qthread/common.h"
 
-#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) ||                             \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-#include <stddef.h>
-#define NEEDTILEMAKECONTEXT
-#define NEEDSWAPCONTEXT
-#include "tile-ucontext.h"
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #define NEEDX86MAKECONTEXT
 #define NEEDSWAPCONTEXT
 #include "386-ucontext.h"

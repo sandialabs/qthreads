@@ -294,11 +294,11 @@ AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
                              interfaces include no, hwloc, hwloc_v2, binders, lgrp, libnuma,
-                             libnumaV2, mach, plpa, sys, and, tilera.])],
+                             libnumaV2, mach, plpa, and sys.])],
             [AS_IF([test "x$with_topology" = xyes],
                    [with_topology=none_specified])
              case "$with_topology" in
-                 hwloc|binders|hwloc_v2|lgrp|libnuma|libnumaV2|mach|no|plpa|sys|tilera) ;;
+                 hwloc|binders|hwloc_v2|lgrp|libnuma|libnumaV2|mach|no|plpa|sys) ;;
                  none_specified) ;;
                  *)
                  AC_MSG_ERROR([Unsupported topology library ($with_topology)])
@@ -327,8 +327,7 @@ AC_ARG_ENABLE([condwait-queue],
                               [force the use of a pthread condwait queue,
                                instead of a spin-based queue for inter-thread
                                communication (important if spinning shepherds
-                               interfere with each other). Default enabled on
-                               sparc/solaris, but default disabled elsewhere.])])
+                               interfere with each other). Default disabled.])])
 
 AC_ARG_ENABLE([third-party-benchmarks],
               [AS_HELP_STRING([--enable-third-party-benchmarks],
@@ -402,16 +401,9 @@ dnl Test for this *before* AC_PROG_CC, to avoid getting the default CFLAGS
 dnl However, that means we don't know a ton about this machine or this compiler
 dnl yet, so we may have to reset it later.
 AS_IF([test "x$enable_debugging" = xyes],
-      [case "$build_cpu" in dnl (
-         sparc)
-           CFLAGS="$CFLAGS -O0 -g3"
-           CXXFLAGS="$CXXFLAGS -O0 -g3"
-           ;;
-         *)
-           CFLAGS="$CFLAGS -O0 -g"
-           CXXFLAGS="$CXXFLAGS -O0 -g"
-           ;;
-       esac])
+      [CFLAGS="$CFLAGS -O0 -g"
+       CXXFLAGS="$CXXFLAGS -O0 -g"
+      ])
 AC_PROG_CC
 dnl We use system extensions.  This includes setting _GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
@@ -495,7 +487,7 @@ AS_IF([test "x$enable_picky" = xyes],
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 case "$qthread_cv_asm_arch" in
-    POWERPC32|SPARCV9_32)
+    POWERPC32)
     compile_compat_atomic=yes
     ;;
 esac
@@ -734,14 +726,7 @@ AS_IF([test "x$enable_oversubscription" = "xyes"],
        AC_CHECK_FUNCS([sched_yield])])
 
 AS_IF([test "x$enable_condwait_queue" = "x"],
-      [case "$host" in
-         sparc-sun-solaris*)
-           enable_condwait_queue="yes"
-           ;;
-         *)
-           enable_condwait_queue="no"
-           ;;
-       esac])
+      [enable_condwait_queue="no"])
 AS_IF([test "x$enable_condwait_queue" = "xyes"],
       [AC_DEFINE([QTHREAD_CONDWAIT_BLOCKING_QUEUE], [1], [use pthread-based condwait for lf queue])])
 
@@ -988,10 +973,6 @@ AS_IF([test "x$qthread_topo" != xno],
                                     [qthread_topo=libnumaV2],
                                     [AS_IF([test "x$qthread_topo" != xno],
                                            [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xtilera],
-             [QTHREAD_CHECK_TILETOPO([qthread_topo=tilera],
-                                     [AS_IF([test "x$qthread_topo" != xno],
-                                            [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        # Third, check any others.
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xmach],
              [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],

@@ -10,7 +10,6 @@ noinst_HEADERS = \
 	fastcontext/taskimpl.h \
 	fastcontext/power-ucontext.h \
 	fastcontext/386-ucontext.h \
-	fastcontext/tile-ucontext.h \
 	net/net.h \
 	qthread_innards.h \
 	qloop_innards.h \

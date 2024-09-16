@@ -140,9 +140,6 @@ AC_CACHE_CHECK([support for __sync_synchronize],
 		     POWERPC*)
                        mdefstr='__asm__ __volatile__ ("sync":::"memory")'
 		       ;;
-		     SPARCV9_32|SPARCV9_64)
-                       mdefstr='__asm__ __volatile__ ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad":::"memory")'
-                       ;;
 		    *)
 				 AC_MSG_ERROR([ASM $qthread_cv_asm_arch])
                        mdefstr="$cdefstr"

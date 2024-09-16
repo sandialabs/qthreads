@@ -82,33 +82,6 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   ucp->mc.mc_esp = (long)sp;
 }
 
-#elif defined(NEEDTILEMAKECONTEXT)
-/* This function is entirely copyright Sandia National Laboratories */
-void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
-  unsigned long *sp;
-  unsigned long *tos = ucp->uc_stack.ss_sp;
-  int i;
-  va_list arg;
-
-  tos += ucp->uc_stack.ss_size / sizeof(unsigned long);
-  tos -= 1;        // allow space for an incoming lr
-  sp = tos - argc; // allow space for arguments
-  sp = (void *)((unsigned long)sp -
-                (unsigned long)sp % 64); /* 64-align for Tilera */
-  /* now copy from my arg list to the function's arglist (yes, I know this is
-   * voodoo) */
-  // memmove(sp, &argc + 1, argc * sizeof(void*));
-  /* The function may also expect to pull args from up to nine registers */
-  va_start(arg, argc);
-  for (i = 0; i < argc; i++) {
-    if (i == 0) { ucp->mc.arg0 = va_arg(arg, unsigned long); }
-  }
-  ucp->mc.pc = (unsigned long)func;
-  ucp->mc.sp = (unsigned long)sp;
-  ucp->mc.first = 1;
-  va_end(arg);
-}
-
 #elif defined(NEEDARMMAKECONTEXT)
 /* This function is entirely copyright Sandia National Laboratories */
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
@@ -176,8 +149,7 @@ QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp) {
   Q_PREFETCH(ucp, 0, 0);
   if (getcontext(oucp) == 0) {
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                                \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                               \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64))
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64))
     Q_PREFETCH((void *)ucp->mc.mc_esp, 1, 3);
 #endif
     setcontext(ucp);
