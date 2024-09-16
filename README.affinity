@@ -4,7 +4,7 @@ machine, the better decisions can be made about affinity.
 
 The best-supported library is hwloc, which provides a full set of topology
 querying and thread- and memory-pinning functions on the widest variety of
-platforms, including Linux, BSD, HP-UX, and more. When using hwloc, the default
+platforms, including Linux, BSD, and more. When using hwloc, the default
 arrangement is to pin each worker thread to a PU (the lowest level
 computational processing unit), and to group them (for the Sherwood scheduler)
 by the top-level cache.
