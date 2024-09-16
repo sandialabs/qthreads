@@ -614,7 +614,6 @@ esac
 AS_IF([test "x$enable_hardware_atomics" != xno],
       [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
 QTHREAD_VAMACROS
-QTHREAD_CHECK_BITFIELDS
 
 QTHREAD_MALLOC_ATTRIBUTE
 QTHREAD_UNUSED_ATTRIBUTE
