@@ -616,7 +616,6 @@ case "$qthread_cv_c_compiler_type" in
       enable_native_tls=no
     ;;
 esac
-AX_TLS
 
 # Figure out whether the compiler has builtin atomic operations
 AS_IF([test "x$enable_hardware_atomics" != xno],
