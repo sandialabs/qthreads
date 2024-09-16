@@ -613,7 +613,6 @@ esac
 # Figure out whether the compiler has builtin atomic operations
 AS_IF([test "x$enable_hardware_atomics" != xno],
       [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
-QTHREAD_BUILTIN_EXPECT
 QTHREAD_BUILTIN_TRAP
 QTHREAD_VAMACROS
 QTHREAD_CHECK_BITFIELDS
