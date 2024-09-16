@@ -292,12 +292,12 @@ AC_ARG_ENABLE([64bit-alignment],
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
-                             interfaces include no, hwloc, hwloc_v2, binders, lgrp, libnuma,
+                             interfaces include no, hwloc, hwloc_v2, binders, libnuma,
                              libnumaV2, mach, plpa, and sys.])],
             [AS_IF([test "x$with_topology" = xyes],
                    [with_topology=none_specified])
              case "$with_topology" in
-                 hwloc|binders|hwloc_v2|lgrp|libnuma|libnumaV2|mach|no|plpa|sys) ;;
+                 hwloc|binders|hwloc_v2|libnuma|libnumaV2|mach|no|plpa|sys) ;;
                  none_specified) ;;
                  *)
                  AC_MSG_ERROR([Unsupported topology library ($with_topology)])
@@ -938,11 +938,6 @@ AS_IF([test "x$qthread_topo" != xno],
                                          [qthread_topo=hwloc])],
                                   [AS_IF([test "x$qthread_topo" != xno],
                                          [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # Second, check for the ones that will give me distance information
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlgrp],
-             [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp],
-                                    [AS_IF([test "x$qthread_topo" != xno],
-                                           [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlibnuma -o "x$qthread_topo" = xlibnumaV2],
              [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
                                     [qthread_topo=libnumaV2],

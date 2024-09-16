@@ -1379,11 +1379,7 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
   /* Several other libraries that do this reserve a few words on either end
    * of the stack for some reason. To avoid problems, I'll also do this (even
    * though I have no idea why they do this). */
-#ifdef INVERSE_STACK_POINTER
-  c->uc_stack.ss_sp = (char *)(stack) + stacksize - 8;
-#else
   c->uc_stack.ss_sp = (uint8_t *)(stack) + 8;
-#endif
   c->uc_stack.ss_size = stacksize - 64;
 #ifdef UCSTACK_HAS_SSFLAGS
   c->uc_stack.ss_flags = 0;
@@ -1395,17 +1391,9 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-#ifdef EXTRA_MAKECONTEXT_ARGC
-  makecontext(c, func, 3, high, low);
-#else
   makecontext(c, func, 2, high, low);
-#endif /* EXTRA_MAKECONTEXT_ARGC */
 #else  /* QTHREAD_MAKECONTEXT_SPLIT */
-#ifdef EXTRA_MAKECONTEXT_ARGC
-  makecontext(c, func, 2, arg);
-#else
   makecontext(c, func, 1, arg);
-#endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
   assert((void *)c->uc_link == (void *)returnc);
 #else  /* ifdef HAVE_NATIVE_MAKECONTEXT */

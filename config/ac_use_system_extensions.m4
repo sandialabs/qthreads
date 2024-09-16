@@ -69,10 +69,7 @@ AC_DEFUN([AC_USE_SYSTEM_EXTENSIONS],
   AC_REQUIRE([AC_MINIX])
 
   AH_VERBATIM([__EXTENSIONS__],
-[/* Enable extensions on Solaris.  */
-#ifndef __EXTENSIONS__
-# undef __EXTENSIONS__
-#endif
+[
 #ifndef _POSIX_PTHREAD_SEMANTICS
 # undef _POSIX_PTHREAD_SEMANTICS
 #endif
