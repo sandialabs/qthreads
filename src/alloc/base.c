@@ -39,12 +39,10 @@ void *qt_internal_aligned_alloc(size_t alloc_size, uint_fast16_t alignment) {
   assert(alloc_size > 0);
   switch (alignment) {
     case 0: ret = MALLOC(alloc_size); break;
-#if defined(HAVE_16ALIGNED_MALLOC)
     case 16:
     case 8:
     case 4:
     case 2: ret = MALLOC(alloc_size); break;
-#endif
     default:
 #if defined(HAVE_WORKING_VALLOC)
       if (alignment == pagesize) {
@@ -80,12 +78,10 @@ void qt_internal_aligned_free(void *ptr, uint_fast16_t alignment) {
   assert(ptr);
   switch (alignment) {
     case 0: qt_free(ptr); break;
-#if defined(HAVE_16ALIGNED_MALLOC)
     case 16:
     case 8:
     case 4:
     case 2: qt_free(ptr); break;
-#endif
     default:
 #if defined(HAVE_WORKING_VALLOC) || defined(HAVE_PAGE_ALIGNED_MALLOC)
       if (alignment == pagesize) {
