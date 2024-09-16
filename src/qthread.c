@@ -73,9 +73,6 @@
 #include "qt_syncvar.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
-#ifdef QTHREAD_MULTINODE
-#include "qt_multinode_innards.h"
-#endif
 #include "qt_alloc.h"
 #include "qt_teams.h"
 #ifdef QTHREAD_USE_EUREKAS
@@ -1343,12 +1340,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   qthread_debug(CORE_DETAILS, "calling component init functions\n");
   qt_barrier_internal_init();
-
-#ifdef QTHREAD_MULTINODE
-  if (NULL != qt_internal_get_env_str("MULTINODE", NULL)) {
-    qthread_multinode_initialize();
-  }
-#endif
 
   qthread_debug(CORE_DETAILS, "finished.\n");
   return QTHREAD_SUCCESS;

@@ -171,7 +171,6 @@ AC_ARG_ENABLE([debug],
                                io,
                                loops,
                                mpool,
-                               multinode,
                                qarray,
                                shepherd,
                                syncvars,
@@ -181,7 +180,7 @@ AC_ARG_ENABLE([debug],
                                threadqueues,
                                xomp])],
               [AS_IF([test "x$enable_debug" = "xyes"],
-                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,futurelib,xomp,multinode"])
+                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,futurelib,xomp"])
                for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
                      affinity) enable_debug_affinity=yes ;;
@@ -200,7 +199,6 @@ AC_ARG_ENABLE([debug],
                      qarray|qarrays) enable_debug_qarray=yes ;;
                      futurelib) enable_debug_futurelib=yes ;;
                      xomp) enable_debug_xomp=yes ;;
-                     multinode) enable_debug_multinode=yes ;;
                      *) AC_MSG_ERROR([Unrecognized debug category ($area).]) ;;
                  esac
                done],
@@ -382,10 +380,6 @@ AC_ARG_WITH([cacheline-width],
                              runtime.])],
             [],
             [with_cacheline_width=256])
-
-AC_ARG_ENABLE([multinode],
-          [AS_HELP_STRING([--enable-multinode],
-                              [Enable experimental support for multi-node qthreads applications])])
 
 AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
 AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
@@ -860,8 +854,6 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
                       [QTHREAD_DEBUG_FUTURELIB], [prints out futurelib debugging information at runtime])
        QT_COND_DEFINE([$enable_debug_xomp],
                       [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_multinode],
-                      [QTHREAD_DEBUG_MULTINODE], [prints out multinode debugging information at runtime])
        ])
 
 AS_IF([test "x$enable_hardware_timer" != "xno"],
@@ -953,16 +945,6 @@ AS_IF([test "x$qthread_topo" != xno],
                                   [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        ])
 
-AS_IF([test "x$enable_multinode" = "xyes"], 
-      [AC_DEFINE([QTHREAD_MULTINODE], [1], [Defined if multinode support desired])
-       QTHREAD_CHECK_PORTALS4([], [AC_MSG_ERROR([Could not find Portals 4 library])])
-       CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS $portals4_runtime_CPPFLAGS"
-       LDFLAGS="$LDFLAGS $portals4_LDFLAGS $portals4_runtime_LDFLAGS"
-       LIBS="$LIBS $portals4_LIBS $portals4_runtime_LIBS"
-      ])
-
-
-
 AS_IF([test "x$enable_lf_febs" == "xyes"],
       [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
       [enable_lf_febs=no])
@@ -993,7 +975,6 @@ AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
-AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([QTHREAD_PERFORMANCE], [test "$enable_performance_monitoring" = "yes"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
@@ -1016,7 +997,6 @@ AC_CONFIG_FILES([Makefile
                  test/utils/rng/Makefile
                  test/basics/Makefile
                  test/features/Makefile
-                 test/multinode/Makefile
                  test/stress/Makefile
                  test/benchmarks/Makefile
                  test/benchmarks/mantevo/Makefile
@@ -1045,13 +1025,9 @@ case "$qthread_cv_stack_size" in
         2096)    stack_string="2kB" ;;
         *)       stack_string="${qthread_cv_stack_size} bytes" ;;
 esac
-AS_IF([test "x$enable_multinode" = "xyes"],
-      [multinode_string="$enable_multinode, $with_multinode_runtime"],
-      [multinode_string="no"])
 echo ""
 echo    "System Characteristics:"
 echo    "       Target Style: $qthread_implementation"
-echo    "         Multi-node: $multinode_string"
 echo    "       Topology API: ${qthread_topo:-none}"
 echo    "        Qtimer type: ${qthread_timer_type:-none}"
 echo    "     Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"

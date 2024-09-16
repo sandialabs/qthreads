@@ -40,12 +40,6 @@ nodist_pkginclude_HEADERS = \
 noinst_HEADERS = \
 	omp_defines.h
 
-if COMPILE_MULTINODE
-pkginclude_HEADERS += \
-	multinode.h \
-	spr.h
-endif
-
 # ensure that this happens after the rest of the uninstall is done
 uninstall-hook:
 	test -d "$(pkgincludedir)" && rmdir $(pkgincludedir) || true

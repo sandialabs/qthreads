@@ -6,7 +6,6 @@
 EXTRA_DIST = \
 			 README.md \
 			 README.affinity \
-			 README.multinode \
 			 README.performance-monitoring.md \
 			 SCHEDULING \
 			 TODO.md \
@@ -36,9 +35,6 @@ featuretests: core
 
 stresstests: core
 	$(MAKE) -C test stresstests
-
-multinodetests: core
-	$(MAKE) -C test multinodetests
 
 buildtests: tests
 
