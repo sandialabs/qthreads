@@ -71,11 +71,12 @@
 /* Last resort, if no function name macros can be found */
 #undef __FUNCTION__
 
-/* Define to the equivalent of the C99 'restrict' keyword, or to
-   nothing if this is not supported.  Do not define if restrict is
-   supported directly.  */
-#ifndef restrict
-#undef restrict
+#ifdef __cplusplus
+#ifdef __GNUC__
+#define restrict __restrict
+#else
+#define restrict
+#endif
 #endif
 
 /* If __builtin_trap can be used */

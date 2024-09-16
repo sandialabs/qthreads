@@ -591,7 +591,6 @@ AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xIntel"],
 
 AC_C_CONST
 AC_C_INLINE
-AX_C_RESTRICT
 AC_C_VOLATILE
 AS_IF([test "x$enable_third_party_benchmarks" = xyes],
       [AX_OPENMP([have_openmp=yes], [have_openmp=no])
