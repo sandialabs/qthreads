@@ -237,14 +237,13 @@ test_varargs (const char *format, ...)
 ]],
 dnl Try
 dnl GCC		-std=gnu99 (unused restrictive modes: -std=c99 -std=iso9899:1999)
-dnl AIX		-qlanglvl=extc99 (unused restrictive mode: -qlanglvl=stdc99)
 dnl Intel ICC	-c99
 dnl IRIX	-c99
 dnl Solaris	(unused because it causes the compiler to assume C99 semantics for
 dnl		library functions, and this is invalid before Solaris 10: -xc99)
 dnl Tru64	-c99
 dnl with extended modes being tried first.
-[[-std=gnu99 -c99 -qlanglvl=extc99]], [$1], [$2])[]dnl
+[[-std=gnu99 -c99]], [$1], [$2])[]dnl
 ])# _AC_PROG_CC_C99
 
 # AC_PROG_CC_C99
