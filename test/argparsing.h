@@ -101,8 +101,6 @@ static ARGP_Atomic(int) verbose;
 #if defined(SILENT_ARGPARSING)
 #warning Silencing iprintf() output.
 #define iprintf(...)
-#elif defined(__tile__) || defined(__CYGWIN32__)
-#define iprintf printf
 #else
 static void iprintf(char const *restrict format, ...) {
   if (atomic_load_explicit(&verbose, memory_order_relaxed)) {
@@ -115,7 +113,7 @@ static void iprintf(char const *restrict format, ...) {
   }
 }
 
-#endif // if defined(__tile__) || defined(__CYGWIN32__)
+#endif // if defined(__CYGWIN32__)
 
 #endif // ifndef TEST_ARGPARSING_H
 /* vim:set expandtab: */

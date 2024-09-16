@@ -10,11 +10,6 @@ AC_REQUIRE([QTHREAD_DETECT_COMPILER_TYPE])
 AC_ARG_ENABLE([builtin-atomics],
      [AS_HELP_STRING([--disable-builtin-atomics],
 	                 [force the use of inline-assembly (if possible) rather than compiler-builtins for atomics. This is useful for working around some compiler bugs; normally, it's preferable to use compiler builtins.])])
-AS_IF([test "x$enable_builtin_atomics" != xno],
-      [AS_IF([test "x$qthread_cv_c_compiler_type" = xIBM_XL -o "x$qthread_cv_cxx_compiler_type" = xIBM_XL],
-		     [AS_IF([test "x$enable_builtin_atomics" = xyes],
-				    [AC_MSG_WARN([Disabling builtin atomics on IBM_XL, due to compiler design decision])])
-			  enable_builtin_atomics=no])])
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS-32],
   [qthread_cv_atomic_CAS32],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[

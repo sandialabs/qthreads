@@ -48,21 +48,7 @@
   do { COMPILER_FENCE; } while (0)
 #endif // ifdef QTHREAD_OVERSUBSCRIPTION
 
-#if defined(__tile__)
-#include <tmc/sync.h>
-#define QTHREAD_FASTLOCK_ATTRVAR
-#define QTHREAD_FASTLOCK_SETUP()                                               \
-  do {                                                                         \
-  } while (0)
-#define QTHREAD_FASTLOCK_INIT(x) tmc_sync_mutex_init(&(x))
-#define QTHREAD_FASTLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
-#define QTHREAD_FASTLOCK_LOCK(x) tmc_sync_mutex_lock((x))
-#define QTHREAD_FASTLOCK_UNLOCK(x) tmc_sync_mutex_unlock((x))
-#define QTHREAD_FASTLOCK_DESTROY(x)
-#define QTHREAD_FASTLOCK_DESTROY_PTR(x)
-#define QTHREAD_FASTLOCK_TYPE tmc_sync_mutex_t
-#define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
-#elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
+#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 #define QTHREAD_FASTLOCK_SETUP()                                               \
   do {                                                                         \
   } while (0)
@@ -144,18 +130,6 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 // Trylock declarations
 
-#if defined(__tile__)
-#include <tmc/sync.h>
-#define QTHREAD_TRYLOCK_INIT(x) tmc_sync_mutex_init(&(x))
-#define QTHREAD_TRYLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
-#define QTHREAD_TRYLOCK_LOCK(x) tmc_sync_mutex_lock((x))
-#define QTHREAD_TRYLOCK_TRY(x) (tmc_sync_mutex_trylock((x)) == 0)
-#define QTHREAD_TRYLOCK_UNLOCK(x) tmc_sync_mutex_unlock((x))
-#define QTHREAD_TRYLOCK_DESTROY(x)
-#define QTHREAD_TRYLOCK_DESTROY_PTR(x)
-#define QTHREAD_TRYLOCK_TYPE tmc_sync_mutex_t
-#define QTHREAD_TRYLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
-
 /* For the followimg implementation of try-locks,
  * it is necessary that qthread_incr() be defined on
  * haligned_t types. This requirement is satisfied when
@@ -163,7 +137,7 @@ extern pthread_mutexattr_t _fastlock_attr;
  * whether it is satisfied in some circumstances when
  * !defined(QTHREAD_ATOMIC_INCR).
  */
-#elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK &&               \
+#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK &&               \
   defined(QTHREAD_ATOMIC_INCR) && !defined(QTHREAD_MUTEX_INCREMENT)
 
 #define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
@@ -234,7 +208,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 #define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
 #define QTHREAD_TRYLOCK_TRY(x) (pthread_mutex_trylock((x)) == 0)
 
-#endif // if defined(__tile__)
+#endif
 
 #include <pthread.h>
 #define QTHREAD_COND_DECL(c)                                                   \
@@ -434,19 +408,10 @@ qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
    * instantiates cmpxchg for 8-byte registers, and IA32 never has 64-bit
    * pointers
    */
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && defined(__PGI)
-  __asm__ __volatile__("lock; cmpxchg %1,(%2)\n\t"
-                       "mov %%rax,(%0)" ::"r"(&retval),
-                       "r"(newv),
-                       "r"(ptr),
-                       "a"(oldv) /* load into RAX */
-                       : "cc", "memory");
-#else
   __asm__ __volatile__("lock; cmpxchg %1,(%2)"
                        : "=a"(retval)                   /* store from RAX */
                        : "r"(newv), "r"(ptr), "a"(oldv) /* load into RAX */
                        : "cc", "memory");
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && defined(__PGI) */
   return retval;
 
 #else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
