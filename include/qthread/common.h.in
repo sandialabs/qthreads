@@ -72,9 +72,6 @@
 /* if the compiler supports __attribute__((unused)) */
 #undef Q_UNUSED
 
-/* Last resort, if no function name macros can be found */
-#undef __FUNCTION__
-
 #ifdef __cplusplus
 #ifdef __GNUC__
 #define restrict __restrict
