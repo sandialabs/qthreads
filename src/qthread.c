@@ -538,7 +538,7 @@ static void *qthread_master(void *arg) {
                 QTHREAD_REAL_MCCOY));
 
       assert(t->f != NULL ||
-             atoic_load_explicit(&t->flags, memory_order_relaxed) &
+             atomic_load_explicit(&t->flags, memory_order_relaxed) &
                QTHREAD_REAL_MCCOY);
       if (t->rdata == NULL) {
         alloc_rdata(me, t);
