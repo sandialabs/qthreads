@@ -621,7 +621,6 @@ QTHREAD_UNUSED_ATTRIBUTE
 QTHREAD_ALIGNED_ATTRIBUTE
 QTHREAD_NOINLINE_ATTRIBUTE
 QTHREAD_DEPRECATED_ATTRIBUTE
-QTHREAD_BUILTIN_PREFETCH
 QTHREAD_BUILTIN_SYNCHRONIZE
 
 AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
