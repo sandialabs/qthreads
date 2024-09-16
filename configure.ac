@@ -869,8 +869,6 @@ int main() {
        AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
              [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
        AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
-             [QTHREAD_CHECK_ALTIX_TIMER([qthread_timer_type=altix])])
-       AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
              [AC_SEARCH_LIBS([clock_gettime],[rt],
                              [qthread_timer_type=clock_gettime
                               break])])
@@ -966,7 +964,6 @@ AM_CONDITIONAL([QTHREAD_NEED_OWN_MAKECONTEXT], [test "x$qthread_makecontext_type
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xclock_gettime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
-AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
