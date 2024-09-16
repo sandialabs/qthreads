@@ -77,25 +77,6 @@ __attribute__((noinline)) void * f(int i)
  AS_IF([test "x$qt_cv_noinline_attr" = xyes], [$1], [$2])
 ])
 
-AC_DEFUN([QTHREAD_DEPRECATED_ATTRIBUTE],[dnl
-AC_CACHE_CHECK(
- [support for __attribute__((deprecated))],
- [qt_cv_deprecated_attr],
- [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-#include <stdlib.h>
-void * __attribute__((deprecated)) f (int i);
-void * __attribute__((deprecated)) f (int i)
-{ return malloc(i); }]])],
- [qt_cv_deprecated_attr=yes],
- [qt_cv_deprecated_attr=no])])
- AS_IF([test "x$qt_cv_deprecated_attr" = xyes],
- 	   [defstr="__attribute__((deprecated))"],
-	   [defstr=""])
- AC_DEFINE_UNQUOTED([Q_DEPRECATED], [$defstr],
-		   [if the compiler supports __attribute__((deprecated))])
- AS_IF([test "x$qt_cv_deprecated_attr" = xyes], [$1], [$2])
-])
-
 AC_DEFUN([QTHREAD_BUILTIN_PREFETCH],[dnl
 AC_CACHE_CHECK(
  [support for __builtin_prefetch],
