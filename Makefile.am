@@ -8,7 +8,6 @@
 # want them distributed in case someone with AC 2.59 wants to run autoreconf
 EXTRA_DIST = \
 			 config/ac_prog_cc_c99.m4 \
-			 config/ac_use_system_extensions.m4 \
 			 README.md \
 			 README.affinity \
 			 README.multinode \
