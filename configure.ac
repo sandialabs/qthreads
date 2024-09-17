@@ -549,8 +549,6 @@ AC_HEADER_TIME
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h unistd.h sys/syscall.h])
 AC_SYS_LARGEFILE
 
-QTHREAD_CHECK_FUNCTION
-
 AC_CACHE_SAVE
 
 ## -------------------- ##
@@ -616,7 +614,6 @@ QTHREAD_VAMACROS
 
 QTHREAD_MALLOC_ATTRIBUTE
 QTHREAD_NOINLINE_ATTRIBUTE
-QTHREAD_DEPRECATED_ATTRIBUTE
 QTHREAD_BUILTIN_SYNCHRONIZE
 
 AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
