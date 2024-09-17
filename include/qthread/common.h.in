@@ -60,9 +60,6 @@
 /* builtin incr supported */
 #undef QTHREAD_ATOMIC_INCR
 
-/* if the compiler supports __attribute__((malloc)) */
-#undef Q_MALLOC
-
 #ifdef __cplusplus
 #ifdef __GNUC__
 #define restrict __restrict

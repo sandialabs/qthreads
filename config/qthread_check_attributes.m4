@@ -3,25 +3,6 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-AC_DEFUN([QTHREAD_MALLOC_ATTRIBUTE],[dnl
-AC_CACHE_CHECK(
- [support for __attribute__((malloc))],
- [qt_cv_malloc_attr],
- [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-#include <stdlib.h>
-__attribute__((malloc)) void * f(int i);
-__attribute__((malloc)) void * f(int i)
-{ return malloc(i); }]])],
- [qt_cv_malloc_attr=yes],
- [qt_cv_malloc_attr=no])])
- AS_IF([test "x$qt_cv_malloc_attr" = xyes],
- 	   [defstr="__attribute__((malloc))"],
-	   [defstr=""])
- AC_DEFINE_UNQUOTED([Q_MALLOC], [$defstr],
-		   [if the compiler supports __attribute__((malloc))])
- AS_IF([test "x$qt_cv_malloc_attr" = xyes], [$1], [$2])
-])
-
 AC_DEFUN([QTHREAD_NOINLINE_ATTRIBUTE],[dnl
 AC_CACHE_CHECK(
  [support for __attribute__((noinline))],
