@@ -65,13 +65,11 @@
 #endif
 #endif
 
-/* If __builtin_trap can be used */
-#undef QTHREAD_TRAP_OKAY
-
-#ifdef QTHREAD_TRAP_OKAY
-# define QTHREAD_TRAP() __builtin_trap()
+#ifdef __GNUC__
+#define QTHREAD_TRAP() __builtin_trap()
 #else
-# define QTHREAD_TRAP() *(volatile int *)0 = 0
+#include "signal.h"
+#define QTHREAD_TRAP() raise(SIGABRT)
 #endif
 
 /* Architecture defines */
