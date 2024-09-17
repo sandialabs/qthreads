@@ -489,7 +489,6 @@ AS_IF([test "x$enable_internal_spinlock" != xno],
       [AC_CHECK_FUNCS([pthread_spin_init],
                       [have_pthread_spinlocks=yes],
                       [have_pthread_spinlocks=no])])
-QTHREAD_PTHREAD_PROCESS_PRIVATE
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
