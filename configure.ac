@@ -586,7 +586,6 @@ AS_IF([test "x$enable_hardware_atomics" != xno],
       [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
 QTHREAD_VAMACROS
 
-QTHREAD_NOINLINE_ATTRIBUTE
 QTHREAD_BUILTIN_SYNCHRONIZE
 
 AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],

@@ -3,25 +3,6 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-AC_DEFUN([QTHREAD_NOINLINE_ATTRIBUTE],[dnl
-AC_CACHE_CHECK(
- [support for __attribute__((noinline))],
- [qt_cv_noinline_attr],
- [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-#include <stdlib.h>
-__attribute__((noinline)) void * f(int i);
-__attribute__((noinline)) void * f(int i)
-{ return malloc(i); }]])],
- [qt_cv_noinline_attr=yes],
- [qt_cv_noinline_attr=no])])
- AS_IF([test "x$qt_cv_noinline_attr" = xyes],
- 	   [defstr="__attribute__((noinline))"],
-	   [defstr=""])
- AC_DEFINE_UNQUOTED([Q_NOINLINE], [$defstr],
-		   [if the compiler supports __attribute__((NOINLINE))])
- AS_IF([test "x$qt_cv_noinline_attr" = xyes], [$1], [$2])
-])
-
 AC_DEFUN([QTHREAD_BUILTIN_SYNCHRONIZE],[dnl
 AC_REQUIRE([QTHREAD_CHECK_ASSEMBLY])
 AC_CACHE_CHECK([support for __sync_synchronize],
