@@ -102,11 +102,20 @@ Q_STARTCXX /* */
  * FEB locking only works on aligned addresses.
  * On all supported platforms sizeof(aligned_t) == alignof(aligned_t)
  * anyway so we're fine. */
-#if QTHREAD_SIZEOF_ALIGNED_T == 4
+
+#if UINTPTR_MAX == UINT32_MAX
+#define QTHREAD_BITS 32
+#elif UINTPTR_MAX == UINT64_MAX
+#define QTHREAD_BITS 64
+#else
+#error Unrecognized bit-ness
+#endif
+
+#if QTHREAD_BITS == 32
 typedef uint32_t aligned_t;
 typedef uint16_t haligned_t;
 typedef int32_t saligned_t;
-#elif QTHREAD_SIZEOF_ALIGNED_T == 8
+#elif QTHREAD_BITS == 64
 typedef uint64_t aligned_t;
 typedef uint32_t haligned_t;
 typedef int64_t saligned_t;

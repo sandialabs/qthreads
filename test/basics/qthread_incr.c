@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   assert(master == 150);
   iprintf("30 concurrent threads successfully incremented by 5\n");
 
-#if (QTHREAD_SIZEOF_ALIGNED_T == 8)
+#if (QTHREAD_BITS == 64)
   master = 0xFFFFFFFF;
   qthread_incr(&master, 1);
   if (master != 0x100000000ULL) {
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     assert(master == 0x100000000);
   }
   iprintf("64-bit add appears to work\n");
-#endif /* if (QTHREAD_SIZEOF_ALIGNED_T == 8) */
+#endif
 
   return 0;
 }

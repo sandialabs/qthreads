@@ -478,7 +478,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
   unsigned int const max QTHREAD_OPTIONAL_LOCKARG) { /*{{{ */
   aligned_t retval;
 
-#if QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 4)
+#if QTHREAD_ATOMIC_CAS && (QTHREAD_BITS == 32)
   uint32_t oldval, newval;
 
   newval = *operand;
@@ -489,7 +489,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
 
     newval = __sync_val_compare_and_swap((uint32_t *)operand, oldval, newval);
   } while (oldval != newval);
-#elif QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 8)
+#elif QTHREAD_ATOMIC_CAS && (QTHREAD_BITS == 64)
   uint64_t oldval, newval;
 
   newval = *operand;
@@ -503,7 +503,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
 #elif defined(HAVE_GCC_INLINE_ASSEMBLY)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                            \
   ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                             \
-   (QTHREAD_SIZEOF_ALIGNED_T == 4))
+   (QTHREAD_BITS == 32))
 
   unsigned int incrd = incrd; /* these don't need to be initialized */
   unsigned int compd = compd; /* they're just tmp variables */
@@ -547,9 +547,9 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
                : "cc", "memory");
 
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) &&                              \
-       (QTHREAD_SIZEOF_ALIGNED_T == 4)) ||                                     \
+       (QTHREAD_BITS == 32)) ||                                     \
   ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) &&                                 \
-   (QTHREAD_SIZEOF_ALIGNED_T == 4))
+   (QTHREAD_BITS == 32))
 
   unsigned int oldval, newval;
 
@@ -622,11 +622,11 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
 
 #else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                    \
          ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                      \
-         (QTHREAD_SIZEOF_ALIGNED_T == 4)) */
+         (QTHREAD_BITS == 32)) */
 #error "Unimplemented assembly architecture"
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                   \
           ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                     \
-          (QTHREAD_SIZEOF_ALIGNED_T == 4)) */
+          (QTHREAD_BITS == 32)) */
 
 #elif defined(QTHREAD_MUTEX_INCREMENT)
   QTHREAD_FASTLOCK_LOCK(lock);

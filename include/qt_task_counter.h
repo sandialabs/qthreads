@@ -3,12 +3,12 @@
 
 #include <qthread/qthread.h>
 
-#if QTHREAD_SIZEOF_ALIGNED_T == 4
+#if QTHREAD_BITS == 32
 
 #define QT_TCOUNT_OFFSET (31)
 #define QT_TCOUNT_BASE (1u)
 
-#elif QTHREAD_SIZEOF_ALIGNED_T == 8
+#elif QTHREAD_BITS == 64
 
 #define QT_TCOUNT_OFFSET (63)
 #define QT_TCOUNT_BASE (1ul)

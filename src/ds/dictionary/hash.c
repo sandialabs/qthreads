@@ -105,7 +105,7 @@ uint64_t API_FUNC qt_hash64(uint64_t key) { /*{{{*/
 #endif /* if (SIZEOF_VOIDP == 8) */
 } /*}}}*/
 
-#if (QTHREAD_SIZEOF_ALIGNED_T == 4)
+#if (QTHREAD_BITS == 32)
 #define mix(a, b, c)                                                           \
   do {                                                                         \
     a -= b;                                                                    \
@@ -136,7 +136,7 @@ uint64_t API_FUNC qt_hash64(uint64_t key) { /*{{{*/
     c -= b;                                                                    \
     c ^= (b >> 15);                                                            \
   } while (0)
-#else /* QTHREAD_SIZEOF_ALIGNED_T == 8 */
+#else /* QTHREAD_BITS == 64 */
 #define mix(a, b, c)                                                           \
   do {                                                                         \
     a -= b;                                                                    \

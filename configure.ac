@@ -476,32 +476,6 @@ AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_TYPE_PID_T
 
-AC_CHECK_SIZEOF([int])
-AC_CHECK_SIZEOF([void*])
-
-# Default behavior:
-#   sizeof(aligned_t)    = 8 (unless POWERPC32, then 4)
-#   alignment(aligned_t) = 8 (unless POWERPC32, then 4)
-# If user specified 64bit aligned_t:
-#   sizeof(aligned_t)    = 8 (or should this be sizeof(long)?)
-#   alignment(aligned_t) = 8
-# else if user forbids 64bit aligned_t:
-#   sizeof(aligned_t)    = sizeof(int)
-#   alignment(aligned_t) = sizeof(int)
-# If user specified 64bit alignment:
-#   alignment(aligned_t) = 8
-AS_IF([test "x$qthread_cv_asm_arch" = "xPOWERPC32"],
-      [sizeof_aligned_t=4
-       align_aligned_t=4],
-      [sizeof_aligned_t=8
-       align_aligned_t=8])
-AS_IF([test "x$enable_64bit_aligned_t" = "xyes"], [sizeof_aligned_t="8"
-                                                   align_aligned_t="8"])
-AS_IF([test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_sizeof_int"
-                                                   align_aligned_t="$ac_cv_sizeof_int"])
-
-AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
-
 AC_CACHE_SAVE
 
 ## -------------------- ##
