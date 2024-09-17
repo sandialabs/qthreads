@@ -42,9 +42,6 @@
 /* The size of `void*', as computed by sizeof. */
 #undef SIZEOF_VOIDP
 
-/* alignment of aligned_t */
-#undef QTHREAD_ALIGNMENT_ALIGNED_T
-
 /* size of aligned_t */
 #undef QTHREAD_SIZEOF_ALIGNED_T
 
@@ -62,9 +59,6 @@
 
 /* builtin incr supported */
 #undef QTHREAD_ATOMIC_INCR
-
-/* specifying data alignment is allowed */
-#undef QTHREAD_ALIGNEDDATA_ALLOWED
 
 /* if the compiler supports __attribute__((malloc)) */
 #undef Q_MALLOC

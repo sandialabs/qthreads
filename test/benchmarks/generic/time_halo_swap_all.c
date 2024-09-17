@@ -75,7 +75,7 @@ static char *pos_strs[16] = {"NW",
                              "NWES"};
 
 typedef struct partition_s {
-  Q_ALIGNED(8) position_t pos;    // Position of this partition in matrix
+  alignas(8) position_t pos;    // Position of this partition in matrix
   size_t row;                     // Row index in partition matrix
   size_t col;                     // Col index in partition matrix
   size_t nrows;                   // Number of rows in this partition
@@ -256,8 +256,8 @@ typedef struct upx_args_s {
   syncvar_t ***stages;
   size_t now;
   size_t timestep;
-  Q_ALIGNED(8) position_t dir;
-  Q_ALIGNED(8) position_t pos;
+  alignas(8) position_t dir;
+  alignas(8) position_t pos;
   size_t num_rows;
   size_t num_cols;
   size_t part_lid;
@@ -667,7 +667,7 @@ num_cols, arg->part_lid};
 typedef struct sb_args_s {
   syncvar_t ***target;
   syncvar_t ***source;
-  Q_ALIGNED(8) position_t dir;
+  alignas(8) position_t dir;
   size_t stage;
   size_t timestep;
   size_t lb;

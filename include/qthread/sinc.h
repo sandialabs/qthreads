@@ -1,14 +1,18 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
+
+#include <stdalign.h>
+
 #include "macros.h"
+#include "qthread.h"
 
 Q_STARTCXX /* */
 
   typedef void (*qt_sinc_op_f)(void *tgt, void const *src);
 
 typedef struct qt_opaque_sinc_s {
-  uint8_t opaque_data[24];
-} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) qt_sinc_t;
+  alignas(QTHREAD_ALIGNMENT_ALIGNED_T) uint8_t opaque_data[24];
+} qt_sinc_t;
 
 void qt_sinc_init(qt_sinc_t *restrict sinc,
                   size_t sizeof_value,

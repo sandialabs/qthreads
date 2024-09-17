@@ -58,10 +58,10 @@ typedef struct {
    * guaranteed accurate (that would be a race condition) */
   saligned_t nemesis_advisory_queuelen;
   uint8_t pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t)];
-} NEMESIS_queue Q_ALIGNED(CACHELINE_WIDTH);
+} NEMESIS_queue;
 
 struct _qt_threadqueue {
-  NEMESIS_queue q;
+  alignas(CACHELINE_WIDTH) NEMESIS_queue q;
   /* the following is for estimating a queue's "busy" level, and is not
    * guaranteed accurate (that would be a race condition) */
   saligned_t advisory_queuelen;

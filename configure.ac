@@ -501,7 +501,6 @@ AS_IF([test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_size
                                                    align_aligned_t="$ac_cv_sizeof_int"])
 
 AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
-AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment of aligned_t])
 
 AC_CACHE_SAVE
 
@@ -616,7 +615,6 @@ AS_IF([test "x$enable_hardware_atomics" != xno],
 QTHREAD_VAMACROS
 
 QTHREAD_MALLOC_ATTRIBUTE
-QTHREAD_ALIGNED_ATTRIBUTE
 QTHREAD_NOINLINE_ATTRIBUTE
 QTHREAD_DEPRECATED_ATTRIBUTE
 QTHREAD_BUILTIN_SYNCHRONIZE
