@@ -251,19 +251,10 @@ extern enum qthread_debug_levels debuglevel;
 
 extern QTHREAD_FASTLOCK_TYPE output_lock;
 
-#ifdef HAVE_GNU_VAMACROS
-#define qthread_debug(level, format, args...)                                  \
-  qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
-
-static QINLINE void qthread_debug_(int level, char const *format, ...)
-#elif defined(HAVE_C99_VAMACROS)
 #define qthread_debug(level, format, ...)                                      \
   qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 static QINLINE void qthread_debug_(int level, char const *format, ...)
-#else
-static QINLINE void qthread_debug(int level, char const *format, ...)
-#endif // ifdef HAVE_GNU_VAMACROS
 {      /*{{{ */
   va_list args;
 
