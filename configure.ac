@@ -620,7 +620,6 @@ AS_IF([test "x$enable_setrlimit" = "xyes"],
                       [AC_DEFINE([NEED_RLIMIT], [1], [Whether the library should use get/set rlimit functions])],
                       [AC_MSG_ERROR([setrlimit() calls enabled, but function is unavailable])])])
 AC_CHECK_FUNCS([strtol memalign posix_memalign memset memmove munmap memcpy fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl syscall])
-QTHREAD_CHECK_QSORT
 AC_CHECK_DECLS([MADV_ACCESS_LWP],[],[],[[#include <sys/types.h>
 #include <sys/mman.h>]])
 
