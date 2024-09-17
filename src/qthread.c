@@ -339,7 +339,7 @@ int API_FUNC qthread_debuglevel(int d) {
 }
 
 #else
-int API_FUNC qthread_debuglevel(int Q_UNUSED d) { return 0; }
+int API_FUNC qthread_debuglevel(int Q_UNUSED(d)) { return 0; }
 
 #endif /* ifdef QTHREAD_DEBUG */
 

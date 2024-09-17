@@ -76,7 +76,7 @@ static void qt_blocking_subsystem_internal_freemem(void) { /*{{{*/
   QTHREAD_DESTROYCOND(&theQueue.notempty);
 } /*}}}*/
 
-static void *qt_blocking_subsystem_proxy_thread(void *QUNUSED(arg)) { /*{{{*/
+static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) { /*{{{*/
   while (!atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
     if (qt_process_blocking_call()) { break; }
     COMPILER_FENCE;

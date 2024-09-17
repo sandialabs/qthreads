@@ -40,24 +40,6 @@ __attribute__((malloc)) void * f(int i)
  AS_IF([test "x$qt_cv_malloc_attr" = xyes], [$1], [$2])
 ])
 
-AC_DEFUN([QTHREAD_UNUSED_ATTRIBUTE],[dnl
-AC_CACHE_CHECK(
- [support for __attribute__((unused))],
- [qt_cv_unused_attr],
- [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-static __attribute__((unused))
-int f(int i) { return i; }]])],
- [qt_cv_unused_attr=yes],
- [qt_cv_unused_attr=no])])
- AS_IF([test "x$qt_cv_unused_attr" = xyes],
- 	   [unusedstr="__attribute__((unused))"
-	    AC_DEFINE([HAVE_UNUSED], [1], [compiler understands __attribute__((unused))])],
-	   [unusedstr=""])
- AC_DEFINE_UNQUOTED([Q_UNUSED], [$unusedstr],
-		   [most gcc compilers know a function __attribute__((unused))])
- AS_IF([test "x$qt_cv_unused_attr" = xyes], [$1], [$2])
-])
-
 AC_DEFUN([QTHREAD_NOINLINE_ATTRIBUTE],[dnl
 AC_CACHE_CHECK(
  [support for __attribute__((noinline))],

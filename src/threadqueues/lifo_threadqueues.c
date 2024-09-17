@@ -230,8 +230,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 
 qthread_t INTERNAL *
 qt_scheduler_get_thread(qt_threadqueue_t *q,
-                        qt_threadqueue_private_t *QUNUSED(qc),
-                        uint_fast8_t QUNUSED(active)) { /*{{{*/
+                        qt_threadqueue_private_t *Q_UNUSED(qc),
+                        uint_fast8_t Q_UNUSED(active)) { /*{{{*/
 #ifdef QTHREAD_USE_EUREKAS
   qt_eureka_disable();
 #endif /* QTHREAD_USE_EUREKAS */

@@ -69,9 +69,6 @@
 /* if the compiler supports __attribute__((malloc)) */
 #undef Q_MALLOC
 
-/* if the compiler supports __attribute__((unused)) */
-#undef Q_UNUSED
-
 #ifdef __cplusplus
 #ifdef __GNUC__
 #define restrict __restrict

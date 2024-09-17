@@ -17,6 +17,7 @@
 #include "qt_barrier.h"
 #include "qt_debug.h"
 #include "qt_initialized.h" // for qthread_library_initialized
+#include "qt_macros.h"
 #include "qt_mpool.h"
 #include "qt_subsystems.h"
 #include "qt_visibility.h"

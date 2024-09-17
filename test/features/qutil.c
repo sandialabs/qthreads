@@ -19,11 +19,6 @@
  * This file tests the qutil functions
  *
  */
-static Q_UNUSED int dcmp(void const *a, void const *b) {
-  if ((*(double *)a) < (*(double *)b)) { return -1; }
-  if ((*(double *)a) > (*(double *)b)) { return 1; }
-  return 0;
-}
 
 aligned_t *ui_array;
 aligned_t ui_out, ui_sum_authoritative = 0, ui_mult_authoritative = 1,
@@ -177,7 +172,6 @@ static aligned_t qmain(void *junk) {
   // printf("[qutil] sorting...\n");
   gettimeofday(&start, NULL);
   qutil_qsort(d_array, d_len);
-  // qsort(d_array, d_len, sizeof(double), dcmp);
   gettimeofday(&stop, NULL);
   iprintf("done sorting, checking correctness...\n");
   for (i = 0; i < d_len - 1; i++) {

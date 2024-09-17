@@ -750,7 +750,7 @@ void API_FUNC qt_loopaccum_balance_dc(size_t const start,
  * are disabled.
  */
 
-static Q_UNUSED QINLINE int qqloop_get_iterations_guided(
+static int qqloop_get_iterations_guided(
   qqloop_iteration_queue_t *restrict const iq,
   struct qqloop_static_args *restrict const sa,
   struct qqloop_wrapper_range *restrict const range) { /*{{{ */

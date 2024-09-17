@@ -5,10 +5,10 @@
 #include <config.h>
 #endif
 
-#ifdef HAVE_UNUSED
-#define QUNUSED(x) UNUSED_##x __attribute__((unused))
+#ifdef __GNUC__
+#define Q_UNUSED(x) __attribute__((unused)) x
 #else
-#define QUNUSED(x) UNUSED_##x
+#define Q_UNUSED(x) x
 #endif
 
 #ifdef TLS

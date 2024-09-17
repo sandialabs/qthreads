@@ -6,6 +6,7 @@
 #include <qthread/qthread.h>
 
 #include "qt_asserts.h"
+#include "qt_macros.h"
 
 #include <stdio.h>  /* for printf */
 #include <stdlib.h> /* for malloc() */
@@ -145,7 +146,7 @@ struct qt_ap_gargs2 {
 
 static void qt_ap_genwork2(size_t const startat,
                            size_t const stopat,
-                           qarray *Q_UNUSED a,
+                           qarray *Q_UNUSED(a),
                            void *gargs_void) {
   struct qt_ap_gargs2 *gargs = (struct qt_ap_gargs2 *)gargs_void;
   struct qt_ap_workunit *workunit = MALLOC(sizeof(struct qt_ap_workunit));
@@ -199,7 +200,7 @@ static void qt_ap_genwork2(size_t const startat,
 
 static void qt_ap_genwork(size_t const startat,
                           size_t const stopat,
-                          qarray *restrict const Q_UNUSED a,
+                          qarray *restrict const Q_UNUSED(a),
                           void *restrict gargs_void) {
   struct qt_ap_gargs *gargs = (struct qt_ap_gargs *)gargs_void;
   struct qt_ap_gargs2 garg2 = {gargs->wq, startat, stopat, qthread_shep()};
