@@ -87,12 +87,8 @@ endif
 
 EXTRA_DIST += \
 			 threadqueues/distrib_threadqueues.c \
-			 threadqueues/lifo_threadqueues.c \
 			 threadqueues/nemesis_threadqueues.c \
-			 threadqueues/mutexfifo_threadqueues.c \
-			 threadqueues/mtsfifo_threadqueues.c \
 			 threadqueues/sherwood_threadqueues.c \
-			 threadqueues/nottingham_threadqueues.c \
 			 sincs/donecount.c \
 			 sincs/donecount_cas.c \
 			 sincs/original.c \

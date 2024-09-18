@@ -335,10 +335,9 @@ AC_ARG_ENABLE([third-party-benchmarks],
 AC_ARG_WITH([scheduler],
             [AS_HELP_STRING([--with-scheduler=[[type]]],
                             [Specify the scheduler. Options when using
-                             single-threaded shepherds are: nemesis (default),
-                             lifo, mdlifo, mutexfifo, and mtsfifo. Options 
-                             when using multi-threaded shepherds are: sherwood 
-                             (default), distrib and nottingham. Details on 
+                             single-threaded shepherds are: nemesis (default).
+                             Options when using multi-threaded shepherds are:
+                             sherwood (default), and distrib. Details on 
                              these options are in the SCHEDULING file.])])
 
 AC_ARG_WITH([sinc],
@@ -670,17 +669,8 @@ AS_IF([test "x$with_scheduler" != "x"],
          default)
            [with_scheduler="sherwood"]
            ;;
-         sherwood|nemesis|lifo|mutexfifo|mtsfifo|distrib)
+         sherwood|nemesis|distrib)
            # all valid options that require no additional configuration
-           ;;
-         mdlifo)
-           [with_scheduler=lifo]
-           [using_mdlifo=yes]
-           AC_DEFINE([QTHREAD_LIFO_MULTI_DEQUEUER], [1], [Enable multiple-dequeuer support for lifo scheduler])
-           ;;
-         nottingham)
-           AS_IF([test "x$qthread_cv_atomic_CAS128" != "xyes"],
-                 [AC_MSG_ERROR([The $with_scheduler scheduler requires a 128-bit CAS.])])
            ;;
          *)
            AC_MSG_ERROR([Unknown scheduler option])
