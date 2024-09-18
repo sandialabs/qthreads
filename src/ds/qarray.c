@@ -317,9 +317,6 @@ static qarray *qarray_create_internal(size_t const count,
       break;
   }
   if (ret->base_ptr == NULL) {
-#ifdef QTHREAD_HAVE_LIBNUMA
-    numa_error("allocating qarray body");
-#endif
   }
 #else  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
   /* For speed, we want page-aligned memory, if we can get it */

@@ -12,10 +12,6 @@
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
-#if defined(QTHREAD_HAVE_LIBNUMA)
-#define QTHREAD_HAVE_MEM_AFFINITY
-#endif
-
 #if defined(QTHREAD_HAVE_HWLOC) && (HWLOC_API_VERSION > 0x00010000)
 #define QTHREAD_HAVE_MEM_AFFINITY
 #endif

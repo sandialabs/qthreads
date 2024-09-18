@@ -582,7 +582,6 @@ esac
 # Figure out whether the compiler has builtin atomic operations
 AS_IF([test "x$enable_hardware_atomics" != xno],
       [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
-QTHREAD_VAMACROS
 
 QTHREAD_BUILTIN_SYNCHRONIZE
 
@@ -866,30 +865,11 @@ AS_IF([test "x$qthread_topo" != xno],
       [AS_IF([test "x$qthread_topo" = "xnone_specified"],
              [qthread_topo=no])
        # First, check for hwloc, since it gives me the most portable/flexible/reliable/detailed information.
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xbinders -o "x$qthread_topo" = xhwloc -o "x$qthread_topo" = xhwloc_v2],
-             [QTHREAD_CHECK_HWLOC([AS_IF([test "x$qthread_topo" != xhwloc -a "x$qthread_topo" != xhwloc_v2 -a "x$qthread_topo" != xbinders],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xbinders -o "x$qthread_topo" = xhwloc],
+             [QTHREAD_CHECK_HWLOC([AS_IF([test "x$qthread_topo" != xhwloc -a "x$qthread_topo" != xbinders],
                                          [qthread_topo=hwloc])],
                                   [AS_IF([test "x$qthread_topo" != xno],
                                          [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlibnuma -o "x$qthread_topo" = xlibnumaV2],
-             [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
-                                    [qthread_topo=libnumaV2],
-                                    [AS_IF([test "x$qthread_topo" != xno],
-                                           [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # Third, check any others.
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xmach],
-             [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],
-                                     [AS_IF([test "x$qthread_topo" != xno],
-                                            [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # PLPA is deprecated in favor of hwloc
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xplpa],
-             [QTHREAD_CHECK_PLPA([qthread_topo=plpa],
-                                 [AS_IF([test "x$qthread_topo" != xno],
-                                        [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xsys],
-             [QTHREAD_CHECK_LINUX([qthread_topo=sys],
-                           [AS_IF([test "x$qthread_topo" = xsys],
-                                  [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        ])
 
 AS_IF([test "x$enable_lf_febs" == "xyes"],
