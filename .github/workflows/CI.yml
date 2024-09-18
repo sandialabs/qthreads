@@ -29,6 +29,7 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
+        make tests -j2
     - name: make check
       run: timeout -k 10s --foreground 3m make check
       timeout-minutes: 4
@@ -80,6 +81,7 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
+        make tests -j2
     - name: make check
       run: timeout -k 10s --foreground 6m make check
       timeout-minutes: 7
@@ -117,6 +119,7 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
         make -j2
+        make tests -j2
     - name: make check
       run: |
         source /opt/intel/oneapi/setvars.sh
@@ -157,6 +160,7 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
         make -j2
+        make tests -j2
     - name: make check
       run: |
         source /opt/intel/oneapi/setvars.sh
@@ -193,6 +197,7 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
         make -j2
+        make tests -j2
     - name: make check
       run: |
         timeout -k 10s --foreground 6m make check
@@ -225,9 +230,9 @@ jobs:
         ./autogen.sh
         ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j3
+        make tests -j3
     - name: make check
       run: |
-        make tests -j3
         # commented example for how to get a backtrace from CI usign lldb on OSX:
         #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
         #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
@@ -273,6 +278,7 @@ jobs:
         ./autogen.sh
         ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
+        make tests -j2
     - name: make check
       run: timeout -k 10s --foreground 8m make check
       timeout-minutes: 9
@@ -316,6 +322,7 @@ jobs:
         ./autogen.sh
         ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j2
+        make tests -j2
     - name: make check
       run: timeout -k 10s --foreground 6m make check
       timeout-minutes: 7

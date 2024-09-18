@@ -40,8 +40,8 @@ osx_m1_task:
     ./autogen.sh
     ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
-  test_script: |
     make tests -j$CIRRUS_CPU
+  test_script: |
     # commented example for how to get a backtrace from CI usign lldb on OSX:
     #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
     #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
@@ -66,6 +66,7 @@ freebsd_task:
     bash autogen.sh
     bash configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
     make -j$CIRRUS_CPU
+    make tests -j$CIRRUS_CPU
   test_script: |
     gtimeout --foreground -k 10s 2m make check
 
@@ -109,6 +110,7 @@ arm_linux_task:
     ./autogen.sh
     ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
+    make tests -j$CIRRUS_CPU
   test_script: |
     timeout --foreground -k 10s 2m make check
 
@@ -164,6 +166,7 @@ arm_linux_clang_task:
     ./autogen.sh
     ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
     make -j$CIRRUS_CPU
+    make tests -j$CIRRUS_CPU
   test_script: |
     timeout --foreground -k 10s 2m make check
 
