@@ -226,7 +226,12 @@ jobs:
         ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
         make -j3
     - name: make check
-      run: gtimeout -k 10s --foreground 8m make check
+      run: |
+        make tests -j3
+        # commented example for how to get a backtrace from CI usign lldb on OSX:
+        #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
+        #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
+        gtimeout -k 10s --foreground 8m make check
       timeout-minutes: 9
 
   sanitizers:
