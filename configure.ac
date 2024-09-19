@@ -6,7 +6,7 @@
 ## --------------------- ##
 ## Autoconf Requirements ##
 ## --------------------- ##
-AC_PREREQ(2.59)
+AC_PREREQ(2.71)
 
 ## ---------------------------------- ##
 ## Autoconf / Automake Initialization ##
