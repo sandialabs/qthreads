@@ -39,9 +39,6 @@
 #define BITFIELD_ORDER_FORWARD
 #endif
 
-/* The size of `void*', as computed by sizeof. */
-#undef SIZEOF_VOIDP
-
 /* builtin cas supported */
 #undef QTHREAD_ATOMIC_CAS
 

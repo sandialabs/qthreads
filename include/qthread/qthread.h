@@ -1344,11 +1344,11 @@ static QINLINE aligned_t qthread_cas_xx(aligned_t *addr,
 
 static QINLINE void *
 qthread_cas_ptr_(void **addr, void *oldval, void *newval) { /*{{{*/
-#if (SIZEOF_VOIDP == 4)
+#if (QTHREAD_BITS == 32)
   return (void *)(uintptr_t)qthread_cas32(
     (uint32_t *)addr, (uint32_t)(uintptr_t)oldval, (uint32_t)(uintptr_t)newval);
 
-#elif (SIZEOF_VOIDP == 8)
+#elif (QTHREAD_BITS == 64)
   return (void *)(uintptr_t)qthread_cas64(
     (uint64_t *)addr, (uint64_t)(uintptr_t)oldval, (uint64_t)(uintptr_t)newval);
 

@@ -19,7 +19,7 @@ uint64_t API_FUNC qt_hash64(uint64_t key) { /*{{{*/
     uint8_t b[sizeof(uint64_t)];
   } k = {key};
 
-#if (SIZEOF_VOIDP == 8) /* i.e. a 64-bit machine */
+#if (QTHREAD_BITS == 64)
   uint64_t a, b, c;
 
   a = b = 0x9e3779b97f4a7c13LL; // the golden ratio
@@ -72,37 +72,37 @@ uint64_t API_FUNC qt_hash64(uint64_t key) { /*{{{*/
   c = c ^ (b >> 22u);
   return c;
 
-#else  /* i.e. a 32-bit machine */
+#else
   uint32_t a, b, c;
 
   a = b = 0x9e3779b9; // golden ratio
   c = 0xdeadbeef + sizeof(uint64_t);
 
-  b += k.b[7] << 24;
-  b += k.b[6] << 16;
-  b += k.b[5] << 8;
+  b += k.b[7] << 24u;
+  b += k.b[6] << 16u;
+  b += k.b[5] << 8u;
   b += k.b[4];
-  a += k.b[3] << 24;
-  a += k.b[2] << 16;
-  a += k.b[1] << 8;
+  a += k.b[3] << 24u;
+  a += k.b[2] << 16u;
+  a += k.b[1] << 8u;
   a += k.b[0];
 
   c ^= b;
-  c -= rot(b, 14);
+  c -= rot(b, 14u);
   a ^= c;
-  a -= rot(c, 11);
+  a -= rot(c, 11u);
   b ^= a;
-  b -= rot(a, 25);
+  b -= rot(a, 25u);
   c ^= b;
-  c -= rot(b, 16);
+  c -= rot(b, 16u);
   a ^= c;
-  a -= rot(c, 4);
+  a -= rot(c, 4u);
   b ^= a;
-  b -= rot(a, 14);
+  b -= rot(a, 14u);
   c ^= b;
-  c -= rot(b, 24);
+  c -= rot(b, 24u);
   return ((uint64_t)c + (((uint64_t)b) << 32));
-#endif /* if (SIZEOF_VOIDP == 8) */
+#endif /* if (QTHREAD_BITS == 64) */
 } /*}}}*/
 
 #if (QTHREAD_BITS == 32)
