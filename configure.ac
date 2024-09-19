@@ -18,7 +18,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
 
-AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.7 ])
+AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.16 ])
 AM_SILENT_RULES([yes])
 
 # clean some extra things...
