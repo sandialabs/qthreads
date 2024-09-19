@@ -39,7 +39,6 @@ CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
 AC_CANONICAL_HOST
-AC_PROG_SED
 AC_PATH_PROG([timelimit_path],[timelimit])
 
 ## ----------------- ##
@@ -172,7 +171,6 @@ AC_ARG_ENABLE([debug],
                                io,
                                loops,
                                mpool,
-                               multinode,
                                qarray,
                                shepherd,
                                syncvars,
@@ -182,7 +180,7 @@ AC_ARG_ENABLE([debug],
                                threadqueues,
                                xomp])],
               [AS_IF([test "x$enable_debug" = "xyes"],
-                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,futurelib,xomp,multinode"])
+                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,futurelib,xomp"])
                for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
                      affinity) enable_debug_affinity=yes ;;
@@ -201,7 +199,6 @@ AC_ARG_ENABLE([debug],
                      qarray|qarrays) enable_debug_qarray=yes ;;
                      futurelib) enable_debug_futurelib=yes ;;
                      xomp) enable_debug_xomp=yes ;;
-                     multinode) enable_debug_multinode=yes ;;
                      *) AC_MSG_ERROR([Unrecognized debug category ($area).]) ;;
                  esac
                done],
@@ -293,12 +290,12 @@ AC_ARG_ENABLE([64bit-alignment],
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
-                             interfaces include no, hwloc, hwloc_v2, binders, lgrp, libnuma,
+                             interfaces include no, hwloc, hwloc_v2, binders, libnuma,
                              libnumaV2, mach, plpa, and sys.])],
             [AS_IF([test "x$with_topology" = xyes],
                    [with_topology=none_specified])
              case "$with_topology" in
-                 hwloc|binders|hwloc_v2|lgrp|libnuma|libnumaV2|mach|no|plpa|sys) ;;
+                 hwloc|binders|hwloc_v2|libnuma|libnumaV2|mach|no|plpa|sys) ;;
                  none_specified) ;;
                  *)
                  AC_MSG_ERROR([Unsupported topology library ($with_topology)])
@@ -383,10 +380,6 @@ AC_ARG_WITH([cacheline-width],
                              runtime.])],
             [],
             [with_cacheline_width=256])
-
-AC_ARG_ENABLE([multinode],
-          [AS_HELP_STRING([--enable-multinode],
-                              [Enable experimental support for multi-node qthreads applications])])
 
 AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
 AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
@@ -483,33 +476,6 @@ AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 AC_TYPE_PID_T
 
-AC_CHECK_SIZEOF([int])
-AC_CHECK_SIZEOF([void*])
-
-# Default behavior:
-#   sizeof(aligned_t)    = 8 (unless POWERPC32, then 4)
-#   alignment(aligned_t) = 8 (unless POWERPC32, then 4)
-# If user specified 64bit aligned_t:
-#   sizeof(aligned_t)    = 8 (or should this be sizeof(long)?)
-#   alignment(aligned_t) = 8
-# else if user forbids 64bit aligned_t:
-#   sizeof(aligned_t)    = sizeof(int)
-#   alignment(aligned_t) = sizeof(int)
-# If user specified 64bit alignment:
-#   alignment(aligned_t) = 8
-AS_IF([test "x$qthread_cv_asm_arch" = "xPOWERPC32"],
-      [sizeof_aligned_t=4
-       align_aligned_t=4],
-      [sizeof_aligned_t=8
-       align_aligned_t=8])
-AS_IF([test "x$enable_64bit_aligned_t" = "xyes"], [sizeof_aligned_t="8"
-                                                   align_aligned_t="8"])
-AS_IF([test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_sizeof_int"
-                                                   align_aligned_t="$ac_cv_sizeof_int"])
-
-AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
-AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment of aligned_t])
-
 AC_CACHE_SAVE
 
 ## -------------------- ##
@@ -523,7 +489,6 @@ AS_IF([test "x$enable_internal_spinlock" != xno],
       [AC_CHECK_FUNCS([pthread_spin_init],
                       [have_pthread_spinlocks=yes],
                       [have_pthread_spinlocks=no])])
-QTHREAD_PTHREAD_PROCESS_PRIVATE
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
@@ -556,8 +521,6 @@ AC_HEADER_SYS_WAIT
 AC_HEADER_TIME
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h unistd.h sys/syscall.h])
 AC_SYS_LARGEFILE
-
-QTHREAD_CHECK_FUNCTION
 
 AC_CACHE_SAVE
 
@@ -592,7 +555,6 @@ AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xIntel"],
 
 AC_C_CONST
 AC_C_INLINE
-AX_C_RESTRICT
 AC_C_VOLATILE
 AS_IF([test "x$enable_third_party_benchmarks" = xyes],
       [AX_OPENMP([have_openmp=yes], [have_openmp=no])
@@ -617,22 +579,12 @@ case "$qthread_cv_c_compiler_type" in
       enable_native_tls=no
     ;;
 esac
-AX_TLS
 
 # Figure out whether the compiler has builtin atomic operations
 AS_IF([test "x$enable_hardware_atomics" != xno],
       [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
-QTHREAD_BUILTIN_EXPECT
-QTHREAD_BUILTIN_TRAP
 QTHREAD_VAMACROS
-QTHREAD_CHECK_BITFIELDS
 
-QTHREAD_MALLOC_ATTRIBUTE
-QTHREAD_UNUSED_ATTRIBUTE
-QTHREAD_ALIGNED_ATTRIBUTE
-QTHREAD_NOINLINE_ATTRIBUTE
-QTHREAD_DEPRECATED_ATTRIBUTE
-QTHREAD_BUILTIN_PREFETCH
 QTHREAD_BUILTIN_SYNCHRONIZE
 
 AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
@@ -668,14 +620,8 @@ AS_IF([test "x$enable_setrlimit" = "xyes"],
                       [AC_DEFINE([NEED_RLIMIT], [1], [Whether the library should use get/set rlimit functions])],
                       [AC_MSG_ERROR([setrlimit() calls enabled, but function is unavailable])])])
 AC_CHECK_FUNCS([strtol memalign posix_memalign memset memmove munmap memcpy fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl syscall])
-QTHREAD_CHECK_QSORT
 AC_CHECK_DECLS([MADV_ACCESS_LWP],[],[],[[#include <sys/types.h>
 #include <sys/mman.h>]])
-AX_CHECK_PAGE_ALIGNED_MALLOC
-AX_CHECK_16ALIGNED_MALLOC
-AX_CHECK_16ALIGNED_CALLOC
-QTHREAD_CHECK_WORKING_VALLOC
-QTHREAD_CHECK_ASSERT([],[AC_MSG_ERROR([assert() does not seem to work])])
 
 AC_CACHE_SAVE
 
@@ -867,8 +813,6 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
                       [QTHREAD_DEBUG_FUTURELIB], [prints out futurelib debugging information at runtime])
        QT_COND_DEFINE([$enable_debug_xomp],
                       [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_multinode],
-                      [QTHREAD_DEBUG_MULTINODE], [prints out multinode debugging information at runtime])
        ])
 
 AS_IF([test "x$enable_hardware_timer" != "xno"],
@@ -885,8 +829,6 @@ int main() {
              [AC_CHECK_FUNC([mach_absolute_time], [qthread_timer_type=mach])])
        AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
              [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
-       AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
-             [QTHREAD_CHECK_ALTIX_TIMER([qthread_timer_type=altix])])
        AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
              [AC_SEARCH_LIBS([clock_gettime],[rt],
                              [qthread_timer_type=clock_gettime
@@ -939,11 +881,6 @@ AS_IF([test "x$qthread_topo" != xno],
                                          [qthread_topo=hwloc])],
                                   [AS_IF([test "x$qthread_topo" != xno],
                                          [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # Second, check for the ones that will give me distance information
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlgrp],
-             [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp],
-                                    [AS_IF([test "x$qthread_topo" != xno],
-                                           [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlibnuma -o "x$qthread_topo" = xlibnumaV2],
              [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
                                     [qthread_topo=libnumaV2],
@@ -964,16 +901,6 @@ AS_IF([test "x$qthread_topo" != xno],
                            [AS_IF([test "x$qthread_topo" = xsys],
                                   [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        ])
-
-AS_IF([test "x$enable_multinode" = "xyes"], 
-      [AC_DEFINE([QTHREAD_MULTINODE], [1], [Defined if multinode support desired])
-       QTHREAD_CHECK_PORTALS4([], [AC_MSG_ERROR([Could not find Portals 4 library])])
-       CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS $portals4_runtime_CPPFLAGS"
-       LDFLAGS="$LDFLAGS $portals4_LDFLAGS $portals4_runtime_LDFLAGS"
-       LIBS="$LIBS $portals4_LIBS $portals4_runtime_LIBS"
-      ])
-
-
 
 AS_IF([test "x$enable_lf_febs" == "xyes"],
       [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
@@ -998,14 +925,12 @@ AM_CONDITIONAL([QTHREAD_NEED_OWN_MAKECONTEXT], [test "x$qthread_makecontext_type
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xclock_gettime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
-AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
-AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([QTHREAD_PERFORMANCE], [test "$enable_performance_monitoring" = "yes"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
@@ -1028,7 +953,6 @@ AC_CONFIG_FILES([Makefile
                  test/utils/rng/Makefile
                  test/basics/Makefile
                  test/features/Makefile
-                 test/multinode/Makefile
                  test/stress/Makefile
                  test/benchmarks/Makefile
                  test/benchmarks/mantevo/Makefile
@@ -1057,13 +981,9 @@ case "$qthread_cv_stack_size" in
         2096)    stack_string="2kB" ;;
         *)       stack_string="${qthread_cv_stack_size} bytes" ;;
 esac
-AS_IF([test "x$enable_multinode" = "xyes"],
-      [multinode_string="$enable_multinode, $with_multinode_runtime"],
-      [multinode_string="no"])
 echo ""
 echo    "System Characteristics:"
 echo    "       Target Style: $qthread_implementation"
-echo    "         Multi-node: $multinode_string"
 echo    "       Topology API: ${qthread_topo:-none}"
 echo    "        Qtimer type: ${qthread_timer_type:-none}"
 echo    "     Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"

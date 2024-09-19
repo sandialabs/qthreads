@@ -92,7 +92,7 @@ struct qthread_s {
   _Atomic uint16_t flags; /* may not need all bits */
   _Atomic uint8_t thread_state;
 
-  Q_ALIGNED(8)
+  alignas(8)
   uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };
 

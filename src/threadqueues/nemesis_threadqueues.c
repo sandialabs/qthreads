@@ -58,10 +58,10 @@ typedef struct {
    * guaranteed accurate (that would be a race condition) */
   saligned_t nemesis_advisory_queuelen;
   uint8_t pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t)];
-} NEMESIS_queue Q_ALIGNED(CACHELINE_WIDTH);
+} NEMESIS_queue;
 
 struct _qt_threadqueue {
-  NEMESIS_queue q;
+  alignas(CACHELINE_WIDTH) NEMESIS_queue q;
   /* the following is for estimating a queue's "busy" level, and is not
    * guaranteed accurate (that would be a race condition) */
   saligned_t advisory_queuelen;
@@ -353,8 +353,8 @@ qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{ */
 
 qthread_t INTERNAL *
 qt_scheduler_get_thread(qt_threadqueue_t *q,
-                        qt_threadqueue_private_t *QUNUSED(qc),
-                        uint_fast8_t QUNUSED(active)) { /*{{{ */
+                        qt_threadqueue_private_t *Q_UNUSED(qc),
+                        uint_fast8_t Q_UNUSED(active)) { /*{{{ */
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
   int i;
 #endif /* QTHREAD_CONDWAIT_BLOCKING_QUEUE */

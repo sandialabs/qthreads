@@ -248,33 +248,13 @@ extern enum qthread_debug_levels debuglevel;
 #define XOMP_BEHAVIOR NO_DEBUG_OUTPUT
 #define XOMP_DETAILS NO_DEBUG_OUTPUT
 #endif
-#ifdef QTHREAD_DEBUG_MULTINODE
-#define MULTINODE_CALLS DEBUG_CALLS
-#define MULTINODE_FUNCTIONS DEBUG_FUNCTIONS
-#define MULTINODE_BEHAVIOR DEBUG_BEHAVIOR
-#define MULTINODE_DETAILS DEBUG_DETAILS
-#else
-#define MULTINODE_CALLS NO_DEBUG_OUTPUT
-#define MULTINODE_FUNCTIONS NO_DEBUG_OUTPUT
-#define MULTINODE_BEHAVIOR NO_DEBUG_OUTPUT
-#define MULTINODE_DETAILS NO_DEBUG_OUTPUT
-#endif
 
 extern QTHREAD_FASTLOCK_TYPE output_lock;
 
-#ifdef HAVE_GNU_VAMACROS
-#define qthread_debug(level, format, args...)                                  \
-  qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
-
-static QINLINE void qthread_debug_(int level, char const *format, ...)
-#elif defined(HAVE_C99_VAMACROS)
 #define qthread_debug(level, format, ...)                                      \
   qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 static QINLINE void qthread_debug_(int level, char const *format, ...)
-#else
-static QINLINE void qthread_debug(int level, char const *format, ...)
-#endif // ifdef HAVE_GNU_VAMACROS
 {      /*{{{ */
   va_list args;
 

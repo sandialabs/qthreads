@@ -29,20 +29,15 @@
 /* Allow functions to be inlined */
 #undef QINLINE
 
-/* Define if bitfields are in forward order */
-#undef BITFIELD_ORDER_FORWARD
-
-/* Define if bitfields are in reverse order */
-#undef BITFIELD_ORDER_REVERSE
-
-/* The size of `void*', as computed by sizeof. */
-#undef SIZEOF_VOIDP
-
-/* alignment of aligned_t */
-#undef QTHREAD_ALIGNMENT_ALIGNED_T
-
-/* size of aligned_t */
-#undef QTHREAD_SIZEOF_ALIGNED_T
+#ifndef __powerpc
+#define BITFIELD_ORDER_REVERSE
+#else
+// ARM processors can technically change modes between
+// big-endian and little-endian which also reverses the
+// bitfield order. The overwhelming majority of the time
+// they're run in little-endian mode though.
+#define BITFIELD_ORDER_FORWARD
+#endif
 
 /* builtin cas supported */
 #undef QTHREAD_ATOMIC_CAS
@@ -59,32 +54,19 @@
 /* builtin incr supported */
 #undef QTHREAD_ATOMIC_INCR
 
-/* specifying data alignment is allowed */
-#undef QTHREAD_ALIGNEDDATA_ALLOWED
-
-/* if the compiler supports __attribute__((malloc)) */
-#undef Q_MALLOC
-
-/* if the compiler supports __attribute__((unused)) */
-#undef Q_UNUSED
-
-/* Last resort, if no function name macros can be found */
-#undef __FUNCTION__
-
-/* Define to the equivalent of the C99 'restrict' keyword, or to
-   nothing if this is not supported.  Do not define if restrict is
-   supported directly.  */
-#ifndef restrict
-#undef restrict
+#ifdef __cplusplus
+#ifdef __GNUC__
+#define restrict __restrict
+#else
+#define restrict
+#endif
 #endif
 
-/* If __builtin_trap can be used */
-#undef QTHREAD_TRAP_OKAY
-
-#ifdef QTHREAD_TRAP_OKAY
-# define QTHREAD_TRAP() __builtin_trap()
+#ifdef __GNUC__
+#define QTHREAD_TRAP() __builtin_trap()
 #else
-# define QTHREAD_TRAP() *(volatile int *)0 = 0
+#include "signal.h"
+#define QTHREAD_TRAP() raise(SIGABRT)
 #endif
 
 /* Architecture defines */

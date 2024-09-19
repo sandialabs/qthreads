@@ -121,8 +121,6 @@ void qt_sinc_init(qt_sinc_t *restrict sinc_,
   assert(sizeof(qt_sinc_cache_count_t) <= cacheline);
   snzi->counts = qt_internal_aligned_alloc(num_sheps * cacheline, cacheline);
   assert(snzi->counts);
-  // memset(sinc->counts, 0, num_sheps * cacheline);
-  // memset(sinc->counts, 0, QTHREAD_SIZEOF_ALIGNED_T * num_sheps);
 
   // Initialize counts array
   if (expect > 0) {

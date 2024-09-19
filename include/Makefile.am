@@ -10,7 +10,6 @@ noinst_HEADERS = \
 	fastcontext/taskimpl.h \
 	fastcontext/power-ucontext.h \
 	fastcontext/386-ucontext.h \
-	net/net.h \
 	qthread_innards.h \
 	qloop_innards.h \
 	qt_asserts.h \
@@ -61,6 +60,3 @@ if COMPILE_EUREKAS
 noinst_HEADERS += qt_eurekas.h
 endif
 
-if COMPILE_MULTINODE
-noinst_HEADERS += qt_multinode_innards.h
-endif

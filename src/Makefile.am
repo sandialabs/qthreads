@@ -62,13 +62,6 @@ include ds/Makefile.inc
 include patterns/Makefile.inc
 include syscalls/Makefile.inc
 
-if COMPILE_MULTINODE
-libqthread_la_SOURCES += spr.c
-
-include net/Makefile.inc
-include net/portals4/Makefile.inc
-endif
-
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing
 #    functions change, increment this number)

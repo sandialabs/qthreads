@@ -178,7 +178,7 @@ qt_loop_spawner(size_t const start, size_t const stop, void *args_) { /*{{{*/
     syncvar_t *syncvar;
     aligned_t *aligned;
     qt_sinc_t *sinc;
-  } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) sync = {NULL};
+  } sync = {NULL};
 
   switch (sync_type) {
     case SYNCVAR_T:
@@ -347,7 +347,7 @@ static QINLINE void qt_loop_balance_inner(size_t const start,
     aligned_t *aligned;
     qt_sinc_t *sinc;
     aligned_t dc;
-  } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) sync = {NULL};
+  } sync = {NULL};
 
   switch (sync_type) {
     case SYNCVAR_T:
@@ -591,7 +591,7 @@ static QINLINE void qt_loopaccum_balance_inner(size_t const start,
     aligned_t *aligned;
     qt_sinc_t *sinc;
     aligned_t dc;
-  } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) sync = {NULL};
+  } sync = {NULL};
 
   switch (sync_type) {
     case SYNCVAR_T:
@@ -750,7 +750,7 @@ void API_FUNC qt_loopaccum_balance_dc(size_t const start,
  * are disabled.
  */
 
-static Q_UNUSED QINLINE int qqloop_get_iterations_guided(
+static int qqloop_get_iterations_guided(
   qqloop_iteration_queue_t *restrict const iq,
   struct qqloop_static_args *restrict const sa,
   struct qqloop_wrapper_range *restrict const range) { /*{{{ */

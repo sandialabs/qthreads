@@ -73,9 +73,6 @@
 #include "qt_syncvar.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
-#ifdef QTHREAD_MULTINODE
-#include "qt_multinode_innards.h"
-#endif
 #include "qt_alloc.h"
 #include "qt_teams.h"
 #ifdef QTHREAD_USE_EUREKAS
@@ -342,7 +339,7 @@ int API_FUNC qthread_debuglevel(int d) {
 }
 
 #else
-int API_FUNC qthread_debuglevel(int Q_UNUSED d) { return 0; }
+int API_FUNC qthread_debuglevel(int Q_UNUSED(d)) { return 0; }
 
 #endif /* ifdef QTHREAD_DEBUG */
 
@@ -541,7 +538,7 @@ static void *qthread_master(void *arg) {
                 QTHREAD_REAL_MCCOY));
 
       assert(t->f != NULL ||
-             atoic_load_explicit(&t->flags, memory_order_relaxed) &
+             atomic_load_explicit(&t->flags, memory_order_relaxed) &
                QTHREAD_REAL_MCCOY);
       if (t->rdata == NULL) {
         alloc_rdata(me, t);
@@ -1344,12 +1341,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   qthread_debug(CORE_DETAILS, "calling component init functions\n");
   qt_barrier_internal_init();
 
-#ifdef QTHREAD_MULTINODE
-  if (NULL != qt_internal_get_env_str("MULTINODE", NULL)) {
-    qthread_multinode_initialize();
-  }
-#endif
-
   qthread_debug(CORE_DETAILS, "finished.\n");
   return QTHREAD_SUCCESS;
 } /*}}} */
@@ -1379,11 +1370,7 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
   /* Several other libraries that do this reserve a few words on either end
    * of the stack for some reason. To avoid problems, I'll also do this (even
    * though I have no idea why they do this). */
-#ifdef INVERSE_STACK_POINTER
-  c->uc_stack.ss_sp = (char *)(stack) + stacksize - 8;
-#else
   c->uc_stack.ss_sp = (uint8_t *)(stack) + 8;
-#endif
   c->uc_stack.ss_size = stacksize - 64;
 #ifdef UCSTACK_HAS_SSFLAGS
   c->uc_stack.ss_flags = 0;
@@ -1395,17 +1382,9 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-#ifdef EXTRA_MAKECONTEXT_ARGC
-  makecontext(c, func, 3, high, low);
-#else
   makecontext(c, func, 2, high, low);
-#endif /* EXTRA_MAKECONTEXT_ARGC */
 #else  /* QTHREAD_MAKECONTEXT_SPLIT */
-#ifdef EXTRA_MAKECONTEXT_ARGC
-  makecontext(c, func, 2, arg);
-#else
   makecontext(c, func, 1, arg);
-#endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
   assert((void *)c->uc_link == (void *)returnc);
 #else  /* ifdef HAVE_NATIVE_MAKECONTEXT */

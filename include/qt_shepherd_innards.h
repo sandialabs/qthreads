@@ -1,6 +1,8 @@
 #ifndef QT_SHEPHERD_INNARDS_H
 #define QT_SHEPHERD_INNARDS_H
 
+#include <stdalign.h>
+
 #ifdef QTHREAD_PERFORMANCE
 #include <qthread/performance.h>
 #endif
@@ -53,7 +55,7 @@ struct qthread_worker_s {
 #ifdef QTHREAD_PERFORMANCE
   struct qtperfdata_s *performance_data;
 #endif
-  _Atomic Q_ALIGNED(8) uint_fast8_t active;
+  _Atomic alignas(8) uint_fast8_t active;
 };
 typedef struct qthread_worker_s qthread_worker_t;
 

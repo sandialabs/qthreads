@@ -91,10 +91,6 @@ using std::memory_order_relaxed;
 
 #include "macros.h"
 
-#ifdef QTHREAD_ALIGNEDDATA_ALLOWED
-#define Q_ALIGNED(x) __attribute__((aligned(x)))
-#endif
-
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
 #endif
@@ -103,19 +99,31 @@ Q_STARTCXX /* */
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on aligned_t-size segments of memory.
  *
- * FEB locking only works on aligned addresses. This is here to try and help a
- * little bit. */
-#if QTHREAD_SIZEOF_ALIGNED_T == 4
-  typedef uint32_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) aligned_t;
-typedef uint16_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T / 2) haligned_t;
-typedef int32_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
-#elif QTHREAD_SIZEOF_ALIGNED_T == 8
-  typedef uint64_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) aligned_t;
-typedef uint32_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T / 2) haligned_t;
-typedef int64_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
+ * FEB locking only works on aligned addresses.
+ * On all supported platforms sizeof(aligned_t) == alignof(aligned_t)
+ * anyway so we're fine. */
+
+#if UINTPTR_MAX == UINT32_MAX
+#define QTHREAD_BITS 32
+#elif UINTPTR_MAX == UINT64_MAX
+#define QTHREAD_BITS 64
+#else
+#error Unrecognized bit-ness
+#endif
+
+#if QTHREAD_BITS == 32
+typedef uint32_t aligned_t;
+typedef uint16_t haligned_t;
+typedef int32_t saligned_t;
+#elif QTHREAD_BITS == 64
+typedef uint64_t aligned_t;
+typedef uint32_t haligned_t;
+typedef int64_t saligned_t;
 #else
 #error "Don't know type for sizeof aligned_t"
 #endif
+
+#define QTHREAD_ALIGNMENT_ALIGNED_T (sizeof(aligned_t))
 
 #ifndef QTHREAD_NOALIGNCHECK
 #define QALIGN(d, s)                                                           \
@@ -511,7 +519,7 @@ typedef union qt_spin_trylock_s {
     haligned_t ticket;
     haligned_t users;
   } s;
-} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) qt_spin_trylock_t;
+} qt_spin_trylock_t;
 
 typedef struct {
   int64_t s;
@@ -1336,11 +1344,11 @@ static QINLINE aligned_t qthread_cas_xx(aligned_t *addr,
 
 static QINLINE void *
 qthread_cas_ptr_(void **addr, void *oldval, void *newval) { /*{{{*/
-#if (SIZEOF_VOIDP == 4)
+#if (QTHREAD_BITS == 32)
   return (void *)(uintptr_t)qthread_cas32(
     (uint32_t *)addr, (uint32_t)(uintptr_t)oldval, (uint32_t)(uintptr_t)newval);
 
-#elif (SIZEOF_VOIDP == 8)
+#elif (QTHREAD_BITS == 64)
   return (void *)(uintptr_t)qthread_cas64(
     (uint64_t *)addr, (uint64_t)(uintptr_t)oldval, (uint64_t)(uintptr_t)newval);
 

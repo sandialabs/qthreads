@@ -286,8 +286,8 @@ void qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 
 qthread_t INTERNAL *
 qt_scheduler_get_thread(qt_threadqueue_t *q,
-                        qt_threadqueue_private_t *QUNUSED(qc),
-                        uint_fast8_t QUNUSED(active)) { /*{{{ */
+                        qt_threadqueue_private_t *Q_UNUSED(qc),
+                        uint_fast8_t Q_UNUSED(active)) { /*{{{ */
   qthread_t *p = NULL;
 
   qt_threadqueue_node_t *head;

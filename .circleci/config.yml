@@ -25,6 +25,7 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> --with-topology=<< parameters.topology >>
           make -j2
+          make tests -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
           no_output_timeout: 60s
@@ -55,6 +56,7 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
+          make tests -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
           no_output_timeout: 60s
@@ -92,6 +94,7 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
+          make tests -j2
       - run:
           command: timeout --foreground -k 10s 4m make check
           no_output_timeout: 120s
@@ -127,6 +130,7 @@ jobs:
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
+          make tests -j2
       - run:
           command: |
               export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
@@ -152,6 +156,7 @@ jobs:
           bash autogen.sh
           bash configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
           make -j2
+          make tests -j2
       - run:
           command: make check
           no_output_timeout: 60s

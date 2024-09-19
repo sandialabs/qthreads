@@ -7,7 +7,7 @@
 
 Q_STARTCXX /* */
 
-#if (QTHREAD_SIZEOF_ALIGNED_T == 4)
+#if (QTHREAD_BITS == 32)
 #define GOLDEN_RATIO 0x9e3779b9
 #else
 #define GOLDEN_RATIO 0x9e3779b97f4a7c13LL

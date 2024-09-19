@@ -199,7 +199,7 @@ void INTERNAL qt_hash_destroy_deallocate(qt_hash h,
       }
     }
   }
-  assert(visited == atomic_load_explicit(&h->population));
+  assert(visited == atomic_load_explicit(&h->population, memory_order_relaxed));
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   qt_hash_destroy(h);
 } /*}}}*/

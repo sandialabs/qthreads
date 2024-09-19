@@ -112,11 +112,11 @@ qt_sinc_t *qt_sinc_create(size_t const sizeof_value,
          (!sinc->result && !sinc->initial_value));
 
   // Allocate counts array
-  size_t const sizeof_shep_counts = num_wps * QTHREAD_SIZEOF_ALIGNED_T;
+  size_t const sizeof_shep_counts = num_wps * sizeof(aligned_t);
   size_t const num_lines_per_shep =
     QT_CEIL_RATIO(sizeof_shep_counts, cacheline);
   size_t const sizeof_shep_count_part =
-    (num_lines_per_shep * cacheline) / QTHREAD_SIZEOF_ALIGNED_T;
+    (num_lines_per_shep * cacheline) / sizeof(aligned_t);
   size_t const num_count_array_lines = num_sheps * num_lines_per_shep;
 
   sinc->sizeof_shep_count_part = sizeof_shep_count_part;

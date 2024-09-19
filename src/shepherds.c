@@ -36,7 +36,6 @@ int API_FUNC qthread_shep_ok(void) { /*{{{ */
 
 void API_FUNC qthread_shep_next(qthread_shepherd_id_t *shep) { /*{{{*/
   assert(qthread_library_initialized);
-  /* This will mean something slightly different in a multinode world. */
   qthread_shepherd_id_t cur = *shep;
 
   assert(cur != NO_SHEPHERD);
@@ -47,7 +46,6 @@ void API_FUNC qthread_shep_next(qthread_shepherd_id_t *shep) { /*{{{*/
 
 void API_FUNC qthread_shep_prev(qthread_shepherd_id_t *shep) { /*{{{*/
   assert(qthread_library_initialized);
-  /* This will mean something slightly different in a multinode world. */
   qthread_shepherd_id_t cur = *shep;
 
   assert(cur != NO_SHEPHERD);
