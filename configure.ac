@@ -18,19 +18,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
 
-dnl Require at least AM 1.7.  Prior versions require AM_CONFIG_HEADER
-dnl and have no equivalent to AC_CONFIG_HEADERS (the plural version),
-dnl which is a pain.  AM 1.7 also added support for putting target
-dnl information in AM_CONDITIONAL blocks and using the += modifier.
-dnl ... removed "check-news" because of automatic version generation
-# Automake's silent rules were implemented in the same version that
-# color-tests was implemented, so we can use one to detect the other.
-# This nasty, dirty, unreliable trick is strongly discouraged by its author:
-# http://blog.flameeyes.eu/trackbacks?article_id=5155
-m4_ifdef([AM_SILENT_RULES],
-         [m4_define([qt_color_tests], [color-tests])],
-         [m4_define([qt_color_tests], [])])
-AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.7 ]qt_color_tests)
+AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.7 ])
 # If Automake supports silent rules, enable them (credit to Brian)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
