@@ -133,13 +133,13 @@ static void qthread_wrapper(unsigned int high, unsigned int low);
 static void qthread_wrapper(void *ptr);
 #endif
 
-static QINLINE void qthread_makecontext(qt_context_t *const c,
+static inline void qthread_makecontext(qt_context_t *const c,
                                         void *const stack,
                                         size_t const stacksize,
                                         void (*func)(void),
                                         void const *const arg,
                                         qt_context_t *const returnc);
-static QINLINE qthread_t *qthread_thread_new(qthread_f f,
+static inline qthread_t *qthread_thread_new(qthread_f f,
                                              void const *arg,
                                              size_t arg_size,
                                              void *ret,
@@ -175,7 +175,7 @@ qt_mpool generic_big_qthread_pool = NULL;
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
 #ifdef QTHREAD_GUARD_PAGES
-static QINLINE void *ALLOC_STACK(void) { /*{{{ */
+static inline void *ALLOC_STACK(void) { /*{{{ */
   if (GUARD_PAGES) {
     uint8_t *tmp = qt_internal_aligned_alloc(
       qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
@@ -203,7 +203,7 @@ static QINLINE void *ALLOC_STACK(void) { /*{{{ */
   }
 } /*}}} */
 
-static QINLINE void FREE_STACK(void *t) { /*{{{ */
+static inline void FREE_STACK(void *t) { /*{{{ */
   if (GUARD_PAGES) {
     uint8_t *tmp = t;
 
@@ -234,7 +234,7 @@ static QINLINE void FREE_STACK(void *t) { /*{{{ */
 #else /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 static qt_mpool generic_stack_pool = NULL;
 #ifdef QTHREAD_GUARD_PAGES
-static QINLINE void *ALLOC_STACK(void) { /*{{{ */
+static inline void *ALLOC_STACK(void) { /*{{{ */
   if (GUARD_PAGES) {
     uint8_t *tmp = qt_mpool_alloc(generic_stack_pool);
 
@@ -254,7 +254,7 @@ static QINLINE void *ALLOC_STACK(void) { /*{{{ */
   }
 } /*}}} */
 
-static QINLINE void FREE_STACK(void *t) { /*{{{ */
+static inline void FREE_STACK(void *t) { /*{{{ */
   if (GUARD_PAGES) {
     assert(t);
     t = (uint8_t *)t - getpagesize();
@@ -350,7 +350,7 @@ int qthread_library_initialized = 0;
 void *shep0arg = NULL;
 #endif
 
-static QINLINE void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
+static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
   void *stack = NULL;
   struct qthread_runtime_data_s *rdata;
 
@@ -1348,7 +1348,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
-static QINLINE void qthread_makecontext(qt_context_t *const c,
+static inline void qthread_makecontext(qt_context_t *const c,
                                         void *const stack,
                                         size_t const stacksize,
                                         void (*func)(void),
@@ -2130,7 +2130,7 @@ aligned_t API_FUNC *qthread_retloc(void) { /*{{{ */
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
-static QINLINE qthread_t *qthread_thread_new(qthread_f const f,
+static inline qthread_t *qthread_thread_new(qthread_f const f,
                                              void const *arg,
                                              size_t arg_size,
                                              void *ret,

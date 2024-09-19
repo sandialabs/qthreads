@@ -198,7 +198,7 @@ qt_threadqueue_pools_t generic_threadqueue_pools;
   (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
 #define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t)
 
-static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void) { /*{{{ */
+static inline qt_threadqueue_node_t *ALLOC_TQNODE(void) { /*{{{ */
   return (qt_threadqueue_node_t *)qt_mpool_alloc(
     generic_threadqueue_pools.nodes);
 } /*}}} */
@@ -244,7 +244,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 /* functions to manage the thread queues */
 /*****************************************/
 
-static QINLINE qt_threadqueue_node_t *
+static inline qt_threadqueue_node_t *
 qthread_steal(qthread_shepherd_t *thief_shepherd);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{*/
@@ -306,7 +306,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{*/
   FREE_THREADQUEUE(q);
 } /*}}}*/
 
-static QINLINE int qt_threadqueue_isstealable(qthread_t *t) { /*{{{*/
+static inline int qt_threadqueue_isstealable(qthread_t *t) { /*{{{*/
   return ((atomic_load_explicit(&t->flags, memory_order_relaxed) &
            QTHREAD_UNSTEALABLE) == 0)
            ? 1
@@ -1148,7 +1148,7 @@ qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
 /*  Steal work from another shepherd's queue
  *  Returns the work stolen
  */
-static QINLINE qt_threadqueue_node_t *
+static inline qt_threadqueue_node_t *
 qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
   qt_threadqueue_node_t *stolen = NULL;
 

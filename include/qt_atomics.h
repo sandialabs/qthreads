@@ -325,7 +325,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 #define QT_CAS_(var, oldv, newv, caslock)                                      \
   qt_cas((void **)&(var), (void *)(oldv), (void *)(newv), &(caslock))
 
-static QINLINE void *qt_cas(void **const ptr,
+static inline void *qt_cas(void **const ptr,
                             void *const oldv,
                             void *const newv,
                             QTHREAD_FASTLOCK_TYPE *lock) {
@@ -338,7 +338,7 @@ static QINLINE void *qt_cas(void **const ptr,
   return ret;
 }
 
-static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const ptr,
+static inline uintptr_t qt_cas_read_ui(uintptr_t *const ptr,
                                         QTHREAD_FASTLOCK_TYPE *mutex) {
   uintptr_t ret;
 
@@ -364,7 +364,7 @@ static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const ptr,
 #ifdef QTHREAD_ATOMIC_CAS_PTR
 #define qt_cas(P, O, N) (void *)__sync_val_compare_and_swap((P), (O), (N))
 #else
-static QINLINE void *
+static inline void *
 qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
@@ -437,7 +437,7 @@ qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
   qthread_internal_incr_mod_(op, m, lock)
 #define QTHREAD_OPTIONAL_LOCKARG , QTHREAD_FASTLOCK_TYPE *lock
 
-static QINLINE aligned_t qthread_internal_incr(aligned_t *operand,
+static inline aligned_t qthread_internal_incr(aligned_t *operand,
                                                QTHREAD_FASTLOCK_TYPE *lock,
                                                int val) { /*{{{ */
   aligned_t retval;
@@ -449,7 +449,7 @@ static QINLINE aligned_t qthread_internal_incr(aligned_t *operand,
   return retval;
 } /*}}} */
 
-static QINLINE saligned_t qthread_internal_incr_s(saligned_t *operand,
+static inline saligned_t qthread_internal_incr_s(saligned_t *operand,
                                                   QTHREAD_FASTLOCK_TYPE *lock,
                                                   int val) { /*{{{ */
   saligned_t retval;
@@ -461,7 +461,7 @@ static QINLINE saligned_t qthread_internal_incr_s(saligned_t *operand,
   return retval;
 } /*}}} */
 
-static QINLINE saligned_t qthread_internal_atomic_read_s(
+static inline saligned_t qthread_internal_atomic_read_s(
   saligned_t *operand, QTHREAD_FASTLOCK_TYPE *lock) { /*{{{ */
   saligned_t retval;
 
@@ -473,7 +473,7 @@ static QINLINE saligned_t qthread_internal_atomic_read_s(
 
 #endif /* ifndef QTHREAD_MUTEX_INCREMENT */
 
-static QINLINE aligned_t qthread_internal_incr_mod_(
+static inline aligned_t qthread_internal_incr_mod_(
   aligned_t *operand,
   unsigned int const max QTHREAD_OPTIONAL_LOCKARG) { /*{{{ */
   aligned_t retval;
@@ -651,7 +651,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
   return retval;
 } /*}}} */
 
-static QINLINE void *qt_internal_atomic_swap_ptr(void **addr,
+static inline void *qt_internal_atomic_swap_ptr(void **addr,
                                                  void *newval) { /*{{{*/
   void *oldval =
     atomic_load_explicit((void *_Atomic *)addr, memory_order_relaxed);

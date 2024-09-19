@@ -73,7 +73,7 @@
 #define QTHREAD_FEB_UNIQUERECORD2(TYPE, ADDR, SHEP)                            \
   qt_hash_put((SHEP)->unique##TYPE##addrs, (void *)(ADDR), (void *)(ADDR))
 
-static QINLINE void
+static inline void
 qthread_unique_collect(qt_key_t const key, void *value, void *id) { /*{{{*/
   qt_hash_put_locked((qt_hash)id, key, value);
 } /*}}}*/

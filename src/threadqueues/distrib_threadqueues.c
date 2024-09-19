@@ -100,18 +100,18 @@ static void free_threadqueue(qt_threadqueue_t *t) {
   qt_mpool_free(generic_threadqueue_pools.queues, t);
 }
 
-static QINLINE qt_threadqueue_node_t *alloc_tqnode(void) {
+static inline qt_threadqueue_node_t *alloc_tqnode(void) {
   return (qt_threadqueue_node_t *)qt_mpool_alloc(
     generic_threadqueue_pools.nodes);
 }
 
-static QINLINE void free_tqnode(qt_threadqueue_node_t *t) {
+static inline void free_tqnode(qt_threadqueue_node_t *t) {
   qt_mpool_free(generic_threadqueue_pools.nodes, t);
 }
 
 extern qt_mpool generic_qthread_pool;
 
-static QINLINE void free_qthread(qthread_t *t) {
+static inline void free_qthread(qthread_t *t) {
   return qt_mpool_free(generic_qthread_pool, t);
 }
 

@@ -31,15 +31,15 @@
 #endif /* QTHREAD_USE_EUREKAS */
 
 /* Internal Prototypes */
-static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
+static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
                                                  qthread_addrstat_t *m,
                                                  syncvar_t *maddr,
                                                  uint64_t const ret);
-static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
+static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
                                                   syncvar_t *maddr,
                                                   uint64_t const ret);
-static QINLINE void qthread_syncvar_remove(void *maddr);
+static inline void qthread_syncvar_remove(void *maddr);
 
 /* Internal Structs */
 typedef struct {
@@ -1018,7 +1018,7 @@ int API_FUNC qthread_syncvar_readFE_nb(uint64_t *restrict dest,
   return QTHREAD_SUCCESS;
 } /*}}} */
 
-static QINLINE void qthread_syncvar_schedule(qthread_t *waiter,
+static inline void qthread_syncvar_schedule(qthread_t *waiter,
                                              qthread_shepherd_t *shep) { /*{{{*/
   assert(waiter);
   assert(shep);
@@ -1037,7 +1037,7 @@ static QINLINE void qthread_syncvar_schedule(qthread_t *waiter,
   }
 } /*}}}*/
 
-static QINLINE void qthread_syncvar_remove(void *maddr) { /*{{{*/
+static inline void qthread_syncvar_remove(void *maddr) { /*{{{*/
   int const lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
   qthread_addrstat_t *m;
 
@@ -1114,7 +1114,7 @@ static QINLINE void qthread_syncvar_remove(void *maddr) { /*{{{*/
   }
 } /*}}}*/
 
-static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
+static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
                                                   syncvar_t *maddr,
                                                   uint64_t const sf) { /*{{{ */
@@ -1145,7 +1145,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
   if (removeable) { qthread_syncvar_remove(maddr); }
 } /*}}} */
 
-static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
+static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
                                                  qthread_addrstat_t *m,
                                                  syncvar_t *maddr,
                                                  uint64_t const ret) { /*{{{ */

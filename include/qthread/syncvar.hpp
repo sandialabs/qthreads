@@ -9,22 +9,22 @@ class syncvar;
 
 class syncvar {
 public:
-  QINLINE syncvar(void) noexcept {
+  inline syncvar(void) noexcept {
     // Doing it this way because extended initializers (e.g.
     // SYNCVAR_STATIC_INITIALIZER) are not (yet) supported by C++
     the_syncvar_t.u.w = 0;
   }
 
-  QINLINE syncvar(uint64_t const &val) noexcept {
+  inline syncvar(uint64_t const &val) noexcept {
     assert(!(val & 0xf000000000000000ull));
     the_syncvar_t.u.s.data = val;
   }
 
-  QINLINE syncvar(syncvar const &val) noexcept {
+  inline syncvar(syncvar const &val) noexcept {
     the_syncvar_t.u.w = val.the_syncvar_t.u.w;
   }
 
-  QINLINE syncvar(syncvar_t const &val) { the_syncvar_t.u.w = val.u.w; }
+  inline syncvar(syncvar_t const &val) { the_syncvar_t.u.w = val.u.w; }
 
   int empty(void) { return qthread_syncvar_empty(&the_syncvar_t); }
 

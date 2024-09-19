@@ -132,7 +132,7 @@ struct qthread_shepherd_s {
 
 extern TLS_DECL(qthread_shepherd_t *, shepherd_structs);
 
-static QINLINE qthread_shepherd_t *qthread_internal_getshep(void) {
+static inline qthread_shepherd_t *qthread_internal_getshep(void) {
   qthread_worker_t *w = (qthread_worker_t *)TLS_GET(shepherd_structs);
   if (w == NULL) {
     return NULL;
@@ -141,7 +141,7 @@ static QINLINE qthread_shepherd_t *qthread_internal_getshep(void) {
   }
 }
 
-static QINLINE qthread_worker_t *qthread_internal_getworker(void) {
+static inline qthread_worker_t *qthread_internal_getworker(void) {
   return (qthread_worker_t *)TLS_GET(shepherd_structs);
 }
 

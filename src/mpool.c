@@ -108,7 +108,7 @@ void INTERNAL qt_mpool_subsystem_init(void) {
 }
 
 /* local funcs */
-static QINLINE void *
+static inline void *
 qt_mpool_internal_aligned_alloc(size_t alloc_size, size_t alignment) { /*{{{ */
   void *ret = qt_internal_aligned_alloc(alloc_size, alignment);
 
@@ -116,7 +116,7 @@ qt_mpool_internal_aligned_alloc(size_t alloc_size, size_t alignment) { /*{{{ */
   return ret;
 } /*}}} */
 
-static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
+static inline void qt_mpool_internal_aligned_free(void *freeme,
                                                    size_t alignment) { /*{{{ */
   qt_internal_aligned_free(freeme, alignment);
 } /*}}} */

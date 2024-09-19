@@ -39,12 +39,6 @@ AC_ARG_ENABLE([debugging],
               [AS_HELP_STRING([--enable-debugging],
                               [turns off optimization and turns on debug flags])])
 
-AC_ARG_ENABLE([inlined-functions],
-              [AS_HELP_STRING([--disable-inlined-functions],
-                              [prevent functions from being inlined; this
-                               sometimes is useful for analysis of the code in
-                               a debugger or some other tool])])
-
 AC_ARG_ENABLE([hardware-atomics],
               [AS_HELP_STRING([--disable-hardware-atomics],
                               [use mutexes to do the internal atomics;
@@ -834,11 +828,6 @@ AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "xno"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])
        enable_lazy_threadids=no],
       [enable_lazy_threadids=yes])
-
-AS_IF([test "x$enable_inlined_functions" != "xno"],
-      [qinline_define=inline],
-      [qinline_define=""])
-AC_DEFINE_UNQUOTED([QINLINE], [$qinline_define], [Allow function inlining to be toggled])
 
 AS_IF([test "x$enable_header_syscall_interception" == xyes],
       [AC_DEFINE([USE_HEADER_SYSCALLS], [1],

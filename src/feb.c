@@ -73,19 +73,19 @@ typedef struct {
 /********************************************************************
  * Local Prototypes
  *********************************************************************/
-static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
+static inline void qthread_gotlock_fill(qthread_shepherd_t *shep,
                                          qthread_addrstat_t *m,
                                          void *maddr);
-static QINLINE void
+static inline void
 qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
                            qthread_addrstat_t *m,
                            void *maddr,
                            uint_fast8_t const recursive,
                            qthread_addrres_t **precond_tasks);
-static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
+static inline void qthread_gotlock_empty(qthread_shepherd_t *shep,
                                           qthread_addrstat_t *m,
                                           void *maddr);
-static QINLINE void
+static inline void
 qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
                             qthread_addrstat_t *m,
                             void *maddr,
@@ -317,7 +317,7 @@ int API_FUNC qthread_feb_status(aligned_t const *addr) { /*{{{ */
 
 /* this function removes the FEB data structure for the address maddr from the
  * hash table */
-static QINLINE void qthread_FEB_remove(void *maddr) { /*{{{ */
+static inline void qthread_FEB_remove(void *maddr) { /*{{{ */
   qthread_addrstat_t *m;
   int const lockbin = QTHREAD_CHOOSE_STRIPE2(maddr);
 
@@ -406,7 +406,7 @@ static QINLINE void qthread_FEB_remove(void *maddr) { /*{{{ */
   }
 } /*}}} */
 
-static QINLINE void
+static inline void
 qthread_precond_launch(qthread_shepherd_t *shep,
                        qthread_addrres_t *precond_tasks) { /*{{{*/
   qthread_addrres_t *precond_tail =
@@ -435,7 +435,7 @@ qthread_precond_launch(qthread_shepherd_t *shep,
   }
 } /*}}}*/
 
-static QINLINE void
+static inline void
 qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
                             qthread_addrstat_t *m,
                             void *maddr,
@@ -484,7 +484,7 @@ qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
   }
 } /*}}} */
 
-static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
+static inline void qthread_gotlock_empty(qthread_shepherd_t *shep,
                                           qthread_addrstat_t *m,
                                           void *maddr) {
   qthread_addrres_t *tmp = NULL;
@@ -492,7 +492,7 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
   qthread_gotlock_empty_inner(shep, m, maddr, 0, &tmp);
 }
 
-static QINLINE void
+static inline void
 qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
                            qthread_addrstat_t *m,
                            void *maddr,
@@ -645,7 +645,7 @@ qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
   }
 } /*}}} */
 
-static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
+static inline void qthread_gotlock_fill(qthread_shepherd_t *shep,
                                          qthread_addrstat_t *m,
                                          void *maddr) {
   qthread_addrres_t *tmp = NULL;

@@ -692,7 +692,7 @@ uint64_t qthread_cas64_(uint64_t *, uint64_t, uint64_t);
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
-static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
+static inline float qthread_fincr(float *operand, float incr) { /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT)
   return qthread_fincr_(operand, incr);
 
@@ -806,7 +806,7 @@ static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
 #endif // if defined(QTHREAD_MUTEX_INCREMENT)
 } /*}}} */
 
-static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
+static inline double qthread_dincr(double *operand, double incr) { /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
   return qthread_dincr_(operand, incr);
@@ -1001,7 +1001,7 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
        // QTHREAD_POWERPC32)
 } /*}}} */
 
-static QINLINE uint32_t qthread_incr32(uint32_t *operand,
+static inline uint32_t qthread_incr32(uint32_t *operand,
                                        uint32_t incr) { /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT
   return qthread_incr32_(operand, incr);
@@ -1055,7 +1055,7 @@ static QINLINE uint32_t qthread_incr32(uint32_t *operand,
 #endif // ifdef QTHREAD_MUTEX_INCREMENT
 } /*}}} */
 
-static QINLINE uint64_t qthread_incr64(uint64_t *operand,
+static inline uint64_t qthread_incr64(uint64_t *operand,
                                        uint64_t incr) { /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
@@ -1170,7 +1170,7 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
 #endif // if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 } /*}}} */
 
-static QINLINE int64_t qthread_incr_xx(void *addr,
+static inline int64_t qthread_incr_xx(void *addr,
                                        int64_t incr,
                                        size_t length) { /*{{{ */
   switch (length) {
@@ -1186,7 +1186,7 @@ static QINLINE int64_t qthread_incr_xx(void *addr,
 uint64_t qthread_syncvar_incrF(syncvar_t *restrict operand, uint64_t inc);
 
 #if !defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_INCREMENT)
-static QINLINE uint32_t qthread_cas32(uint32_t *operand,
+static inline uint32_t qthread_cas32(uint32_t *operand,
                                       uint32_t oldval,
                                       uint32_t newval) { /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT // XXX: this is only valid if you don't read
@@ -1233,7 +1233,7 @@ static QINLINE uint32_t qthread_cas32(uint32_t *operand,
 #endif // ifdef QTHREAD_MUTEX_INCREMENT
 } /*}}} */
 
-static QINLINE uint64_t qthread_cas64(uint64_t *operand,
+static inline uint64_t qthread_cas64(uint64_t *operand,
                                       uint64_t oldval,
                                       uint64_t newval) { /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT
@@ -1325,7 +1325,7 @@ static QINLINE uint64_t qthread_cas64(uint64_t *operand,
 #endif // ifdef QTHREAD_MUTEX_INCREMENT
 } /*}}} */
 
-static QINLINE aligned_t qthread_cas_xx(aligned_t *addr,
+static inline aligned_t qthread_cas_xx(aligned_t *addr,
                                         aligned_t oldval,
                                         aligned_t newval,
                                         size_t length) { /*{{{ */
@@ -1342,7 +1342,7 @@ static QINLINE aligned_t qthread_cas_xx(aligned_t *addr,
   return 0; /* compiler check */
 } /*}}} */
 
-static QINLINE void *
+static inline void *
 qthread_cas_ptr_(void **addr, void *oldval, void *newval) { /*{{{*/
 #if (QTHREAD_BITS == 32)
   return (void *)(uintptr_t)qthread_cas32(
