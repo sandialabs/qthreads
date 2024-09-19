@@ -19,8 +19,7 @@ AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.7 ])
-# If Automake supports silent rules, enable them (credit to Brian)
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+AM_SILENT_RULES([yes])
 
 # clean some extra things...
 CLEANFILES="*~ .\#* .gdb_history"
