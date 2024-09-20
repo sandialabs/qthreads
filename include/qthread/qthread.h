@@ -675,16 +675,6 @@ int qthread_spinlocks_destroy(qthread_spinlock_t *a);
 int qthread_lock_init(aligned_t const *a, bool const is_recursive);
 int qthread_lock_destroy(aligned_t *a);
 
-#if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
-uint32_t qthread_incr32_(uint32_t *, int32_t);
-uint64_t qthread_incr64_(uint64_t *, int64_t);
-float qthread_fincr_(float *, float);
-double qthread_dincr_(double *, double);
-uint32_t qthread_cas32_(uint32_t *, uint32_t, uint32_t);
-uint64_t qthread_cas64_(uint64_t *, uint64_t, uint64_t);
-#endif // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==
-       // QTHREAD_POWERPC32)
-
 /* the following three functions implement variations on atomic increment. It
  * is done with architecture-specific assembly (on supported architectures,
  * when possible) and does NOT use FEB's or lock/unlock unless the architecture
@@ -692,11 +682,8 @@ uint64_t qthread_cas64_(uint64_t *, uint64_t, uint64_t);
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
-static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
-#if defined(QTHREAD_MUTEX_INCREMENT)
-  return qthread_fincr_(operand, incr);
-
-#elif QTHREAD_ATOMIC_CAS && !defined(HAVE_GCC_INLINE_ASSEMBLY)
+static inline float qthread_fincr(float *operand, float incr) { /*{{{ */
+#if QTHREAD_ATOMIC_CAS
   union {
     float f;
     uint32_t i;
@@ -713,7 +700,7 @@ static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
 
 #elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
 #error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
-#else // if defined(QTHREAD_MUTEX_INCREMENT)
+#else // if QTHREAD_ATOMIC_CAS
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                            \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   union {
@@ -803,15 +790,11 @@ static QINLINE float qthread_fincr(float *operand, float incr) { /*{{{ */
 #error Unsupported assembly architecture for qthread_fincr
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||
        // (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // if defined(QTHREAD_MUTEX_INCREMENT)
+#endif // if QTHREAD_ATOMIC_CAS
 } /*}}} */
 
-static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
-#if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-  return qthread_dincr_(operand, incr);
-
-#elif QTHREAD_ATOMIC_CAS && !defined(HAVE_GCC_INLINE_ASSEMBLY)
+static inline double qthread_dincr(double *operand, double incr) { /*{{{ */
+#if QTHREAD_ATOMIC_CAS
   union {
     uint64_t i;
     double d;
@@ -828,8 +811,7 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
 
 #elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
 #error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
-#else // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==
-      // QTHREAD_POWERPC32)
+#else // if QTHREAD_ATOMIC_CAS
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   uint64_t scratch_int;
   double incremented_value;
@@ -997,19 +979,15 @@ static QINLINE double qthread_dincr(double *operand, double incr) { /*{{{ */
 #else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #error Unimplemented assembly architecture for qthread_dincr
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH ==
-       // QTHREAD_POWERPC32)
+#endif // if QTHREAD_ATOMIC_CAS
 } /*}}} */
 
-static QINLINE uint32_t qthread_incr32(uint32_t *operand,
+static inline uint32_t qthread_incr32(uint32_t *operand,
                                        uint32_t incr) { /*{{{ */
-#ifdef QTHREAD_MUTEX_INCREMENT
-  return qthread_incr32_(operand, incr);
-
-#elif defined(QTHREAD_ATOMIC_INCR)
+#if defined(QTHREAD_ATOMIC_INCR)
   return __sync_fetch_and_add(operand, incr);
 
-#elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+#elif QTHREAD_ATOMIC_CAS
   uint32_t oldval, newval;
   do {
     oldval = *operand;
@@ -1020,7 +998,7 @@ static QINLINE uint32_t qthread_incr32(uint32_t *operand,
 
 #elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
 #error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
-#else // ifdef QTHREAD_MUTEX_INCREMENT
+#else // if defined(QTHREAD_ATOMIC_INCR)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                            \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   uint32_t retval;
@@ -1052,19 +1030,15 @@ static QINLINE uint32_t qthread_incr32(uint32_t *operand,
 #error Unimplemented assembly architecture for qthread_incr32
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||
        // (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // ifdef QTHREAD_MUTEX_INCREMENT
+#endif // if defined(QTHREAD_ATOMIC_INCR)
 } /*}}} */
 
-static QINLINE uint64_t qthread_incr64(uint64_t *operand,
+static inline uint64_t qthread_incr64(uint64_t *operand,
                                        uint64_t incr) { /*{{{ */
-#if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-  return qthread_incr64_(operand, incr);
-
-#elif defined(QTHREAD_ATOMIC_INCR)
+#if defined(QTHREAD_ATOMIC_INCR)
   return __sync_fetch_and_add(operand, incr);
 
-#elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+#elif QTHREAD_ATOMIC_CAS
   uint64_t oldval, newval;
   do {
     oldval = *operand;
@@ -1075,7 +1049,7 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
 
 #elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
 #error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
-#else // if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
+#else // if defined(QTHREAD_ATOMIC_CAS)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   uint64_t retval;
   uint64_t incrd = incrd; /* no initializing */
@@ -1167,10 +1141,10 @@ static QINLINE uint64_t qthread_incr64(uint64_t *operand,
 #else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #error Unimplemented assembly architecture for qthread_incr64
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
+#endif // if defined(QTHREAD_ATOMIC_INCR)
 } /*}}} */
 
-static QINLINE int64_t qthread_incr_xx(void *addr,
+static inline int64_t qthread_incr_xx(void *addr,
                                        int64_t incr,
                                        size_t length) { /*{{{ */
   switch (length) {
@@ -1185,15 +1159,10 @@ static QINLINE int64_t qthread_incr_xx(void *addr,
 
 uint64_t qthread_syncvar_incrF(syncvar_t *restrict operand, uint64_t inc);
 
-#if !defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_INCREMENT)
-static QINLINE uint32_t qthread_cas32(uint32_t *operand,
+#if !defined(QTHREAD_ATOMIC_CAS)
+static inline uint32_t qthread_cas32(uint32_t *operand,
                                       uint32_t oldval,
                                       uint32_t newval) { /*{{{ */
-#ifdef QTHREAD_MUTEX_INCREMENT // XXX: this is only valid if you don't read
-                               // *operand without the lock
-  return qthread_cas32_(operand, oldval, newval);
-
-#else
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                            \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   uint32_t result;
@@ -1230,16 +1199,11 @@ static QINLINE uint32_t qthread_cas32(uint32_t *operand,
 #error Unimplemented assembly architecture for qthread_cas32
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||
        // (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // ifdef QTHREAD_MUTEX_INCREMENT
 } /*}}} */
 
-static QINLINE uint64_t qthread_cas64(uint64_t *operand,
+static inline uint64_t qthread_cas64(uint64_t *operand,
                                       uint64_t oldval,
                                       uint64_t newval) { /*{{{ */
-#ifdef QTHREAD_MUTEX_INCREMENT
-  return qthread_cas64_(operand, oldval, newval);
-
-#else
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   uint64_t result;
   __asm__ __volatile__("A_%=:\n\t"
@@ -1322,10 +1286,9 @@ static QINLINE uint64_t qthread_cas64(uint64_t *operand,
 #else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #error Unimplemented assembly architecture for qthread_cas64
 #endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#endif // ifdef QTHREAD_MUTEX_INCREMENT
 } /*}}} */
 
-static QINLINE aligned_t qthread_cas_xx(aligned_t *addr,
+static inline aligned_t qthread_cas_xx(aligned_t *addr,
                                         aligned_t oldval,
                                         aligned_t newval,
                                         size_t length) { /*{{{ */
@@ -1342,7 +1305,7 @@ static QINLINE aligned_t qthread_cas_xx(aligned_t *addr,
   return 0; /* compiler check */
 } /*}}} */
 
-static QINLINE void *
+static inline void *
 qthread_cas_ptr_(void **addr, void *oldval, void *newval) { /*{{{*/
 #if (QTHREAD_BITS == 32)
   return (void *)(uintptr_t)qthread_cas32(
@@ -1397,7 +1360,7 @@ Q_ENDCXX /* */
 
 #ifndef __cplusplus
 
-#if defined(QTHREAD_ATOMIC_INCR) && !defined(QTHREAD_MUTEX_INCREMENT)
+#if defined(QTHREAD_ATOMIC_INCR)
 #define qthread_incr(ADDR, INCVAL) __sync_fetch_and_add(ADDR, INCVAL)
 #else
 #define qthread_incr(ADDR, INCVAL)                                             \

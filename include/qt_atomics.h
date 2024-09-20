@@ -138,7 +138,7 @@ extern pthread_mutexattr_t _fastlock_attr;
  * !defined(QTHREAD_ATOMIC_INCR).
  */
 #if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK &&               \
-  defined(QTHREAD_ATOMIC_INCR) && !defined(QTHREAD_MUTEX_INCREMENT)
+  defined(QTHREAD_ATOMIC_INCR)
 
 #define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 #define QTHREAD_TRYLOCK_INIT(x)                                                \
@@ -303,52 +303,7 @@ extern pthread_mutexattr_t _fastlock_attr;
     t.tv_nsec -= ((t.tv_nsec >= 1000000000) ? 1000000000 : 0);                 \
     qassert(pthread_cond_timedwait(&(c), &(m), &t), 0);                        \
   } while (0)
-#ifdef QTHREAD_MUTEX_INCREMENT
-#define QTHREAD_CASLOCK(var)                                                   \
-  var;                                                                         \
-  QTHREAD_FASTLOCK_TYPE var##_caslock
-#define QTHREAD_CASLOCK_STATIC(var)                                            \
-  var;                                                                         \
-  static QTHREAD_FASTLOCK_TYPE var##_caslock
-#define QTHREAD_CASLOCK_EXPLICIT_DECL(name) QTHREAD_FASTLOCK_TYPE name;
-#define QTHREAD_CASLOCK_EXPLICIT_INIT(name) QTHREAD_FASTLOCK_INIT(name)
-#define QTHREAD_CASLOCK_INIT(var, i)                                           \
-  var = i;                                                                     \
-  QTHREAD_FASTLOCK_INIT(var##_caslock)
-#define QTHREAD_CASLOCK_DESTROY(var) QTHREAD_FASTLOCK_DESTROY(var##_caslock)
-#define QTHREAD_CASLOCK_READ(var)                                              \
-  (void *)qt_cas_read_ui((uintptr_t *)&(var), &(var##_caslock))
-#define QTHREAD_CASLOCK_READ_UI(var)                                           \
-  qt_cas_read_ui((uintptr_t *)&(var), &(var##_caslock))
-#define QT_CAS(var, oldv, newv)                                                \
-  qt_cas((void **)&(var), (void *)(oldv), (void *)(newv), &(var##_caslock))
-#define QT_CAS_(var, oldv, newv, caslock)                                      \
-  qt_cas((void **)&(var), (void *)(oldv), (void *)(newv), &(caslock))
 
-static QINLINE void *qt_cas(void **const ptr,
-                            void *const oldv,
-                            void *const newv,
-                            QTHREAD_FASTLOCK_TYPE *lock) {
-  void *ret;
-
-  QTHREAD_FASTLOCK_LOCK(lock);
-  ret = *ptr;
-  if (*ptr == oldv) { *ptr = newv; }
-  QTHREAD_FASTLOCK_UNLOCK(lock);
-  return ret;
-}
-
-static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const ptr,
-                                        QTHREAD_FASTLOCK_TYPE *mutex) {
-  uintptr_t ret;
-
-  QTHREAD_FASTLOCK_LOCK(mutex);
-  ret = *ptr;
-  QTHREAD_FASTLOCK_UNLOCK(mutex);
-  return ret;
-}
-
-#else /* ifdef QTHREAD_MUTEX_INCREMENT */
 #define QTHREAD_CASLOCK(var) (var)
 #define QTHREAD_CASLOCK_STATIC(var) (var)
 #define QTHREAD_CASLOCK_EXPLICIT_DECL(name)
@@ -364,7 +319,7 @@ static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const ptr,
 #ifdef QTHREAD_ATOMIC_CAS_PTR
 #define qt_cas(P, O, N) (void *)__sync_val_compare_and_swap((P), (O), (N))
 #else
-static QINLINE void *
+static inline void *
 qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
@@ -423,57 +378,15 @@ qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
 } /*}}}*/
 
 #endif /* ATOMIC_CAS_PTR */
-#endif /* MUTEX_INCREMENT */
 
-#ifndef QTHREAD_MUTEX_INCREMENT
 #define qthread_internal_atomic_read_s(op, lock) (*op)
 #define qthread_internal_incr(op, lock, val) qthread_incr(op, val)
 #define qthread_internal_incr_s(op, lock, val) qthread_incr(op, val)
 #define qthread_internal_decr(op, lock) qthread_incr(op, -1)
 #define qthread_internal_incr_mod(op, m, lock) qthread_internal_incr_mod_(op, m)
 #define QTHREAD_OPTIONAL_LOCKARG
-#else
-#define qthread_internal_incr_mod(op, m, lock)                                 \
-  qthread_internal_incr_mod_(op, m, lock)
-#define QTHREAD_OPTIONAL_LOCKARG , QTHREAD_FASTLOCK_TYPE *lock
 
-static QINLINE aligned_t qthread_internal_incr(aligned_t *operand,
-                                               QTHREAD_FASTLOCK_TYPE *lock,
-                                               int val) { /*{{{ */
-  aligned_t retval;
-
-  QTHREAD_FASTLOCK_LOCK(lock);
-  retval = *operand;
-  *operand += val;
-  QTHREAD_FASTLOCK_UNLOCK(lock);
-  return retval;
-} /*}}} */
-
-static QINLINE saligned_t qthread_internal_incr_s(saligned_t *operand,
-                                                  QTHREAD_FASTLOCK_TYPE *lock,
-                                                  int val) { /*{{{ */
-  saligned_t retval;
-
-  QTHREAD_FASTLOCK_LOCK(lock);
-  retval = *operand;
-  *operand += val;
-  QTHREAD_FASTLOCK_UNLOCK(lock);
-  return retval;
-} /*}}} */
-
-static QINLINE saligned_t qthread_internal_atomic_read_s(
-  saligned_t *operand, QTHREAD_FASTLOCK_TYPE *lock) { /*{{{ */
-  saligned_t retval;
-
-  QTHREAD_FASTLOCK_LOCK(lock);
-  retval = *operand;
-  QTHREAD_FASTLOCK_UNLOCK(lock);
-  return retval;
-} /*}}} */
-
-#endif /* ifndef QTHREAD_MUTEX_INCREMENT */
-
-static QINLINE aligned_t qthread_internal_incr_mod_(
+static inline aligned_t qthread_internal_incr_mod_(
   aligned_t *operand,
   unsigned int const max QTHREAD_OPTIONAL_LOCKARG) { /*{{{ */
   aligned_t retval;
@@ -628,12 +541,6 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
           ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                     \
           (QTHREAD_BITS == 32)) */
 
-#elif defined(QTHREAD_MUTEX_INCREMENT)
-  QTHREAD_FASTLOCK_LOCK(lock);
-  retval = (*operand)++;
-  *operand *= (*operand < max);
-  QTHREAD_FASTLOCK_UNLOCK(lock);
-
 #elif QTHREAD_ATOMIC_CAS
   aligned_t oldval, newval;
 
@@ -651,7 +558,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(
   return retval;
 } /*}}} */
 
-static QINLINE void *qt_internal_atomic_swap_ptr(void **addr,
+static inline void *qt_internal_atomic_swap_ptr(void **addr,
                                                  void *newval) { /*{{{*/
   void *oldval =
     atomic_load_explicit((void *_Atomic *)addr, memory_order_relaxed);

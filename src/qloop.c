@@ -41,7 +41,7 @@ struct qloop_wrapper_args {
   void *sync;
 };
 
-static QINLINE void qt_loop_balance_inner(size_t const start,
+static inline void qt_loop_balance_inner(size_t const start,
                                           size_t const stop,
                                           qt_loop_f const func,
                                           void *argptr,
@@ -320,7 +320,7 @@ void API_FUNC qt_loop_sinc(size_t start,
 
 #define QT_LOOP_BALANCE_SIMPLE (1 << 0)
 
-static QINLINE void qt_loop_balance_inner(size_t const start,
+static inline void qt_loop_balance_inner(size_t const start,
                                           size_t const stop,
                                           qt_loop_f const func,
                                           void *argptr,
@@ -561,7 +561,7 @@ static aligned_t qloopaccum_wrapper(void *restrict arg_void) { /*{{{ */
   return 0;
 } /*}}} */
 
-static QINLINE void qt_loopaccum_balance_inner(size_t const start,
+static inline void qt_loopaccum_balance_inner(size_t const start,
                                                size_t const stop,
                                                size_t const size,
                                                void *restrict out,
@@ -798,7 +798,7 @@ static int qqloop_get_iterations_guided(
   }
 } /*}}} */
 
-static QINLINE int qqloop_get_iterations_factored(
+static inline int qqloop_get_iterations_factored(
   qqloop_iteration_queue_t *restrict const iq,
   struct qqloop_static_args *restrict const sa,
   struct qqloop_wrapper_range *restrict const range) { /*{{{ */
@@ -856,7 +856,7 @@ static QINLINE int qqloop_get_iterations_factored(
   }
 } /*}}} */
 
-static QINLINE int qqloop_get_iterations_chunked(
+static inline int qqloop_get_iterations_chunked(
   qqloop_iteration_queue_t *restrict const iq,
   struct qqloop_static_args *restrict const sa,
   struct qqloop_wrapper_range *restrict const range) { /*{{{ */
@@ -878,7 +878,7 @@ static QINLINE int qqloop_get_iterations_chunked(
   return retval;
 } /*}}} */
 
-static QINLINE int qqloop_get_iterations_timed(
+static inline int qqloop_get_iterations_timed(
   qqloop_iteration_queue_t *restrict const iq,
   struct qqloop_static_args *restrict const sa,
   struct qqloop_wrapper_range *restrict const range) { /*{{{ */
@@ -936,7 +936,7 @@ static QINLINE int qqloop_get_iterations_timed(
   }
 } /*}}} */
 
-static QINLINE qqloop_iteration_queue_t *
+static inline qqloop_iteration_queue_t *
 qqloop_create_iq(size_t const startat,
                  size_t const stopat,
                  size_t const step,
@@ -971,7 +971,7 @@ qqloop_create_iq(size_t const startat,
   return iq;
 } /*}}} */
 
-static QINLINE void qqloop_destroy_iq(qqloop_iteration_queue_t *iq) { /*{{{ */
+static inline void qqloop_destroy_iq(qqloop_iteration_queue_t *iq) { /*{{{ */
   assert(iq);
   switch (iq->type) {
     case TIMED: {

@@ -8,10 +8,6 @@
 #include <sys/lgrp_user.h>
 #endif
 
-#ifdef QTHREAD_HAVE_LIBNUMA
-#include <numa.h>
-#endif
-
 #include <qthread/qdqueue.h>
 #include <qthread/qlfqueue.h>
 #include <qthread/qthread.h>

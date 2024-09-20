@@ -83,14 +83,6 @@
 #include "qt_output_macros.h"
 #include "qt_subsystems.h"
 
-#if !(defined(HAVE_GCC_INLINE_ASSEMBLY) &&                                     \
-      (QTHREAD_SIZEOF_ALIGNED_T == 4 ||                                        \
-       QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)) &&                      \
-  !defined(QTHREAD_ATOMIC_CAS) && !defined(QTHREAD_MUTEX_INCREMENT)
-#warning QTHREAD_MUTEX_INCREMENT not defined. It probably should be.
-#define QTHREAD_MUTEX_INCREMENT 1
-#endif
-
 #ifdef QTHREAD_PERFORMANCE
 #define WKR_DBG 1
 #include "qthread/logging.h"
@@ -133,13 +125,13 @@ static void qthread_wrapper(unsigned int high, unsigned int low);
 static void qthread_wrapper(void *ptr);
 #endif
 
-static QINLINE void qthread_makecontext(qt_context_t *const c,
+static inline void qthread_makecontext(qt_context_t *const c,
                                         void *const stack,
                                         size_t const stacksize,
                                         void (*func)(void),
                                         void const *const arg,
                                         qt_context_t *const returnc);
-static QINLINE qthread_t *qthread_thread_new(qthread_f f,
+static inline qthread_t *qthread_thread_new(qthread_f f,
                                              void const *arg,
                                              size_t arg_size,
                                              void *ret,
@@ -175,7 +167,7 @@ qt_mpool generic_big_qthread_pool = NULL;
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
 #ifdef QTHREAD_GUARD_PAGES
-static QINLINE void *ALLOC_STACK(void) { /*{{{ */
+static inline void *ALLOC_STACK(void) { /*{{{ */
   if (GUARD_PAGES) {
     uint8_t *tmp = qt_internal_aligned_alloc(
       qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
@@ -203,7 +195,7 @@ static QINLINE void *ALLOC_STACK(void) { /*{{{ */
   }
 } /*}}} */
 
-static QINLINE void FREE_STACK(void *t) { /*{{{ */
+static inline void FREE_STACK(void *t) { /*{{{ */
   if (GUARD_PAGES) {
     uint8_t *tmp = t;
 
@@ -234,7 +226,7 @@ static QINLINE void FREE_STACK(void *t) { /*{{{ */
 #else /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 static qt_mpool generic_stack_pool = NULL;
 #ifdef QTHREAD_GUARD_PAGES
-static QINLINE void *ALLOC_STACK(void) { /*{{{ */
+static inline void *ALLOC_STACK(void) { /*{{{ */
   if (GUARD_PAGES) {
     uint8_t *tmp = qt_mpool_alloc(generic_stack_pool);
 
@@ -254,7 +246,7 @@ static QINLINE void *ALLOC_STACK(void) { /*{{{ */
   }
 } /*}}} */
 
-static QINLINE void FREE_STACK(void *t) { /*{{{ */
+static inline void FREE_STACK(void *t) { /*{{{ */
   if (GUARD_PAGES) {
     assert(t);
     t = (uint8_t *)t - getpagesize();
@@ -350,7 +342,7 @@ int qthread_library_initialized = 0;
 void *shep0arg = NULL;
 #endif
 
-static QINLINE void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
+static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
   void *stack = NULL;
   struct qthread_runtime_data_s *rdata;
 
@@ -911,16 +903,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   qlib = (qlib_t)MALLOC(sizeof(struct qlib_s));
   qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
-#if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-  qlib->atomic_locks =
-    MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-  qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
-  for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-    QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
-  }
-#endif
-
   qt_internal_alignment_init();
   qt_hash_initialize_subsystem();
 
@@ -970,10 +952,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
     (qt_threadqueue_t **)MALLOC(nshepherds * sizeof(qt_threadqueue_t *));
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
-#ifdef QTHREAD_MUTEX_INCREMENT
-  QTHREAD_FASTLOCK_INIT(qlib->nshepherds_active_lock);
-  QTHREAD_FASTLOCK_INIT(qlib->nworkers_active_lock);
-#endif
 
   qt_mpool_subsystem_init();
 
@@ -1112,9 +1090,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
     qlib->local_priority_queues[i] = qlib->shepherds[i].local_priority_queue;
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 #ifdef QTHREAD_FEB_PROFILING
-#ifdef QTHREAD_MUTEX_INCREMENT
-    qlib->shepherds[i].uniqueincraddrs = qt_hash_create(need_sync);
-#endif
     qlib->shepherds[i].uniquelockaddrs = qt_hash_create(need_sync);
     qlib->shepherds[i].uniquefebaddrs = qt_hash_create(need_sync);
 #endif
@@ -1348,7 +1323,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
-static QINLINE void qthread_makecontext(qt_context_t *const c,
+static inline void qthread_makecontext(qt_context_t *const c,
                                         void *const stack,
                                         size_t const stacksize,
                                         void (*func)(void),
@@ -1701,11 +1676,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
       shep->idle_maxtime);
 #endif
 #ifdef QTHREAD_FEB_PROFILING
-#ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_ACCUM_MAX(shep0->incr_maxtime, shep->incr_maxtime);
-    shep0->incr_time += shep->incr_time;
-    shep0->incr_count += shep->incr_count;
-#endif
     QTHREAD_ACCUM_MAX(shep0->aquirelock_maxtime, shep->aquirelock_maxtime);
     shep0->aquirelock_time += shep->aquirelock_time;
     shep0->aquirelock_count += shep->aquirelock_count;
@@ -1724,11 +1694,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
     shep0->empty_time += shep->empty_time;
     shep0->empty_count += shep->empty_count;
     qthread_debug(CORE_DETAILS, "destroying hashes\n");
-#ifdef QTHREAD_MUTEX_INCREMENT
-    qt_hash_callback(
-      shep->uniqueincraddrs, qthread_unique_collect, shep0->uniqueincraddrs);
-    qt_hash_destroy(shep->uniqueincraddrs);
-#endif
     qt_hash_callback(
       shep->uniquelockaddrs, qthread_unique_collect, shep0->uniquelockaddrs);
     qt_hash_destroy(shep->uniquelockaddrs);
@@ -1751,15 +1716,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
   }
 
 #ifdef QTHREAD_FEB_PROFILING
-#ifdef QTHREAD_MUTEX_INCREMENT
-  print_status(
-    "%llu increments performed (%ld unique), average %g secs, max %g secs\n",
-    (unsigned long long)shep0->incr_count,
-    qt_hash_count(shep0->uniqueincraddrs),
-    (shep0->incr_count == 0) ? 0 : (shep0->incr_time / shep0->incr_count),
-    shep0->incr_maxtime);
-  qt_hash_destroy(shep0->uniqueincraddrs);
-#endif
   print_status("%ld unique addresses used with FEB, blocked %g secs\n",
                qt_hash_count(shep0->uniquefebaddrs),
                (shep0->febblock_count == 0) ? 0 : shep0->febblock_time);
@@ -1787,16 +1743,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
 #ifdef LOCK_FREE_FEBS
   extern unsigned int QTHREAD_LOCKING_STRIPES;
   QTHREAD_LOCKING_STRIPES = 1;
-#elif defined(QTHREAD_MUTEX_INCREMENT) ||                                      \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-  extern unsigned int QTHREAD_LOCKING_STRIPES;
-  for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-    QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
-  }
-#endif
-#ifdef QTHREAD_MUTEX_INCREMENT
-  QTHREAD_FASTLOCK_DESTROY(qlib->nshepherds_active_lock);
-  QTHREAD_FASTLOCK_DESTROY(qlib->nworkers_active_lock);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
   print_status("spawned %lu threads, max realized concurrency %lu, avg "
@@ -1838,11 +1784,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
     tmp->func();
     FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
   }
-#if defined(QTHREAD_MUTEX_INCREMENT) ||                                        \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-  FREE((void *)qlib->atomic_locks,
-       sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-#endif
 
   for (i = 0; i < qlib->nshepherds; ++i) {
     qthread_debug(
@@ -2130,7 +2071,7 @@ aligned_t API_FUNC *qthread_retloc(void) { /*{{{ */
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
-static QINLINE qthread_t *qthread_thread_new(qthread_f const f,
+static inline qthread_t *qthread_thread_new(qthread_f const f,
                                              void const *arg,
                                              size_t arg_size,
                                              void *ret,

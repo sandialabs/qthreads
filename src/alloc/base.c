@@ -12,7 +12,7 @@
 #ifdef HAVE_GETPAGESIZE
 #include <unistd.h>
 #else
-static QINLINE int getpagesize() { return 4096; }
+static inline int getpagesize() { return 4096; }
 #endif
 
 /* Internal Headers */

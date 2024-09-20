@@ -12,7 +12,7 @@
 #define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
 #define FREE_SCRIBBLE(ptr, sz) memset((ptr), 0x77, (sz))
 
-static QINLINE void *MALLOC(size_t sz) {
+static inline void *MALLOC(size_t sz) {
   void *ret = qt_malloc(sz);
 
   ALLOC_SCRIBBLE(ret, sz);
@@ -254,7 +254,7 @@ extern QTHREAD_FASTLOCK_TYPE output_lock;
 #define qthread_debug(level, format, ...)                                      \
   qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
 
-static QINLINE void qthread_debug_(int level, char const *format, ...)
+static inline void qthread_debug_(int level, char const *format, ...)
 {      /*{{{ */
   va_list args;
 

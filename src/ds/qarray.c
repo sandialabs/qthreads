@@ -32,7 +32,7 @@ static aligned_t *chunk_distribution_tracker = NULL;
 /* this function is for DIST *ONLY*; it returns a pointer to the location that
  * the bookkeeping data is stored (i.e. the record of where this segment is
  * stored) */
-static QINLINE qthread_shepherd_id_t *
+static inline qthread_shepherd_id_t *
 qarray_internal_segment_shep(qarray const *a,
                              void const *segment_head) { /*{{{ */
   char *ptr = (((char *)segment_head) + (a->segment_size * a->unit_size));
@@ -47,7 +47,7 @@ qarray_internal_segment_shep(qarray const *a,
   return (qthread_shepherd_id_t *)ptr;
 } /*}}} */
 
-static QINLINE qthread_shepherd_id_t qarray_internal_segment_shep_read(
+static inline qthread_shepherd_id_t qarray_internal_segment_shep_read(
   qarray const *a, void const *segment_head) { /*{{{*/
   qthread_shepherd_id_t retval;
   qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(a, segment_head);
@@ -58,7 +58,7 @@ static QINLINE qthread_shepherd_id_t qarray_internal_segment_shep_read(
   return retval;
 } /*}}}*/
 
-static QINLINE void
+static inline void
 qarray_internal_segment_shep_write(qarray const *a,
                                    void const *segment_head,
                                    qthread_shepherd_id_t shep) { /*{{{*/
@@ -317,9 +317,6 @@ static qarray *qarray_create_internal(size_t const count,
       break;
   }
   if (ret->base_ptr == NULL) {
-#ifdef QTHREAD_HAVE_LIBNUMA
-    numa_error("allocating qarray body");
-#endif
   }
 #else  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
   /* For speed, we want page-aligned memory, if we can get it */

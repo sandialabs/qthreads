@@ -6,7 +6,7 @@
 ## --------------------- ##
 ## Autoconf Requirements ##
 ## --------------------- ##
-AC_PREREQ(2.59)
+AC_PREREQ(2.71)
 
 ## ---------------------------------- ##
 ## Autoconf / Automake Initialization ##
@@ -18,28 +18,14 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
 
-dnl Require at least AM 1.7.  Prior versions require AM_CONFIG_HEADER
-dnl and have no equivalent to AC_CONFIG_HEADERS (the plural version),
-dnl which is a pain.  AM 1.7 also added support for putting target
-dnl information in AM_CONDITIONAL blocks and using the += modifier.
-dnl ... removed "check-news" because of automatic version generation
-# Automake's silent rules were implemented in the same version that
-# color-tests was implemented, so we can use one to detect the other.
-# This nasty, dirty, unreliable trick is strongly discouraged by its author:
-# http://blog.flameeyes.eu/trackbacks?article_id=5155
-m4_ifdef([AM_SILENT_RULES],
-         [m4_define([qt_color_tests], [color-tests])],
-         [m4_define([qt_color_tests], [])])
-AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.7 ]qt_color_tests)
-# If Automake supports silent rules, enable them (credit to Brian)
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.16 ])
+AM_SILENT_RULES([yes])
 
 # clean some extra things...
 CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
 AC_CANONICAL_HOST
-AC_PATH_PROG([timelimit_path],[timelimit])
 
 ## ----------------- ##
 ## Check the options ##
@@ -52,21 +38,6 @@ AC_ARG_ENABLE([picky],
 AC_ARG_ENABLE([debugging],
               [AS_HELP_STRING([--enable-debugging],
                               [turns off optimization and turns on debug flags])])
-
-AC_ARG_ENABLE([inlined-functions],
-              [AS_HELP_STRING([--disable-inlined-functions],
-                              [prevent functions from being inlined; this
-                               sometimes is useful for analysis of the code in
-                               a debugger or some other tool])])
-
-AC_ARG_ENABLE([hardware-atomics],
-              [AS_HELP_STRING([--disable-hardware-atomics],
-                              [use mutexes to do the internal atomics;
-                               compatible with more compilers and more
-                               platforms, but slow.])])
-AC_ARG_ENABLE([hardware-increments],[],
-              [AS_IF([test "x$enable_hardware_atomics" != x],
-                     [enable_hardware_atomics="$enable_hardware_increments"])])
 
 AC_ARG_ENABLE([hardware-timer],
               [AS_HELP_STRING([--disable-hardware-timer],
@@ -335,10 +306,9 @@ AC_ARG_ENABLE([third-party-benchmarks],
 AC_ARG_WITH([scheduler],
             [AS_HELP_STRING([--with-scheduler=[[type]]],
                             [Specify the scheduler. Options when using
-                             single-threaded shepherds are: nemesis (default),
-                             lifo, mdlifo, mutexfifo, and mtsfifo. Options 
-                             when using multi-threaded shepherds are: sherwood 
-                             (default), distrib and nottingham. Details on 
+                             single-threaded shepherds are: nemesis (default).
+                             Options when using multi-threaded shepherds are:
+                             sherwood (default), and distrib. Details on 
                              these options are in the SCHEDULING file.])])
 
 AC_ARG_WITH([sinc],
@@ -455,11 +425,6 @@ AS_IF([test "x$enable_picky" = xyes],
          esac])
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
-case "$qthread_cv_asm_arch" in
-    POWERPC32)
-    compile_compat_atomic=yes
-    ;;
-esac
 case "$qthread_cv_asm_arch" in
     POWERPC*)
     AS_IF([test "x$qthread_cv_c_compiler_type" = "xApple-GNU4.0"],
@@ -580,25 +545,8 @@ case "$qthread_cv_c_compiler_type" in
     ;;
 esac
 
-# Figure out whether the compiler has builtin atomic operations
-AS_IF([test "x$enable_hardware_atomics" != xno],
-      [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
-QTHREAD_VAMACROS
-
 QTHREAD_BUILTIN_SYNCHRONIZE
 
-AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
-          [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
-           AS_IF([test "x$enable_hardware_atomics" = x],
-                     [AC_MSG_NOTICE(turning on software increments ($have_assembly))
-                      enable_hardware_increments=no])
-           AS_IF([test "x$enable_hardware_atomics" = "xyes"],
-                     [AC_MSG_ERROR([No assembly available and software increments disabled.])])],
-      [AS_IF([test "x$enable_hardware_atomics" = x], [enable_hardware_atomics="yes"])])
-
-AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [compile_compat_atomic=yes
-       AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_GUARD_PAGES], [1], [Use guard pages to detect stack overruns])],
       [enable_guard_pages="no"])
@@ -670,17 +618,8 @@ AS_IF([test "x$with_scheduler" != "x"],
          default)
            [with_scheduler="sherwood"]
            ;;
-         sherwood|nemesis|lifo|mutexfifo|mtsfifo|distrib)
+         sherwood|nemesis|distrib)
            # all valid options that require no additional configuration
-           ;;
-         mdlifo)
-           [with_scheduler=lifo]
-           [using_mdlifo=yes]
-           AC_DEFINE([QTHREAD_LIFO_MULTI_DEQUEUER], [1], [Enable multiple-dequeuer support for lifo scheduler])
-           ;;
-         nottingham)
-           AS_IF([test "x$qthread_cv_atomic_CAS128" != "xyes"],
-                 [AC_MSG_ERROR([The $with_scheduler scheduler requires a 128-bit CAS.])])
            ;;
          *)
            AC_MSG_ERROR([Unknown scheduler option])
@@ -699,16 +638,10 @@ AS_IF([test "x$enable_internal_spinlock" = "x"],
        esac])
 
 
-AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [AS_IF([test "x$with_scheduler" != "xsherwood"],
-             [with_scheduler="sherwood"
-              AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])
-       AS_IF([test "x$enable_lf_fegs" = "xyes"],
-             [AC_MSG_ERROR([FEBs cannot use a lock-free hash table, since hardware atomic support is lacking.])])],
-      [AS_IF([test "x$enable_internal_spinlock" = x],
-             [enable_internal_spinlock=yes])
-       AS_IF([test "x$enable_internal_spinlock" = xyes],
-             [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])])
+AS_IF([test "x$enable_internal_spinlock" = x],
+      [enable_internal_spinlock=yes])
+AS_IF([test "x$enable_internal_spinlock" = xyes],
+      [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])
 
 AS_IF([test "x$enable_steal_profiling" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
@@ -860,11 +793,6 @@ AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "xno"],
        enable_lazy_threadids=no],
       [enable_lazy_threadids=yes])
 
-AS_IF([test "x$enable_inlined_functions" != "xno"],
-      [qinline_define=inline],
-      [qinline_define=""])
-AC_DEFINE_UNQUOTED([QINLINE], [$qinline_define], [Allow function inlining to be toggled])
-
 AS_IF([test "x$enable_header_syscall_interception" == xyes],
       [AC_DEFINE([USE_HEADER_SYSCALLS], [1],
                  [Define to allow blocking syscalls to be mangled into qthread-specific variants])])
@@ -876,30 +804,11 @@ AS_IF([test "x$qthread_topo" != xno],
       [AS_IF([test "x$qthread_topo" = "xnone_specified"],
              [qthread_topo=no])
        # First, check for hwloc, since it gives me the most portable/flexible/reliable/detailed information.
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xbinders -o "x$qthread_topo" = xhwloc -o "x$qthread_topo" = xhwloc_v2],
-             [QTHREAD_CHECK_HWLOC([AS_IF([test "x$qthread_topo" != xhwloc -a "x$qthread_topo" != xhwloc_v2 -a "x$qthread_topo" != xbinders],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xbinders -o "x$qthread_topo" = xhwloc],
+             [QTHREAD_CHECK_HWLOC([AS_IF([test "x$qthread_topo" != xhwloc -a "x$qthread_topo" != xbinders],
                                          [qthread_topo=hwloc])],
                                   [AS_IF([test "x$qthread_topo" != xno],
                                          [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlibnuma -o "x$qthread_topo" = xlibnumaV2],
-             [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
-                                    [qthread_topo=libnumaV2],
-                                    [AS_IF([test "x$qthread_topo" != xno],
-                                           [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # Third, check any others.
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xmach],
-             [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],
-                                     [AS_IF([test "x$qthread_topo" != xno],
-                                            [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # PLPA is deprecated in favor of hwloc
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xplpa],
-             [QTHREAD_CHECK_PLPA([qthread_topo=plpa],
-                                 [AS_IF([test "x$qthread_topo" != xno],
-                                        [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xsys],
-             [QTHREAD_CHECK_LINUX([qthread_topo=sys],
-                           [AS_IF([test "x$qthread_topo" = xsys],
-                                  [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        ])
 
 AS_IF([test "x$enable_lf_febs" == "xyes"],
@@ -926,11 +835,9 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xcl
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
-AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
-AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([QTHREAD_PERFORMANCE], [test "$enable_performance_monitoring" = "yes"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
@@ -1004,17 +911,13 @@ AS_IF([test "x$enable_spawn_cache" = "xyes"],
       [AS_IF([test "x$pool_string" != "x"],
              [pool_string="$pool_string, spawns"],
              [pool_string="spawns"])])
-AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "xyes"],
-             [incr_string="Spin (software)"],
-             [incr_string="Mutex (software)"])],
-      [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
-             [incr_string="Compiler Builtin (both)"],
-             [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
-                    [incr_string="Compiler Builtin/$qthread_cv_asm_arch"],
-                    [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
-                           [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
-                           [incr_string="$qthread_cv_asm_arch"])])])])
+AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
+      [incr_string="Compiler Builtin (both)"],
+      [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
+             [incr_string="Compiler Builtin/$qthread_cv_asm_arch"],
+             [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
+                    [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
+                    [incr_string="$qthread_cv_asm_arch"])])])
 AS_IF([test "x$enable_lf_febs" = xno],
       [feb_string="lock-based hash"],
       [feb_string="lock-free"])

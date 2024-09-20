@@ -34,15 +34,15 @@ static void qt_stack_free(qt_stack_t *stack) {
   stack->base = stack->top = stack->capacity = 0;
 }
 
-static QINLINE int qt_stack_is_empty(qt_stack_t *stack) {
+static inline int qt_stack_is_empty(qt_stack_t *stack) {
   return (stack->empty);
 }
 
-static QINLINE int qt_stack_is_full(qt_stack_t *stack) {
+static inline int qt_stack_is_full(qt_stack_t *stack) {
   return (stack->base == ((stack->top + 1) % stack->capacity));
 }
 
-static QINLINE int qt_stack_size(qt_stack_t *stack) {
+static inline int qt_stack_size(qt_stack_t *stack) {
   if (stack->top >= stack->base) {
     return (stack->top - stack->base);
   } else {
@@ -70,21 +70,21 @@ static void qt_stack_resize(qt_stack_t *stack) {
   free(old_storage);
 }
 
-static QINLINE void qt_stack_push(qt_stack_t *stack, qthread_t *t) {
+static inline void qt_stack_push(qt_stack_t *stack, qthread_t *t) {
   if (qt_stack_is_full(stack)) { qt_stack_resize(stack); }
   stack->top = (stack->top + 1) % (stack->capacity);
   stack->storage[stack->top] = t;
   stack->empty = 0;
 }
 
-static QINLINE void qt_stack_enq_base(qt_stack_t *stack, qthread_t *t) {
+static inline void qt_stack_enq_base(qt_stack_t *stack, qthread_t *t) {
   if (qt_stack_is_full(stack)) { qt_stack_resize(stack); }
   stack->storage[stack->base] = t;
   stack->base = (stack->base - 1 + stack->capacity) % (stack->capacity);
   stack->empty = 0;
 }
 
-static QINLINE qthread_t *qt_stack_pop(qt_stack_t *stack) {
+static inline qthread_t *qt_stack_pop(qt_stack_t *stack) {
   if (qt_stack_is_empty(stack)) { return (NULL); }
   qthread_t *t = stack->storage[stack->top];
   assert(t != NULL);

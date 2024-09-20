@@ -30,14 +30,14 @@ struct tlrw_lock {
 
 typedef struct tlrw_lock rwlock_t;
 
-static QINLINE void rwlock_init(rwlock_t *l) {
+static inline void rwlock_init(rwlock_t *l) {
   unsigned int i;
 
   l->owner = 0;
   for (i = 0; i < sizeof l->readers; i++) l->readers[i] = 0;
 }
 
-static QINLINE void rwlock_rdlock(rwlock_t *l, int id) {
+static inline void rwlock_rdlock(rwlock_t *l, int id) {
   assert(id >= 0);
   for (;;) {
     l->readers[id] = 1;
@@ -53,12 +53,12 @@ static QINLINE void rwlock_rdlock(rwlock_t *l, int id) {
   }
 }
 
-static QINLINE void rwlock_rdunlock(rwlock_t *l, int id) {
+static inline void rwlock_rdunlock(rwlock_t *l, int id) {
   assert(id >= 0);
   l->readers[id] = 0;
 }
 
-static QINLINE void rwlock_wrlock(rwlock_t *l, int id) {
+static inline void rwlock_wrlock(rwlock_t *l, int id) {
   assert(id >= 0);
   id = id + 1;
 
@@ -73,7 +73,7 @@ static QINLINE void rwlock_wrlock(rwlock_t *l, int id) {
   }
 }
 
-static QINLINE void rwlock_wrunlock(rwlock_t *l) {
+static inline void rwlock_wrunlock(rwlock_t *l) {
   l->owner = 0;
   MACHINE_FENCE;
 }

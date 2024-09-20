@@ -8,26 +8,13 @@
 #define QTHREAD_COMMON_H
 
 /* Whether C compiler supports GCC style inline assembly */
-#undef HAVE_GCC_INLINE_ASSEMBLY
+#define HAVE_GCC_INLINE_ASSEMBLY
 
 /* if the compiler supports inline assembly, we can prevent reordering */
 #undef COMPILER_FENCE
 
 /* Architecture type of assembly to use */
 #undef QTHREAD_ASSEMBLY_ARCH
-
-/* use mutexes when incrementing, rather than architecture-specific assembly
-   */
-#undef QTHREAD_MUTEX_INCREMENT
-
-/* use inlined functions */
-#undef QTHREAD_INLINE
-
-/* if the compiler supports __attribute__((deprecated)) */
-#undef Q_DEPRECATED
-
-/* Allow functions to be inlined */
-#undef QINLINE
 
 #ifndef __powerpc
 #define BITFIELD_ORDER_REVERSE
@@ -40,19 +27,19 @@
 #endif
 
 /* builtin cas supported */
-#undef QTHREAD_ATOMIC_CAS
+#define QTHREAD_ATOMIC_CAS 1
 
 /* if the compiler supports __sync_val_compare_and_swap on 32-bit ints */
-#undef QTHREAD_ATOMIC_CAS32
+#define QTHREAD_ATOMIC_CAS32 1
 
 /* if the compiler supports __sync_val_compare_and_swap on 64-bit ints */
-#undef QTHREAD_ATOMIC_CAS64
+#define QTHREAD_ATOMIC_CAS64 1
 
 /* if the compiler supports __sync_val_compare_and_swap on pointers */
-#undef QTHREAD_ATOMIC_CAS_PTR
+#define QTHREAD_ATOMIC_CAS_PTR 1
 
 /* builtin incr supported */
-#undef QTHREAD_ATOMIC_INCR
+#define QTHREAD_ATOMIC_INCR 1
 
 #ifdef __cplusplus
 #ifdef __GNUC__

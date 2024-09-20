@@ -9,9 +9,6 @@
 #include <qthread/qtimer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef QTHREAD_HAVE_LIBNUMA
-#include <numa.h>
-#endif
 #include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
@@ -140,11 +137,7 @@ int main(int argc, char *argv[]) {
   numa_size = iterations * 48 / numshep;
   iprintf("numa_size = %i\n", (int)numa_size);
   for (i = 0; i < numshep; i++) {
-#ifdef QTHREAD_HAVE_LIBNUMA
-    numa_allocs[i] = numa_alloc_onnode(numa_size, i);
-#else
     numa_allocs[i] = malloc(numa_size);
-#endif
     pthread_mutex_init(ptr_lock + i, NULL);
   }
   memcpy(numa_pools, numa_allocs, sizeof(void *) * numshep);
@@ -171,11 +164,7 @@ int main(int argc, char *argv[]) {
          iterations,
          qtimer_secs(timer));
   for (i = 0; i < numshep; i++) {
-#ifdef QTHREAD_HAVE_LIBNUMA
-    numa_free(numa_pools[i], numa_size);
-#else
     free(numa_pools[i]);
-#endif
   }
   free(numa_pools);
   free(numa_allocs);
