@@ -39,15 +39,6 @@ AC_ARG_ENABLE([debugging],
               [AS_HELP_STRING([--enable-debugging],
                               [turns off optimization and turns on debug flags])])
 
-AC_ARG_ENABLE([hardware-atomics],
-              [AS_HELP_STRING([--disable-hardware-atomics],
-                              [use mutexes to do the internal atomics;
-                               compatible with more compilers and more
-                               platforms, but slow.])])
-AC_ARG_ENABLE([hardware-increments],[],
-              [AS_IF([test "x$enable_hardware_atomics" != x],
-                     [enable_hardware_atomics="$enable_hardware_increments"])])
-
 AC_ARG_ENABLE([hardware-timer],
               [AS_HELP_STRING([--disable-hardware-timer],
                               [force the use of gettimeofday even if there is a
@@ -435,11 +426,6 @@ AS_IF([test "x$enable_picky" = xyes],
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 case "$qthread_cv_asm_arch" in
-    POWERPC32)
-    compile_compat_atomic=yes
-    ;;
-esac
-case "$qthread_cv_asm_arch" in
     POWERPC*)
     AS_IF([test "x$qthread_cv_c_compiler_type" = "xApple-GNU4.0"],
           [AC_MSG_ERROR([The Apple GCC 4.0 compiler on PPC does not sufficiently support memory barriers to be safe. Please use a newer compiler (the Apple GCC 4.2 compiler seems to work just fine).])])
@@ -559,24 +545,8 @@ case "$qthread_cv_c_compiler_type" in
     ;;
 esac
 
-# Figure out whether the compiler has builtin atomic operations
-AS_IF([test "x$enable_hardware_atomics" != xno],
-      [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
-
 QTHREAD_BUILTIN_SYNCHRONIZE
 
-AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
-          [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
-           AS_IF([test "x$enable_hardware_atomics" = x],
-                     [AC_MSG_NOTICE(turning on software increments ($have_assembly))
-                      enable_hardware_increments=no])
-           AS_IF([test "x$enable_hardware_atomics" = "xyes"],
-                     [AC_MSG_ERROR([No assembly available and software increments disabled.])])],
-      [AS_IF([test "x$enable_hardware_atomics" = x], [enable_hardware_atomics="yes"])])
-
-AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [compile_compat_atomic=yes
-       AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_GUARD_PAGES], [1], [Use guard pages to detect stack overruns])],
       [enable_guard_pages="no"])
@@ -668,16 +638,10 @@ AS_IF([test "x$enable_internal_spinlock" = "x"],
        esac])
 
 
-AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [AS_IF([test "x$with_scheduler" != "xsherwood"],
-             [with_scheduler="sherwood"
-              AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])
-       AS_IF([test "x$enable_lf_fegs" = "xyes"],
-             [AC_MSG_ERROR([FEBs cannot use a lock-free hash table, since hardware atomic support is lacking.])])],
-      [AS_IF([test "x$enable_internal_spinlock" = x],
-             [enable_internal_spinlock=yes])
-       AS_IF([test "x$enable_internal_spinlock" = xyes],
-             [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])])
+AS_IF([test "x$enable_internal_spinlock" = x],
+      [enable_internal_spinlock=yes])
+AS_IF([test "x$enable_internal_spinlock" = xyes],
+      [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])
 
 AS_IF([test "x$enable_steal_profiling" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
@@ -871,7 +835,6 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xcl
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
-AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
@@ -948,17 +911,13 @@ AS_IF([test "x$enable_spawn_cache" = "xyes"],
       [AS_IF([test "x$pool_string" != "x"],
              [pool_string="$pool_string, spawns"],
              [pool_string="spawns"])])
-AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "xyes"],
-             [incr_string="Spin (software)"],
-             [incr_string="Mutex (software)"])],
-      [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
-             [incr_string="Compiler Builtin (both)"],
-             [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
-                    [incr_string="Compiler Builtin/$qthread_cv_asm_arch"],
-                    [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
-                           [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
-                           [incr_string="$qthread_cv_asm_arch"])])])])
+AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
+      [incr_string="Compiler Builtin (both)"],
+      [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
+             [incr_string="Compiler Builtin/$qthread_cv_asm_arch"],
+             [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
+                    [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
+                    [incr_string="$qthread_cv_asm_arch"])])])
 AS_IF([test "x$enable_lf_febs" = xno],
       [feb_string="lock-based hash"],
       [feb_string="lock-free"])

@@ -53,10 +53,6 @@ if COMPILE_EUREKAS
 libqthread_la_SOURCES += eurekas.c
 endif
 
-if COMPILE_COMPAT_ATOMIC
-libqthread_la_SOURCES += compat_atomics.c
-endif
-
 include qtimer/Makefile.inc
 include ds/Makefile.inc
 include patterns/Makefile.inc

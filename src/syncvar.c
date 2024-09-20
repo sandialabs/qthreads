@@ -77,9 +77,6 @@ typedef struct {
 static qt_hash *syncvars;
 #ifdef QTHREAD_COUNT_THREADS
 extern aligned_t *febs_stripes;
-#ifdef QTHREAD_MUTEX_INCREMENT
-extern QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
-#endif
 #endif
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 

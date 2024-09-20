@@ -99,13 +99,6 @@ struct qthread_shepherd_s {
   size_t num_threads; /* number of threads handled */
 #endif
 #ifdef QTHREAD_FEB_PROFILING
-#ifdef QTHREAD_MUTEX_INCREMENT
-  qt_hash uniqueincraddrs; /* the unique addresses that are incremented */
-  double incr_maxtime;     /* maximum time spent in a single increment */
-  double incr_time;        /* total time spent incrementing */
-  size_t incr_count;       /* number of increments */
-#endif
-
   qt_hash uniquelockaddrs;   /* the unique addresses that are locked */
   double aquirelock_maxtime; /* max time spent aquiring locks */
   double aquirelock_time;    /* total time spent aquiring locks */

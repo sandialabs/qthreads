@@ -38,9 +38,6 @@
 static qt_hash *FEBs;
 #ifdef QTHREAD_COUNT_THREADS
 aligned_t *febs_stripes;
-#ifdef QTHREAD_MUTEX_INCREMENT
-QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
-#endif
 #endif
 
 /********************************************************************
@@ -119,18 +116,11 @@ static void qt_feb_subsystem_shutdown(void) {
 #ifdef QTHREAD_COUNT_THREADS
     print_status(
       "bin %i used %u times for FEBs\n", i, (unsigned int)febs_stripes[i]);
-#ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_DESTROY(febs_stripes_locks[i]);
-#endif
 #endif
   }
   FREE(FEBs, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
 #ifdef QTHREAD_COUNT_THREADS
   FREE(febs_stripes, sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
-#ifdef QTHREAD_MUTEX_INCREMENT
-  FREE(febs_stripes_locks,
-       sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-#endif
 #endif
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
   qt_mpool_destroy(generic_addrstat_pool);
@@ -156,18 +146,10 @@ void INTERNAL qt_feb_subsystem_init(uint_fast8_t need_sync) {
 #ifdef QTHREAD_COUNT_THREADS
   febs_stripes = MALLOC(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
   assert(febs_stripes);
-#ifdef QTHREAD_MUTEX_INCREMENT
-  febs_stripes_locks =
-    MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-  assert(febs_stripes_locks);
-#endif
 #endif /* ifdef QTHREAD_COUNT_THREADS */
   for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
 #ifdef QTHREAD_COUNT_THREADS
     febs_stripes[i] = 0;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_INIT(febs_stripes_locks[i]);
-#endif
 #endif
     FEBs[i] = qt_hash_create(need_sync);
     assert(FEBs[i]);

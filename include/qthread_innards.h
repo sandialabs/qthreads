@@ -38,13 +38,7 @@ typedef struct uint64_strip_s {
 typedef struct qlib_s {
   unsigned int nshepherds;
   aligned_t nshepherds_active;
-#ifdef QTHREAD_MUTEX_INCREMENT
-  QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
-#endif
   aligned_t nworkers_active;
-#ifdef QTHREAD_MUTEX_INCREMENT
-  QTHREAD_FASTLOCK_TYPE nworkers_active_lock;
-#endif
   unsigned int nworkerspershep;
   struct qthread_shepherd_s *shepherds;
   qt_threadqueue_t **threadqueues;
@@ -108,14 +102,6 @@ typedef struct qlib_s {
   /* round robin scheduler - can probably be smarter */
   aligned_t sched_shepherd;
   QTHREAD_FASTLOCK_TYPE sched_shepherd_lock;
-
-#if defined(QTHREAD_MUTEX_INCREMENT) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
-  QTHREAD_FASTLOCK_TYPE *atomic_locks;
-#ifdef QTHREAD_COUNT_THREADS
-  aligned_t *atomic_stripes;
-  QTHREAD_FASTLOCK_TYPE *atomic_stripes_locks;
-#endif
-#endif
 
   /*AGG cost method, call method  and max cost
    * defined in qthreads or given by the user at qthread initialization
