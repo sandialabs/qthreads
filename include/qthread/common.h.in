@@ -7,9 +7,6 @@
 #ifndef QTHREAD_COMMON_H
 #define QTHREAD_COMMON_H
 
-/* Whether C compiler supports GCC style inline assembly */
-#define HAVE_GCC_INLINE_ASSEMBLY
-
 /* if the compiler supports inline assembly, we can prevent reordering */
 #undef COMPILER_FENCE
 
