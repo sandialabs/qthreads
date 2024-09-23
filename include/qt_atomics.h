@@ -127,15 +127,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 // Trylock declarations
 
-/* For the followimg implementation of try-locks,
- * it is necessary that qthread_incr() be defined on
- * haligned_t types. This requirement is satisfied when
- * defined(QTHREAD_ATOMIC_INCR), it remains to be determined
- * whether it is satisfied in some circumstances when
- * !defined(QTHREAD_ATOMIC_INCR).
- */
-#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK &&               \
-  defined(QTHREAD_ATOMIC_INCR)
+#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 
 #define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 #define QTHREAD_TRYLOCK_INIT(x)                                                \

@@ -32,9 +32,6 @@
 /* if the compiler supports __sync_val_compare_and_swap on pointers */
 #define QTHREAD_ATOMIC_CAS_PTR 1
 
-/* builtin incr supported */
-#define QTHREAD_ATOMIC_INCR 1
-
 #ifdef __cplusplus
 #ifdef __GNUC__
 #define restrict __restrict

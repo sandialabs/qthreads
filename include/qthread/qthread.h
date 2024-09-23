@@ -940,12 +940,7 @@ Q_ENDCXX /* */
 
 #ifndef __cplusplus
 
-#if defined(QTHREAD_ATOMIC_INCR)
 #define qthread_incr(ADDR, INCVAL) __sync_fetch_and_add(ADDR, INCVAL)
-#else
-#define qthread_incr(ADDR, INCVAL)                                             \
-  qthread_incr_xx((void *)(ADDR), (int64_t)(INCVAL), sizeof(*(ADDR)))
-#endif
 
 #else /* ifdef __cplusplus */
   extern "C++" {
