@@ -424,7 +424,6 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          esac])
 
-QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 case "$qthread_cv_asm_arch" in
     POWERPC*)
     AS_IF([test "x$qthread_cv_c_compiler_type" = "xApple-GNU4.0"],
