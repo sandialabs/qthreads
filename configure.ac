@@ -424,7 +424,6 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          esac])
 
-QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 case "$qthread_cv_asm_arch" in
     POWERPC*)
     AS_IF([test "x$qthread_cv_c_compiler_type" = "xApple-GNU4.0"],
@@ -846,7 +845,7 @@ AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
 AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
 AM_CONDITIONAL([HAVE_LIBM], [test "x$have_libm" = "xyes"])
 
-AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
+AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  man/Makefile

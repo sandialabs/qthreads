@@ -7,15 +7,6 @@
 #ifndef QTHREAD_COMMON_H
 #define QTHREAD_COMMON_H
 
-/* Whether C compiler supports GCC style inline assembly */
-#define HAVE_GCC_INLINE_ASSEMBLY
-
-/* if the compiler supports inline assembly, we can prevent reordering */
-#undef COMPILER_FENCE
-
-/* Architecture type of assembly to use */
-#undef QTHREAD_ASSEMBLY_ARCH
-
 #ifndef __powerpc
 #define BITFIELD_ORDER_REVERSE
 #else
@@ -25,21 +16,6 @@
 // they're run in little-endian mode though.
 #define BITFIELD_ORDER_FORWARD
 #endif
-
-/* builtin cas supported */
-#define QTHREAD_ATOMIC_CAS 1
-
-/* if the compiler supports __sync_val_compare_and_swap on 32-bit ints */
-#define QTHREAD_ATOMIC_CAS32 1
-
-/* if the compiler supports __sync_val_compare_and_swap on 64-bit ints */
-#define QTHREAD_ATOMIC_CAS64 1
-
-/* if the compiler supports __sync_val_compare_and_swap on pointers */
-#define QTHREAD_ATOMIC_CAS_PTR 1
-
-/* builtin incr supported */
-#define QTHREAD_ATOMIC_INCR 1
 
 #ifdef __cplusplus
 #ifdef __GNUC__
@@ -64,5 +40,21 @@
 #define QTHREAD_POWERPC64   7
 #define QTHREAD_ARM         12
 #define QTHREAD_ARMV8_A64   13
+
+#if defined(__amd64__) || defined(_M_AMD_64)
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_AMD64
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_ARMV8_A64
+#elif defined(_ARCH_PPC64)
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_POWERPC64
+#elif defined(__i386__) || defined(_X86_) || defined(_M_IX86)
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_IA32
+#elif defined(__arm__) || defined(_M_ARM)
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_ARM
+#elif defined(_ARCHPPC)
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_POWERPC32
+#else
+#error "Unsupported architecture"
+#endif
 
 #endif

@@ -56,7 +56,7 @@ static void eureka(void) { /*{{{*/
       MACHINE_FENCE;
       eureka_out_barrier++;
     } else {
-      COMPILER_FENCE;
+      MACHINE_FENCE;
       while (tmp == eureka_out_barrier) SPINLOCK_BODY();
     }
   }
@@ -84,7 +84,7 @@ static void eureka(void) { /*{{{*/
         MACHINE_FENCE;
         eureka_out_barrier++;
       } else {
-        COMPILER_FENCE;
+        MACHINE_FENCE;
         while (tmp == eureka_out_barrier) SPINLOCK_BODY();
       }
     }
@@ -128,7 +128,7 @@ void INTERNAL qt_eureka_end_criticalsect_dead(qthread_t *self) { /*{{{*/
     MACHINE_FENCE;
     eureka_out_barrier++;
   } else {
-    COMPILER_FENCE;
+    MACHINE_FENCE;
     while (tmp == eureka_out_barrier) SPINLOCK_BODY();
   }
   qthread_back_to_master2(self);
@@ -268,7 +268,7 @@ void API_FUNC qt_team_eureka(void) { /*{{{*/
       MACHINE_FENCE;
       eureka_out_barrier++;
     } else {
-      COMPILER_FENCE;
+      MACHINE_FENCE;
       while (tmp == eureka_out_barrier) SPINLOCK_BODY();
     }
   }
@@ -292,7 +292,7 @@ void API_FUNC qt_team_eureka(void) { /*{{{*/
       MACHINE_FENCE;
       eureka_out_barrier++;
     } else {
-      COMPILER_FENCE;
+      MACHINE_FENCE;
       while (tmp == eureka_out_barrier) SPINLOCK_BODY();
     }
   }

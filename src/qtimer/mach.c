@@ -32,7 +32,7 @@ void qtimer_start(qtimer_t q) {
       if (err == 0) {
         conversion = 1e-9 * (double)info.numer / (double)info.denom;
       }
-      COMPILER_FENCE;
+      MACHINE_FENCE;
       inited = 2;
     } else {
       while (inited == 1) SPINLOCK_BODY();

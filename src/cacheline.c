@@ -8,6 +8,8 @@
 #include <qthread/cacheline.h>
 #include <qthread/common.h>
 
+#define HAVE_GCC_INLINE_ASSEMBLY
+
 enum vendor { AMD, Intel, Unknown };
 
 static int cacheline_bytes = 0;

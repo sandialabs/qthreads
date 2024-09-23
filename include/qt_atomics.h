@@ -23,14 +23,12 @@
 #ifdef HAVE_PTHREAD_YIELD
 #define SPINLOCK_BODY()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
     pthread_yield();                                                           \
   } while (0)
 #elif HAVE_SCHED_YIELD
 #include <sched.h> /* for sched_yield(); */
 #define SPINLOCK_BODY()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
     sched_yield();                                                             \
   } while (0)
 #else
@@ -40,12 +38,11 @@
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #define SPINLOCK_BODY()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
-    __asm__ __volatile__("pause" ::: "memory");                                \
+    MACHINE_FENCE;                                                             \
   } while (0)
 #else
 #define SPINLOCK_BODY()                                                        \
-  do { COMPILER_FENCE; } while (0)
+  do { MACHINE_FENCE; } while (0)
 #endif // ifdef QTHREAD_OVERSUBSCRIPTION
 
 #if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
@@ -130,15 +127,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 // Trylock declarations
 
-/* For the followimg implementation of try-locks,
- * it is necessary that qthread_incr() be defined on
- * haligned_t types. This requirement is satisfied when
- * defined(QTHREAD_ATOMIC_INCR), it remains to be determined
- * whether it is satisfied in some circumstances when
- * !defined(QTHREAD_ATOMIC_INCR).
- */
-#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK &&               \
-  defined(QTHREAD_ATOMIC_INCR)
+#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 
 #define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 #define QTHREAD_TRYLOCK_INIT(x)                                                \
@@ -154,8 +143,7 @@ extern pthread_mutexattr_t _fastlock_attr;
   }
 #define QTHREAD_TRYLOCK_UNLOCK(x)                                              \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
-    THREAD_FENCE_MEM_RELEASE;                                                  \
+    atomic_thread_fence(memory_order_release);                                 \
     qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */               \
   } while (0)
 #define QTHREAD_TRYLOCK_DESTROY(x)
@@ -316,68 +304,7 @@ extern pthread_mutexattr_t _fastlock_attr;
   qt_cas((void **)&(var), (void *)(oldv), (void *)(newv))
 #define QT_CAS_(var, oldv, newv, caslock)                                      \
   qt_cas((void **)&(var), (void *)(oldv), (void *)(newv))
-#ifdef QTHREAD_ATOMIC_CAS_PTR
 #define qt_cas(P, O, N) (void *)__sync_val_compare_and_swap((P), (O), (N))
-#else
-static inline void *
-qt_cas(void **const ptr, void *const oldv, void *const newv) { /*{{{*/
-#if defined(HAVE_GCC_INLINE_ASSEMBLY)
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-  void *result;
-  __asm__ __volatile__("A_%=:\n\t"
-                       "lwarx  %0,0,%3\n\t"
-                       "cmpw   %0,%1\n\t"
-                       "bne    B_%=\n\t"
-                       "stwcx. %2,0,%3\n\t"
-                       "bne-   A_%=\n"
-                       "B_%=:"
-                       : "=&b"(result)
-                       : "r"(oldv), "r"(newv), "r"(ptr)
-                       : "cc", "memory");
-  return result;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-  void *result;
-  __asm__ __volatile__("A_%=:\n\t"
-                       "ldarx  %0,0,%3\n\t"
-                       "cmpw   %0,%1\n\t"
-                       "bne    B_%=\n\t"
-                       "stdcx. %2,0,%3\n\t"
-                       "bne-   A_%=\n"
-                       "B_%=:"
-                       : "=&b"(result)
-                       : "r"(oldv), "r"(newv), "r"(ptr)
-                       : "cc", "memory");
-  return result;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                              \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-  void **retval;
-
-  /* note that this is GNU/Linux syntax (aka AT&T syntax), not Intel syntax.
-   * Thus, this instruction has the form:
-   * [lock] cmpxchg reg, reg/mem
-   *                src, dest
-   *
-   * NOTE: this is valid even on 64-bit architectures, because AMD64
-   * instantiates cmpxchg for 8-byte registers, and IA32 never has 64-bit
-   * pointers
-   */
-  __asm__ __volatile__("lock; cmpxchg %1,(%2)"
-                       : "=a"(retval)                   /* store from RAX */
-                       : "r"(newv), "r"(ptr), "a"(oldv) /* load into RAX */
-                       : "cc", "memory");
-  return retval;
-
-#else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
-#error "Don't have a qt_cas implementation for this architecture"
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
-#else  /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */
-#error "CAS needs inline assembly OR __sync_val_compare_and_swap"
-#endif /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */
-} /*}}}*/
-
-#endif /* ATOMIC_CAS_PTR */
 
 #define qthread_internal_atomic_read_s(op, lock) (*op)
 #define qthread_internal_incr(op, lock, val) qthread_incr(op, val)
@@ -391,7 +318,7 @@ static inline aligned_t qthread_internal_incr_mod_(
   unsigned int const max QTHREAD_OPTIONAL_LOCKARG) { /*{{{ */
   aligned_t retval;
 
-#if QTHREAD_ATOMIC_CAS && (QTHREAD_BITS == 32)
+#if QTHREAD_BITS == 32
   uint32_t oldval, newval;
 
   newval = *operand;
@@ -402,7 +329,7 @@ static inline aligned_t qthread_internal_incr_mod_(
 
     newval = __sync_val_compare_and_swap((uint32_t *)operand, oldval, newval);
   } while (oldval != newval);
-#elif QTHREAD_ATOMIC_CAS && (QTHREAD_BITS == 64)
+#elif QTHREAD_BITS == 64
   uint64_t oldval, newval;
 
   newval = *operand;
@@ -413,147 +340,9 @@ static inline aligned_t qthread_internal_incr_mod_(
 
     newval = __sync_val_compare_and_swap((uint64_t *)operand, oldval, newval);
   } while (oldval != newval);
-#elif defined(HAVE_GCC_INLINE_ASSEMBLY)
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                            \
-  ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                             \
-   (QTHREAD_BITS == 32))
-
-  unsigned int incrd = incrd; /* these don't need to be initialized */
-  unsigned int compd = compd; /* they're just tmp variables */
-
-  /* the minus in bne- means "this bne is unlikely to be taken" */
-  asm volatile("A_%=:\n\t"             /* local label */
-               "lwarx  %0,0,%3\n\t"    /* load operand */
-               "addi   %2,%0,1\n\t"    /* increment it into incrd */
-               "cmplw  7,%2,%4\n\t"    /* compare incrd to the max */
-               "mfcr   %1\n\t"         /* move the result into compd */
-               "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
-               "mullw  %2,%2,%1\n\t"   /* incrd *= compd */
-               "stwcx. %2,0,%3\n\t"    /* *operand = incrd */
-               "bne-   A_%=\n\t"       /* if it failed, go to label 1 back */
-               "isync"                 /* make sure it wasn't all a dream */
-
-               /* = means this operand is write-only (previous value is
-                * discarded) & means this operand is an earlyclobber (i.e.
-                * cannot use the same register as any of the input operands) b
-                * means this is a register but must not be r0 */
-               : "=&b"(retval), "=&r"(compd), "=&r"(incrd)
-               : "r"(operand), "r"(max)
-               : "cc", "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-  uint64_t incrd = incrd;
-  uint64_t compd = compd;
-
-  asm volatile("A_%=:\n\t"             /* local label */
-               "ldarx  %0,0,%3\n\t"    /* load operand */
-               "addi   %2,%0,1\n\t"    /* increment it into incrd */
-               "cmpl   7,1,%2,%4\n\t"  /* compare incrd to the max */
-               "mfcr   %1\n\t"         /* move the result into compd */
-               "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
-               "mulld  %2,%2,%1\n\t"   /* incrd *= compd */
-               "stdcx. %2,0,%3\n\t"    /* *operand = incrd */
-               "bne-   A_%=\n\t"       /* if it failed, to to label 1 back */
-               "isync" /* make sure it wasn't all just a dream */
-               : "=&b"(retval), "=&r"(compd), "=&r"(incrd)
-               : "r"(operand), "r"(max)
-               : "cc", "memory");
-
-#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) &&                              \
-       (QTHREAD_BITS == 32)) ||                                     \
-  ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) &&                                 \
-   (QTHREAD_BITS == 32))
-
-  unsigned int oldval, newval;
-
-  do {
-    oldval = *operand;
-    newval = oldval + 1;
-    newval *= (newval < max);
-    asm volatile("lock; cmpxchgl %1, (%2)"
-                 : "=&a"(retval)
-                 : "r"(newval), "r"(operand), "0"(oldval)
-                 : "memory");
-  } while (retval != oldval);
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-  union {
-    uint64_t i;
-
-    struct {
-      /* note: the ordering of these is important and counter-intuitive; welcome
-       * to little-endian! */
-      uint32_t l;
-      uint32_t h;
-    } s;
-  } oldval, newval;
-
-  char test;
-
-  do {
-#ifdef __PIC__
-    /* this saves off %ebx to make PIC code happy :P */
-#define QTHREAD_INTERNAL_PIC_PREFIX /*"xchg %%ebx, %4\n\t"*/                   \
-  "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
-    /* this restores it */
-#define QTHREAD_INTERNAL_PIC_SUFFIX /*"\n\txchg %%ebx, %4"*/ "\n\tpopl %%ebx"
-#define QTHREAD_INTERNAL_PIC_REG_4 "m"
-#else
-#define QTHREAD_INTERNAL_PIC_PREFIX
-#define QTHREAD_INTERNAL_PIC_SUFFIX
-#define QTHREAD_INTERNAL_PIC_REG_4 "b"
-#endif
-    oldval.i = *operand;
-    newval.i = oldval.i + 1;
-    newval.i *= (newval.i < max);
-    __asm__ __volatile__(QTHREAD_INTERNAL_PIC_PREFIX
-                         "lock; cmpxchg8b (%1)\n\t"
-                         "setne %0" /* test = (ZF==0) */
-                         QTHREAD_INTERNAL_PIC_SUFFIX
-                         : "=q"(test)
-                         : "r"(operand),
-                           /*EAX*/ "a"(oldval.s.l),
-                           /*EDX*/ "d"(oldval.s.h),
-                           /*EBX*/ QTHREAD_INTERNAL_PIC_REG_4(newval.s.l),
-                           /*ECX*/ "c"(newval.s.h)
-                         : "memory");
-  } while (test);
-  retval = oldval.i;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-  unsigned long oldval, newval;
-
-  do {
-    oldval = *operand;
-    newval = oldval + 1;
-    newval *= (newval < max);
-    asm volatile("lock; cmpxchgq %1, (%2)"
-                 : "=a"(retval)
-                 : "r"(newval), "r"(operand), "0"(oldval)
-                 : "memory");
-  } while (retval != oldval);
-
-#else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                    \
-         ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                      \
-         (QTHREAD_BITS == 32)) */
-#error "Unimplemented assembly architecture"
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                   \
-          ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) &&                     \
-          (QTHREAD_BITS == 32)) */
-
-#elif QTHREAD_ATOMIC_CAS
-  aligned_t oldval, newval;
-
-  retval = *operand;
-  do {
-    oldval = retval;
-    newval = retval + 1;
-    newval *= (newval < max);
-    retval = __sync_val_compare_and_swap(operand, oldval, newval);
-  } while (retval != oldval);
-#else /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */
-#error "Neither atomic or mutex increment enabled"
-#endif /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */
+#else /* if QTHREAD_BITS == 32 */
+#error "Unrecognized bit-ness"
+#endif /* if QTHREAD_BITS == 32 */
 
   return retval;
 } /*}}} */
