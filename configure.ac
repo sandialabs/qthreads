@@ -39,11 +39,6 @@ AC_ARG_ENABLE([debugging],
               [AS_HELP_STRING([--enable-debugging],
                               [turns off optimization and turns on debug flags])])
 
-AC_ARG_ENABLE([hardware-timer],
-              [AS_HELP_STRING([--disable-hardware-timer],
-                              [force the use of gettimeofday even if there is a
-                               better timer available])])
-
 AC_ARG_ENABLE([aligncheck],
               [AS_HELP_STRING([--enable-aligncheck],
                               [check the alignment of synchronization addresses])])
@@ -747,27 +742,25 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
                       [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
        ])
 
-AS_IF([test "x$enable_hardware_timer" != "xno"],
-      [AC_LINK_IFELSE([AC_LANG_SOURCE([[
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <unistd.h>
 
 int main() {
   return sysconf(_SC_CLK_TCK);
 }]])],
   [AC_DEFINE([HAVE_SC_CLK_TCK], [1], [Define if _SC_CLK_TCK is available.])])
-       dnl Which timer do we want to use
-       qthread_timer_type=gettimeofday
-       AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
-             [AC_CHECK_FUNC([mach_absolute_time], [qthread_timer_type=mach])])
-       AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
-             [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
-       AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
-             [AC_SEARCH_LIBS([clock_gettime],[rt],
-                             [qthread_timer_type=clock_gettime
-                              break])])
-       AC_MSG_CHECKING([for high resolution timer type])
-       AC_MSG_RESULT([$qthread_timer_type])],
-      [qthread_timer_type=gettimeofday])
+dnl Which timer do we want to use
+qthread_timer_type=gettimeofday
+AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
+      [AC_CHECK_FUNC([mach_absolute_time], [qthread_timer_type=mach])])
+AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
+      [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
+AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
+      [AC_SEARCH_LIBS([clock_gettime],[rt],
+                      [qthread_timer_type=clock_gettime
+                       break])])
+AC_MSG_CHECKING([for high resolution timer type])
+AC_MSG_RESULT([$qthread_timer_type])
 
 AS_IF([test "x$with_default_stack_size" != "x"],
       [qthread_cv_stack_size=$with_default_stack_size],
