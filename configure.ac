@@ -845,7 +845,7 @@ AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
 AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
 AM_CONDITIONAL([HAVE_LIBM], [test "x$have_libm" = "xyes"])
 
-AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
+AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  man/Makefile
