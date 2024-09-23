@@ -20,18 +20,6 @@
 #define BITFIELD_ORDER_FORWARD
 #endif
 
-/* builtin cas supported */
-#define QTHREAD_ATOMIC_CAS 1
-
-/* if the compiler supports __sync_val_compare_and_swap on 32-bit ints */
-#define QTHREAD_ATOMIC_CAS32 1
-
-/* if the compiler supports __sync_val_compare_and_swap on 64-bit ints */
-#define QTHREAD_ATOMIC_CAS64 1
-
-/* if the compiler supports __sync_val_compare_and_swap on pointers */
-#define QTHREAD_ATOMIC_CAS_PTR 1
-
 #ifdef __cplusplus
 #ifdef __GNUC__
 #define restrict __restrict
