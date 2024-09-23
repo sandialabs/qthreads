@@ -79,7 +79,7 @@ static void qt_blocking_subsystem_internal_freemem(void) { /*{{{*/
 static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) { /*{{{*/
   while (!atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
     if (qt_process_blocking_call()) { break; }
-    COMPILER_FENCE;
+    MACHINE_FENCE;
   }
   qthread_debug(IO_DETAILS,
                 "proxy_exit = %i, exiting\n",
@@ -140,7 +140,6 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
     struct timespec ts;
     int ret;
 
-    COMPILER_FENCE;
     gettimeofday(&tv, NULL);
     ts.tv_sec = tv.tv_sec;
     ts.tv_nsec = (tv.tv_usec + timeout) * 1000;

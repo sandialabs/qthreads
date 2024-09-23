@@ -73,9 +73,9 @@ int qlfqueue_destroy(qlfqueue_t *q) { /*{{{ */
   qassert_ret((q != NULL), QTHREAD_BADARGS);
   while (q->head != q->tail) {
     qlfqueue_dequeue(q);
-    COMPILER_FENCE;
+    MACHINE_FENCE;
   }
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   qpool_free(qlfqueue_node_pool, (void *)(q->head));
   FREE(q, sizeof(struct qlfqueue_s));
   return QTHREAD_SUCCESS;

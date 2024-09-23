@@ -92,7 +92,6 @@ using std::memory_order_relaxed;
 #include "macros.h"
 
 #define MACHINE_FENCE atomic_thread_fence(memory_order_acq_rel);
-#define COMPILER_FENCE MACHINE_FENCE
 
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
@@ -251,12 +250,10 @@ void qthread_enable_worker(qthread_worker_id_t worker);
  * they block. */
 #define qthread_yield()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
     qthread_yield_(0);                                                         \
   } while (0)
 #define qthread_yield_near()                                                   \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
     qthread_yield_(1);                                                         \
   } while (0)
 void qthread_yield_(int);

@@ -700,7 +700,6 @@ int API_FUNC qthread_empty(aligned_t const *dest) { /*{{{ */
       }
       m->full = 0;
       QTHREAD_EMPTY_TIMER_START(m);
-      COMPILER_FENCE;
       qassertnot(qt_hash_put_locked(FEBbin, (void *)alignedaddr, m), 0);
       qthread_debug(FEB_DETAILS,
                     "dest=%p (tid=%i): inserted m=%p\n",
@@ -927,7 +926,6 @@ int API_FUNC qthread_purge_to(aligned_t *restrict dest,
       }
       m->full = 0;
       QTHREAD_EMPTY_TIMER_START(m);
-      COMPILER_FENCE;
       qassertnot(qt_hash_put_locked(FEBbin, (void *)alignedaddr, m), 0);
       qthread_debug(FEB_DETAILS,
                     "dest=%p src=%p (tid=%i): inserted m=%p\n",

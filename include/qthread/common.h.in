@@ -7,9 +7,6 @@
 #ifndef QTHREAD_COMMON_H
 #define QTHREAD_COMMON_H
 
-/* if the compiler supports inline assembly, we can prevent reordering */
-#undef COMPILER_FENCE
-
 /* Architecture type of assembly to use */
 #undef QTHREAD_ASSEMBLY_ARCH
 

@@ -37,7 +37,7 @@ static aligned_t live_waiter(void *arg) {
   qt_team_critical_section(BEGIN);
   iprintf("live_waiter filled %p\n", &alive[assigned]);
   qt_team_critical_section(END);
-  while (t == 1) { COMPILER_FENCE; }
+  while (t == 1) { MACHINE_FENCE; }
   qthread_incr(&waiter_count, 1);
   iprintf("live_waiter %i exiting! id %i wkr %u\n",
           assigned,
@@ -66,7 +66,7 @@ static aligned_t live_parent(void *arg) {
   iprintf("live_parent about to eureka...\n");
   qt_team_eureka();
   iprintf("live_parent still alive!\n");
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   t = 0;
   return 0;
 }
@@ -80,7 +80,7 @@ static aligned_t live_waiter2(void *arg) {
           id,
           qthread_readstate(CURRENT_UNIQUE_WORKER));
   qt_team_critical_section(END);
-  while (t == 1) { COMPILER_FENCE; }
+  while (t == 1) { MACHINE_FENCE; }
   qthread_incr(&waiter_count, 1);
   qt_team_critical_section(BEGIN);
   iprintf("live_waiter2 %i exiting! id %i wkr %u\n",
@@ -105,7 +105,7 @@ static aligned_t live_parent2(void *arg) {
   iprintf("live_parent2 about to eureka...\n");
   qt_team_eureka();
   iprintf("live_parent2 still alive!\n");
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   t = 0;
   iprintf("live_parent2 exiting!\n");
   return 0;
@@ -119,7 +119,7 @@ static aligned_t live_parent3(void *arg) {
   iprintf("live_parent3 about to eureka...\n");
   qt_team_eureka();
   iprintf("live_parent3 still alive!\n");
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   t = 0;
   iprintf("live_parent3 exiting!\n");
   return 0;
@@ -140,7 +140,7 @@ static aligned_t live_parent_waiter(void *arg) {
   qt_team_critical_section(BEGIN);
   iprintf("live_parent_waiter filled %p\n", &alive[assigned]);
   qt_team_critical_section(END);
-  while (t == 1) { COMPILER_FENCE; }
+  while (t == 1) { MACHINE_FENCE; }
   qthread_incr(&waiter_count, 1);
   iprintf("live_parent_waiter %i exiting! id %i wkr %u\n",
           assigned,
@@ -176,7 +176,7 @@ static aligned_t parent_eureka(void *arg) {
   iprintf("parent_eureka about to eureka...\n");
   qt_team_eureka();
   iprintf("parent_eureka still alive!\n");
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   t = 0;
   return 0;
 }

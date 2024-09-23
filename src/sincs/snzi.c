@@ -332,7 +332,7 @@ void qt_sinc_expect(qt_sinc_t *sinc_, size_t count) {
           succ = 1;
         }
       }
-      COMPILER_FENCE;
+      MACHINE_FENCE;
     } while (!succ);
     if (undoArr != 0) { qthread_incr(&snzi->remaining, undoArr); }
   }

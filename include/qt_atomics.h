@@ -23,14 +23,12 @@
 #ifdef HAVE_PTHREAD_YIELD
 #define SPINLOCK_BODY()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
     pthread_yield();                                                           \
   } while (0)
 #elif HAVE_SCHED_YIELD
 #include <sched.h> /* for sched_yield(); */
 #define SPINLOCK_BODY()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
     sched_yield();                                                             \
   } while (0)
 #else
@@ -40,12 +38,11 @@
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #define SPINLOCK_BODY()                                                        \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
-    __asm__ __volatile__("pause" ::: "memory");                                \
+    MACHINE_FENCE;                                                             \
   } while (0)
 #else
 #define SPINLOCK_BODY()                                                        \
-  do { COMPILER_FENCE; } while (0)
+  do { MACHINE_FENCE; } while (0)
 #endif // ifdef QTHREAD_OVERSUBSCRIPTION
 
 #if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
@@ -154,8 +151,7 @@ extern pthread_mutexattr_t _fastlock_attr;
   }
 #define QTHREAD_TRYLOCK_UNLOCK(x)                                              \
   do {                                                                         \
-    COMPILER_FENCE;                                                            \
-    THREAD_FENCE_MEM_RELEASE;                                                  \
+    atomic_thread_fence(memory_order_release);                                 \
     qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */               \
   } while (0)
 #define QTHREAD_TRYLOCK_DESTROY(x)

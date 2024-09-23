@@ -52,7 +52,7 @@ int qswsrqueue_destroy(qswsrqueue_t *q) { /*{{{ */
 int qswsrqueue_enqueue(qswsrqueue_t *q, void *elem) { /*{{{ */
   uint32_t cur_tail = q->tail;
   uint32_t next_tail = (cur_tail + 1) % q->size;
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   if (next_tail != q->head) {
     q->elements[cur_tail] = elem;
     MACHINE_FENCE;
@@ -68,7 +68,7 @@ int qswsrqueue_enqueue_blocking(qswsrqueue_t *q, void *elem) { /*{{{ */
   uint32_t next_tail = (cur_tail + 1) % q->size2;
   do {
     while (next_tail == q->head) qthread_yield();
-    COMPILER_FENCE;
+    MACHINE_FENCE;
     if (next_tail != q->head) {
       q->elements[cur_tail] = elem;
       MACHINE_FENCE;
@@ -81,10 +81,10 @@ int qswsrqueue_enqueue_blocking(qswsrqueue_t *q, void *elem) { /*{{{ */
 void *qswsrqueue_dequeue(qswsrqueue_t *q) { /*{{{ */
   void *item;
   uint32_t cur_head = q->head;
-  COMPILER_FENCE;
+  MACHINE_FENCE;
   if (cur_head == q->tail) return NULL;
   item = q->elements[cur_head];
-  COMPILER_FENCE; // MIGHT need to be a MACHINE_FENCE, but I don't think so
+  MACHINE_FENCE; // MIGHT need to be a MACHINE_FENCE, but I don't think so
   q->head = (cur_head + 1) % q->size;
   return item;
 } /*}}} */
@@ -95,10 +95,10 @@ void *qswsrqueue_dequeue_blocking(qswsrqueue_t *q) { /*{{{ */
   uint32_t next_head = (cur_head + 1) % q->size;
   do {
     while (next_head == q->tail) qthread_yield();
-    COMPILER_FENCE;
+    MACHINE_FENCE;
     if (next_head != q->tail) {
       item = q->elements[cur_head];
-      COMPILER_FENCE;
+      MACHINE_FENCE;
       q->head = next_head;
       return item;
     }
