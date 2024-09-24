@@ -176,21 +176,6 @@ AC_ARG_ENABLE([lazy-threadids],
                                time, rather than as necessary; this ensures
                                every thread gets a unique thread id])])
 
-AC_ARG_ENABLE([64bit-aligned_t],
-              [AS_HELP_STRING([--enable-64bit-aligned_t],
-                              [If enabled, aligned_t is 8 bytes.  If disabled,
-                               aligned_t is sizeof(int). By default, aligned_t
-                               is 8 bytes on all platforms except PowerPC32,
-                               where it is 4 bytes (due to a lack of native
-                               64-bit atomic operations)])])
-
-AC_ARG_ENABLE([64bit-alignment],
-              [AS_HELP_STRING([--enable-64bit-alignment],
-                              [Align aligned_t to 8 byte boundry, even if it is
-                               4 bytes long.  Default is to align to
-                               sizeof(aligned_t). Alignment cannot be smaller
-                               than aligned_t.])])
-
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
