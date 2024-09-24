@@ -262,7 +262,7 @@ int API_FUNC qthread_feb_status(aligned_t const *addr) { /*{{{ */
   int status = 1; /* full */
   int const lockbin = QTHREAD_CHOOSE_STRIPE2(addr);
 
-  QALIGN(addr, alignedaddr);
+  alignedaddr = addr;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -645,7 +645,7 @@ int API_FUNC qthread_empty(aligned_t const *dest) { /*{{{ */
   assert(qthread_library_initialized);
 
   if (!shep) { return qthread_feb_blocker_func((void *)dest, NULL, EMPTY); }
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   {
     int const lockbin = QTHREAD_CHOOSE_STRIPE2(alignedaddr);
     FEBbin = FEBs[lockbin];
@@ -738,7 +738,7 @@ int API_FUNC qthread_fill(aligned_t const *dest) { /*{{{ */
 
   if (!shep) { return qthread_feb_blocker_func((void *)dest, NULL, FILL); }
   qthread_debug(FEB_CALLS, "dest=%p (tid=%i)\n", dest, qthread_id());
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   /* lock hash */
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
@@ -801,7 +801,7 @@ int API_FUNC qthread_writeF(aligned_t *dest, aligned_t const *src) { /*{{{ */
                 (shep->current) ? (shep->current->thread_id) : UINT_MAX,
                 dest,
                 src);
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
@@ -866,7 +866,7 @@ int API_FUNC qthread_purge_to(aligned_t *restrict dest,
   assert(qthread_library_initialized);
 
   if (!shep) { return qthread_feb_blocker_func(dest, (void *)src, PURGE); }
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
   {
     int const lockbin = QTHREAD_CHOOSE_STRIPE2(alignedaddr);
@@ -1001,7 +1001,7 @@ int API_FUNC qthread_writeEF(aligned_t *restrict dest,
                 me->thread_id);
   QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
   QTHREAD_FEB_TIMER_START(febblock);
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1151,7 +1151,7 @@ int API_FUNC qthread_writeEF_nb(aligned_t *restrict dest,
   qthread_debug(
     FEB_BEHAVIOR, "tid %u dest=%p src=%p...\n", me->thread_id, dest, src);
   QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1221,7 +1221,7 @@ int API_FUNC qthread_writeFF(aligned_t *restrict dest,
     FEB_CALLS, "dest=%p, src=%p (tid=%u)\n", dest, src, me->thread_id);
   QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
   QTHREAD_FEB_TIMER_START(febblock);
-  QALIGN(dest, alignedaddr);
+  alignedaddr = dest;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1336,7 +1336,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict dest,
     FEB_CALLS, "dest=%p, src=%p (tid=%u)\n", dest, src, me->thread_id);
   QTHREAD_FEB_UNIQUERECORD(feb, src, me);
   QTHREAD_FEB_TIMER_START(febblock);
-  QALIGN(src, alignedaddr);
+  alignedaddr = src;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1437,7 +1437,7 @@ int API_FUNC qthread_readFF_nb(aligned_t *restrict dest,
   qthread_debug(
     FEB_BEHAVIOR, "tid %u dest=%p src=%p...\n", me->thread_id, dest, src);
   QTHREAD_FEB_UNIQUERECORD(feb, src, me);
-  QALIGN(src, alignedaddr);
+  alignedaddr = src;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1512,7 +1512,7 @@ int API_FUNC qthread_readFE(aligned_t *restrict dest,
     FEB_CALLS, "dest=%p, src=%p (tid=%i)\n", dest, src, me->thread_id);
   QTHREAD_FEB_UNIQUERECORD(feb, src, me);
   QTHREAD_FEB_TIMER_START(febblock);
-  QALIGN(src, alignedaddr);
+  alignedaddr = src;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1637,7 +1637,7 @@ int API_FUNC qthread_readFE_nb(aligned_t *restrict dest,
   qthread_debug(
     FEB_BEHAVIOR, "tid %u dest=%p src=%p...\n", me->thread_id, dest, src);
   QTHREAD_FEB_UNIQUERECORD(feb, src, me);
-  QALIGN(src, alignedaddr);
+  alignedaddr = src;
   QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
   do {
@@ -1737,7 +1737,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t) { /*{{{*/
 
     QTHREAD_FEB_UNIQUERECORD2(feb, this_sync, curshep);
     QTHREAD_FEB_TIMER_START(febblock);
-    QALIGN(this_sync, alignedaddr);
+    alignedaddr = this_sync;
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
     do {

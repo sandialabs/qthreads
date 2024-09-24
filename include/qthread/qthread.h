@@ -18,10 +18,6 @@ using std::memory_order_relaxed;
 #include <stdint.h>
 #include <string.h> /* for memcpy() */
 
-#ifndef QTHREAD_NOALIGNCHECK
-#include <stdio.h> /* for fprintf() */
-#endif
-
 #include "common.h"
 
 /*****************************************************************************
@@ -127,21 +123,7 @@ typedef int64_t saligned_t;
 
 #define QTHREAD_ALIGNMENT_ALIGNED_T (sizeof(aligned_t))
 
-#ifndef QTHREAD_NOALIGNCHECK
-#define QALIGN(d, s)                                                           \
-  do {                                                                         \
-    s = (aligned_t *)(((size_t)d) & (~(sizeof(aligned_t) - 1)));               \
-    if (s != d) {                                                              \
-      fprintf(stderr,                                                          \
-              "WARNING: %s(): unaligned address %p ... assuming %p\n",         \
-              __FUNCTION__,                                                    \
-              (void *)d,                                                       \
-              (void *)s);                                                      \
-    }                                                                          \
-  } while (0)
-#else /* QTHREAD_NOALIGNCHECK */
 #define QALIGN(d, s) (s) = (d)
-#endif /* ifndef QTHREAD_NOALIGNCHECK */
 
 typedef struct _syncvar_s {
   union {

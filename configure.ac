@@ -39,10 +39,6 @@ AC_ARG_ENABLE([debugging],
               [AS_HELP_STRING([--enable-debugging],
                               [turns off optimization and turns on debug flags])])
 
-AC_ARG_ENABLE([aligncheck],
-              [AS_HELP_STRING([--enable-aligncheck],
-                              [check the alignment of synchronization addresses])])
-
 AC_ARG_ENABLE([guard-pages],
               [AS_HELP_STRING([--enable-guard-pages],
                               [use extra memory around the thread stacks to
@@ -600,11 +596,6 @@ AS_IF([test "x$enable_valgrind" = "xyes"],
 
 AS_IF([test "x$enable_hpctoolkit_support" = xyes],
       [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
-
-AS_IF([test "x$enable_aligncheck" = "xyes"],
-      [],
-      [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])
-       enable_aligncheck=no])
 
 # check scheduler requirements
 AS_IF([test "x$with_scheduler" != "x"],
