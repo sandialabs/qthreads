@@ -53,10 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_ENABLE([spawn-cache],
-              [AS_HELP_STRING([--disable-spawn-cache],
-                              [prevents qthreads from using a worker-specific cache of spawns])])
-
 AC_ARG_ENABLE([eurekas],
               [AS_HELP_STRING([--enable-eurekas],
                               [supports handling of eureka events])])
@@ -404,10 +400,6 @@ AC_SEARCH_LIBS([nanosleep],[rt],[],
 AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
-AS_IF([test "x$enable_spawn_cache" = "xyes"],
-      [AC_DEFINE([QTHREAD_USE_SPAWNCACHE],[1],[Define to use worker-specific spawn cache])
-       enable_spawn_cache=no])
-
 AS_IF([test "x$enable_eurekas" = "xyes"],
       [AC_DEFINE([QTHREAD_USE_EUREKAS],[1],[Define to use eurekas])
        enable_eurekas=yes],
@@ -747,7 +739,6 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xcl
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
-AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([QTHREAD_PERFORMANCE], [test "$enable_performance_monitoring" = "yes"])
@@ -816,10 +807,6 @@ echo    "   Debugging Output: $enable_debug"
 echo    "        Guard Pages: $enable_guard_pages"
 echo    "          Precaching: $enable_precache_guard_pages"
 echo    ""
-AS_IF([test "x$enable_spawn_cache" = "xyes"],
-      [AS_IF([test "x$pool_string" != "x"],
-             [pool_string="$pool_string, spawns"],
-             [pool_string="spawns"])])
 AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
       [incr_string="Compiler Builtin (both)"],
       [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],

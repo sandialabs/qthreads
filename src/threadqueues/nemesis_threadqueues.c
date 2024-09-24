@@ -201,31 +201,6 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{ */
   FREE_THREADQUEUE(q);
 } /*}}} */
 
-#ifdef QTHREAD_USE_SPAWNCACHE
-qthread_t INTERNAL *
-qt_threadqueue_private_dequeue(qt_threadqueue_private_t *c) { /*{{{*/
-  return NULL;
-} /*}}}*/
-
-int INTERNAL
-qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
-                               qt_threadqueue_t *restrict q,
-                               qthread_t *restrict t) { /*{{{*/
-  return 0;
-} /*}}}*/
-
-int INTERNAL qt_threadqueue_private_enqueue_yielded(
-  qt_threadqueue_private_t *restrict q, qthread_t *restrict t) { /*{{{*/
-  return 0;
-} /*}}}*/
-
-void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t *q,
-                                           qt_threadqueue_private_t *cache) {}
-
-void INTERNAL qt_threadqueue_private_filter(
-  qt_threadqueue_private_t *restrict c, qt_threadqueue_filter_f f) {}
-#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
-
 void INTERNAL qthread_steal_enable(void) {}
 
 void INTERNAL qthread_steal_disable(void) {}

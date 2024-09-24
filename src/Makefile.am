@@ -45,10 +45,6 @@ else
 libqthread_la_SOURCES += hashmap.c
 endif
 
-if COMPILE_SPAWNCACHE
-libqthread_la_SOURCES += spawncache.c
-endif
-
 if COMPILE_EUREKAS
 libqthread_la_SOURCES += eurekas.c
 endif

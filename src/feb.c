@@ -171,9 +171,6 @@ static inline void qt_feb_schedule(qthread_t *waiter,
                   waiter->rdata->shepherd_ptr->shepherd_id);
     qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
   } else
-#ifdef QTHREAD_USE_SPAWNCACHE
-    if (!qt_spawncache_spawn(waiter, shep->ready))
-#endif
   {
     qthread_debug(
       FEB_DETAILS,

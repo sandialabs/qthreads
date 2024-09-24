@@ -104,9 +104,6 @@ static void qthread_queue_internal_launch(qthread_t *t,
       (int)t->rdata->shepherd_ptr->shepherd_id);
     qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
   } else
-#ifdef QTHREAD_USE_SPAWNCACHE
-    if (!qt_spawncache_spawn(t, cur_shep->ready))
-#endif
   {
     qthread_debug(
       FEB_DETAILS,
