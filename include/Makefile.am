@@ -56,7 +56,3 @@ noinst_HEADERS = \
 	qt_visibility.h \
 	spr_innards.h
 
-if COMPILE_EUREKAS
-noinst_HEADERS += qt_eurekas.h
-endif
-

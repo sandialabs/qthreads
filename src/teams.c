@@ -376,26 +376,6 @@ static aligned_t qt_team_watcher(void *args_) { /*{{{*/
         // Yield control of the resource while waiting for FEB to be reset
         qthread_yield();
       }
-    } else if (TEAM_SIGNAL_ISEUREKA(code)) {
-      if (myteam == TEAM_SIGNAL_SENDERID(code)) {
-        // I must survive this eureka: I am the waiter, the Beholder!
-        assert("Error: why was the eureka propogated UPWARD?!?" && 0);
-      } else {
-        // I must propogate this eureka: I am the end of all things, and like a
-        // Shoggoth, I will sweep my team evilly free of litter
-        qthread_debug(
-          FEB_DETAILS,
-          "team %u's watcher (tid %u) preparing to destroy its team\n",
-          myteam,
-          qthread_id());
-#ifdef QTHREAD_USE_EUREKAS
-        qt_team_eureka();
-#endif /* QTHREAD_USE_EUREKAS */
-        team->watcher_started =
-          1; // signal that the watcher doesn't need to be killed
-        qthread_empty(parent_eureka);
-        break;
-      }
     } else {
       assert("Error: watcher received code 0 or 1" &&
              0); // not sure what this means

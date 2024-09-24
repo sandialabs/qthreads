@@ -27,9 +27,6 @@
 #include "qt_subsystems.h"
 #include "qt_threadqueues.h"
 #include "qthread_innards.h" /* for qlib */
-#ifdef QTHREAD_USE_EUREKAS
-#include "qt_eurekas.h" // for qthread_internal_assassinate() (used in taskfilter)
-#endif                  /* QTHREAD_USE_EUREKAS */
 #include "qt_output_macros.h"
 
 /********************************************************************
@@ -1097,9 +1094,6 @@ int API_FUNC qthread_writeEF(aligned_t *restrict dest,
 #endif
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(FEB_BEHAVIOR,
                   "dest=%p, src=%p (tid=%i): succeeded after waiting\n",
                   dest,
@@ -1272,9 +1266,6 @@ int API_FUNC qthread_writeFF(aligned_t *restrict dest,
 #endif
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(FEB_BEHAVIOR,
                   "dest=%p, src=%p (tid=%u): succeeded after waiting\n",
                   dest,
@@ -1387,9 +1378,6 @@ int API_FUNC qthread_readFF(aligned_t *restrict dest,
     MACHINE_FENCE;
 #endif
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(FEB_BEHAVIOR,
                   "dest=%p, src=%p (tid=%u): succeeded after waiting\n",
                   dest,
@@ -1575,9 +1563,6 @@ int API_FUNC qthread_readFE(aligned_t *restrict dest,
     MACHINE_FENCE;
 #endif
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(FEB_BEHAVIOR,
                   "tid %u succeeded on %p=%p after waiting\n",
                   me->thread_id,
@@ -1882,9 +1867,6 @@ qt_feb_call_tf(qt_key_t const addr, qthread_addrstat_t *m, void *arg) { /*{{{*/
           break;
         case REMOVE_AND_CONTINUE: // remove, move to the next one
         {
-#ifdef QTHREAD_USE_EUREKAS
-          qthread_internal_assassinate(waiter);
-#endif /* QTHREAD_USE_EUREKAS */
           *base = curs->next;
           FREE_ADDRRES(curs);
           break;

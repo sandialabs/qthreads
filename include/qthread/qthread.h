@@ -423,9 +423,6 @@ typedef enum qt_team_critical_section_e {
 unsigned int qt_team_id(void);
 unsigned int qt_team_parent_id(void);
 void qt_team_critical_section(qt_team_critical_section_t boundary);
-#ifdef QTHREAD_USE_EUREKAS
-void qt_team_eureka(void);
-#endif /* QTHREAD_USE_EUREKAS */
 
 #define qthread_fork_new_team(f, a, r)                                         \
   qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_TEAM)

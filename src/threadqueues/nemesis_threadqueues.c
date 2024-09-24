@@ -23,9 +23,6 @@
 #include "qt_threadqueues.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-#ifdef QTHREAD_USE_EUREKAS
-#include "qt_eurekas.h"
-#endif                       /* QTHREAD_USE_EUREKAS */
 #include "qt_qthread_mgmt.h" /* for qthread_thread_free() */
 #include "qt_subsystems.h"
 
@@ -319,9 +316,6 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
   int i;
 #endif /* QTHREAD_CONDWAIT_BLOCKING_QUEUE */
-#ifdef QTHREAD_USE_EUREKAS
-  qt_eureka_disable();
-#endif /* QTHREAD_USE_EUREKAS */
   qthread_debug(THREADQUEUE_DETAILS,
                 "q(%p)->q {head:%p tail:%p sh:%p} q->advisory_queuelen:%u\n",
                 q,
@@ -342,9 +336,6 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
                 q->advisory_queuelen);
   PARANOIA(sanity_check_tq(&q->q));
   if (node == NULL) {
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
 
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     i = num_spins_before_condwait;
@@ -368,9 +359,6 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
       }
 #endif /* ifdef USE_HARD_POLLING */
     }
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_disable();
-#endif /* QTHREAD_USE_EUREKAS */
     node = qt_internal_NEMESIS_dequeue(&q->q);
   }
   assert(node);
@@ -439,15 +427,9 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
         tmp.nemesis_advisory_queuelen++;
         goto pushback;
       case REMOVE_AND_CONTINUE: // remove, move on
-#ifdef QTHREAD_USE_EUREKAS
-        qthread_internal_assassinate(t);
-#endif /* QTHREAD_USE_EUREKAS */
         FREE_TQNODE(curs);
         break;
       case REMOVE_AND_STOP: // remove, stop looking
-#ifdef QTHREAD_USE_EUREKAS
-        qthread_internal_assassinate(t);
-#endif /* QTHREAD_USE_EUREKAS */
         FREE_TQNODE(curs);
         goto pushback;
     }

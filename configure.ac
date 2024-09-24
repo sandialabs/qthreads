@@ -53,10 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_ENABLE([eurekas],
-              [AS_HELP_STRING([--enable-eurekas],
-                              [supports handling of eureka events])])
-
 AC_ARG_ENABLE([internal-spinlock],
               [AS_HELP_STRING([--disable-internal-spinlock],
                               [avoid using the internal spinlock])])
@@ -400,11 +396,6 @@ AC_SEARCH_LIBS([nanosleep],[rt],[],
 AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
-AS_IF([test "x$enable_eurekas" = "xyes"],
-      [AC_DEFINE([QTHREAD_USE_EUREKAS],[1],[Define to use eurekas])
-       enable_eurekas=yes],
-       [enable_eurekas=no])
-
 AC_CACHE_SAVE
 
 ## ----------------------- ##
@@ -739,7 +730,6 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xcl
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
-AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_GUARD_PAGES], [test "x$enable_guard_pages" = "xyes"])
 AM_CONDITIONAL([QTHREAD_PERFORMANCE], [test "$enable_performance_monitoring" = "yes"])
 AM_CONDITIONAL([WANT_SINGLE_WORKER_SCHEDULER], [test "x$with_scheduler" = "xnemesis" -o "x$with_scheduler" = "xlifo" -o "x$with_scheduler" = "xmutexfifo" -o "x$with_scheduler" = "xmtsfifo" -o "x$with_scheduler" = "xmdlifo"])
@@ -829,9 +819,6 @@ echo    "   Dictionary Style: $with_dict"
 echo    "    Lazy Thread IDs: $enable_lazy_threadids"
 echo    "       Pools/caches: $pool_string"
 echo    "Increments/CAS/FEBs: $incr_string, $feb_string"
-echo ""
-echo    "Miscellany:"
-echo    "      Eureka Events: $enable_eurekas"
 echo ""
 
 AS_IF([test "x$apple_llvm_5658_warning" = "xyes"],

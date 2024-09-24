@@ -27,10 +27,6 @@ TESTS = \
 		subteams \
 		qt_dictionary
 
-if COMPILE_EUREKAS
-TESTS += eureka
-endif
-
 if HAVE_GUARD_PAGES
 TESTS += guard_pages
 endif

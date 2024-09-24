@@ -24,9 +24,6 @@
 #include "qt_threadqueues.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-#ifdef QTHREAD_USE_EUREKAS
-#include "qt_eurekas.h" /* for qt_eureka_check() */
-#endif                  /* QTHREAD_USE_EUREKAS */
 #include "qt_expect.h"
 #include "qt_subsystems.h"
 

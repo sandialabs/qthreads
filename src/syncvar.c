@@ -26,9 +26,6 @@
 #include "qt_subsystems.h"
 #include "qt_threadqueues.h"
 #include "qthread_innards.h"
-#ifdef QTHREAD_USE_EUREKAS
-#include "qt_eurekas.h"
-#endif /* QTHREAD_USE_EUREKAS */
 
 /* Internal Prototypes */
 static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
@@ -486,9 +483,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(SYNCVAR_DETAILS, "src(%p) woke up\n", src);
   } else {
     qthread_debug(SYNCVAR_DETAILS,
@@ -851,9 +845,6 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(SYNCVAR_DETAILS, "src(%p) woke up\n", src);
   } else if (e.sf == 1) { /* waiters! */
     qthread_addrstat_t *m;
@@ -1360,9 +1351,6 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
     QTHREAD_WAIT_TIMER_STOP(me, febwait);
-#ifdef QTHREAD_USE_EUREKAS
-    qt_eureka_check(0);
-#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(SYNCVAR_DETAILS, "writeEF(%p) woke up\n", dest);
   } else if (e.sf == 1) { /* there are waiters to release! */
     qthread_addrstat_t *m;
@@ -1684,9 +1672,6 @@ static void qt_syncvar_call_tf(qt_key_t const addr,
           break;
         case 2: // remove, move to the next one
         {
-#ifdef QTHREAD_USE_EUREKAS
-          qthread_internal_assassinate(waiter);
-#endif /* QTHREAD_USE_EUREKAS */
           *base = curs->next;
           FREE_ADDRRES(curs);
           break;
