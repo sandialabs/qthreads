@@ -89,6 +89,8 @@
 #include "qthread/performance.h"
 #endif // ifdef QTHREAD_PERFORMANCE
 
+#define QTHREAD_STACK_ALIGNMENT 16u
+
 /* Shared Globals */
 qlib_t qlib = NULL;
 int qaffinity = 1;
@@ -1016,8 +1018,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   } else {
     generic_stack_pool = qt_mpool_create_aligned(
       qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s),
-      QTHREAD_STACK_ALIGNMENT); // stacks on most platforms must be 16-byte
-                                // aligned (or less)
+      QTHREAD_STACK_ALIGNMENT);
   }
   generic_rdata_pool = qt_mpool_create(sizeof(struct qthread_runtime_data_s));
 #endif /* ifndef UNPOOLED */

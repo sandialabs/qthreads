@@ -53,11 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_WITH([stack-alignment],
-            [AS_HELP_STRING([--with-stack-alignment=[[bytes]]],
-                            [Specify the alignment to use for stacks. Default:
-                             16])])
-
 AC_ARG_ENABLE([pooled-memory],
               [AS_HELP_STRING([--disable-pooled-memory],
                               [prevents qthreads from (in most cases) using
@@ -655,7 +650,6 @@ AS_IF([test "x$enable_asserts" != "xyes"],
 
 AS_IF([test "x$with_stack_alignment" = "x"],
       [with_stack_alignment=16])
-AC_DEFINE_UNQUOTED([QTHREAD_STACK_ALIGNMENT],[$with_stack_alignment], [How to align the stacks.])
 
 AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
       [enable_debug=no],
