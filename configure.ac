@@ -45,17 +45,6 @@ AC_ARG_ENABLE([guard-pages],
                                help detect stack overruns (will triple memory
                                requirements per thread)])])
 
-AC_ARG_ENABLE([oversubscription],
-              [AS_HELP_STRING([--enable-oversubscription],
-                              [This option configures qthreads in a way that
-                               will run more reasonably in an over-subscribed
-                               environment. Ordinarily, we use spin-locks and
-                               busy-loops in key places to keep latencies as
-                               low as possible, but in an over-subscribed
-                               situation, these will just make us slow and
-                               ought to be replaced with something that will
-                               call into the OS scheduler.])])
-
 AC_ARG_WITH([default-stack-size],
             [AS_HELP_STRING([--with-default-stack-size=[[bytes]]],
                             [Specify the number of bytes to use for stacks, by
@@ -556,12 +545,6 @@ AS_IF([test "x$enable_performance_monitoring" = "xyes"],
 
 AS_IF([test "x$with_gcd" = "xshift"],
       [AC_DEFINE([QTHREAD_SHIFT_GCD],[1],[use a shift-based gcd algorithm])])
-
-AS_IF([test "x$enable_oversubscription" = "xyes"],
-      [AC_DEFINE([QTHREAD_OVERSUBSCRIPTION], [1], [call into the OS scheduler when possible])
-       enable_condwait_queue=yes
-       enable_internal_spinlock=no
-       AC_CHECK_FUNCS([sched_yield])])
 
 AS_IF([test "x$enable_condwait_queue" = "x"],
       [enable_condwait_queue="no"])

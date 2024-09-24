@@ -19,31 +19,8 @@
 #define THREAD_FENCE_MEM_RELEASE THREAD_FENCE_MEM_RELEASE_IMPL
 #endif
 
-#ifdef QTHREAD_OVERSUBSCRIPTION
-#ifdef HAVE_PTHREAD_YIELD
-#define SPINLOCK_BODY()                                                        \
-  do {                                                                         \
-    pthread_yield();                                                           \
-  } while (0)
-#elif HAVE_SCHED_YIELD
-#include <sched.h> /* for sched_yield(); */
-#define SPINLOCK_BODY()                                                        \
-  do {                                                                         \
-    sched_yield();                                                             \
-  } while (0)
-#else
-#error Cannot support efficient oversubscription on this platform.
-#endif
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                               \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-#define SPINLOCK_BODY()                                                        \
-  do {                                                                         \
-    MACHINE_FENCE;                                                             \
-  } while (0)
-#else
 #define SPINLOCK_BODY()                                                        \
   do { MACHINE_FENCE; } while (0)
-#endif // ifdef QTHREAD_OVERSUBSCRIPTION
 
 #if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 #define QTHREAD_FASTLOCK_SETUP()                                               \
@@ -87,7 +64,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 #define QTHREAD_FASTLOCK_TYPE qt_spin_exclusive_t
 #define QTHREAD_FASTLOCK_INITIALIZER                                           \
   (qt_spin_exclusive_t) { 0, 0 }
-#elif defined(HAVE_PTHREAD_SPIN_INIT) && !defined(QTHREAD_OVERSUBSCRIPTION)
+#elif defined(HAVE_PTHREAD_SPIN_INIT)
 #include <pthread.h>
 #define QTHREAD_FASTLOCK_ATTRVAR
 #define QTHREAD_FASTLOCK_SETUP()                                               \
@@ -164,7 +141,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
   return 0;
 }
 
-#elif defined(HAVE_PTHREAD_SPIN_INIT) && !defined(QTHREAD_OVERSUBSCRIPTION)
+#elif defined(HAVE_PTHREAD_SPIN_INIT)
 
 #define QTHREAD_TRYLOCK_TYPE pthread_spinlock_t
 #define QTHREAD_TRYLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)

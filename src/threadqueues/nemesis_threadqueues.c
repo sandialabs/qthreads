@@ -35,11 +35,7 @@
  * with multiple enqueuers and a single de-queuer. */
 
 int num_spins_before_condwait;
-#ifdef QTHREAD_OVERSUBSCRIPTION
-#define DEFAULT_SPINCOUNT 300
-#else
 #define DEFAULT_SPINCOUNT 300000
-#endif
 
 /* Data Structures */
 struct _qt_threadqueue_node {
