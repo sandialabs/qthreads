@@ -531,15 +531,6 @@ AS_IF([test "x$with_scheduler" != "x"],
       [with_scheduler="sherwood"])
 EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
 
-AS_IF([test "x$enable_internal_spinlock" = "x"],
-      [case "$qthread_cv_c_compiler_type" in
-       Apple-LLVM-5658)
-         apple_llvm_5658_warning=yes
-         enable_internal_spinlock=no
-       ;;
-       esac])
-
-
 AS_IF([test "x$enable_internal_spinlock" = x],
       [enable_internal_spinlock=yes])
 AS_IF([test "x$enable_internal_spinlock" = xyes],
@@ -821,6 +812,3 @@ echo    "       Pools/caches: $pool_string"
 echo    "Increments/CAS/FEBs: $incr_string, $feb_string"
 echo ""
 
-AS_IF([test "x$apple_llvm_5658_warning" = "xyes"],
-      [AC_MSG_WARN([Because you are using the Apple LLVM compiler, build 5658, the internal spinlocks cannot be used (they trigger a compiler bug), and pthread mutexes must be used instead. This will reduce performance. Pthread mutexes are also not signal-safe, which means they cannot be used in a signal context and thus makes eurekas unsafe. It is highly recommended that you use a newer compiler.])])
-dnl vim:expandtab
