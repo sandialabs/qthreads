@@ -519,8 +519,6 @@ case "$qthread_cv_c_compiler_type" in
     ;;
 esac
 
-QTHREAD_BUILTIN_SYNCHRONIZE
-
 AS_IF([test "x$enable_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_GUARD_PAGES], [1], [Use guard pages to detect stack overruns])],
       [enable_guard_pages="no"])
