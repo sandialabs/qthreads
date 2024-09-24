@@ -53,10 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_ENABLE([internal-spinlock],
-              [AS_HELP_STRING([--disable-internal-spinlock],
-                              [avoid using the internal spinlock])])
-
 AC_ARG_ENABLE([performance-monitoring],
               [AS_HELP_STRING([--enable-performance-monitoring],
                               [enable performance monitoring infrastructure])])
@@ -386,11 +382,6 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [],
                [AC_MSG_ERROR([Qthreads requires a working pthreads implementation.])])
 AC_CHECK_FUNCS([pthread_yield])
 
-AS_IF([test "x$enable_internal_spinlock" != xno],
-      [AC_CHECK_FUNCS([pthread_spin_init],
-                      [have_pthread_spinlocks=yes],
-                      [have_pthread_spinlocks=no])])
-
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
 AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
@@ -530,11 +521,6 @@ AS_IF([test "x$with_scheduler" != "x"],
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=$with_scheduler"],
       [with_scheduler="sherwood"])
 EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
-
-AS_IF([test "x$enable_internal_spinlock" = x],
-      [enable_internal_spinlock=yes])
-AS_IF([test "x$enable_internal_spinlock" = xyes],
-      [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])
 
 AS_IF([test "x$enable_steal_profiling" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],

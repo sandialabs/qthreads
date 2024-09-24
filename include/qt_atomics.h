@@ -1,6 +1,8 @@
 #ifndef QT_ATOMICS_H
 #define QT_ATOMICS_H
 
+#include <pthread.h>
+
 #include <stdatomic.h>
 #include <sys/time.h>
 
@@ -22,7 +24,6 @@
 #define SPINLOCK_BODY()                                                        \
   do { MACHINE_FENCE; } while (0)
 
-#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 #define QTHREAD_FASTLOCK_SETUP()                                               \
   do {                                                                         \
   } while (0)
@@ -64,47 +65,8 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 #define QTHREAD_FASTLOCK_TYPE qt_spin_exclusive_t
 #define QTHREAD_FASTLOCK_INITIALIZER                                           \
   (qt_spin_exclusive_t) { 0, 0 }
-#elif defined(HAVE_PTHREAD_SPIN_INIT)
-#include <pthread.h>
-#define QTHREAD_FASTLOCK_ATTRVAR
-#define QTHREAD_FASTLOCK_SETUP()                                               \
-  do {                                                                         \
-  } while (0)
-#define QTHREAD_FASTLOCK_INIT(x)                                               \
-  pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
-#define QTHREAD_FASTLOCK_INIT_PTR(x)                                           \
-  pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
-#define QTHREAD_FASTLOCK_LOCK(x) pthread_spin_lock((x))
-#define QTHREAD_FASTLOCK_UNLOCK(x) pthread_spin_unlock((x))
-#define QTHREAD_FASTLOCK_DESTROY(x) pthread_spin_destroy(&(x))
-#define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
-#define QTHREAD_FASTLOCK_TYPE pthread_spinlock_t
-#define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_SPINLOCK_INITIALIZER
-#else /* fallback */
-#include <pthread.h>
-#ifndef QTHREAD_FASTLOCK_ATTR
-#define QTHREAD_FASTLOCK_ATTR
-extern pthread_mutexattr_t _fastlock_attr;
-#define QTHREAD_FASTLOCK_ATTRVAR pthread_mutexattr_t _fastlock_attr
-#endif
-#define QTHREAD_FASTLOCK_SETUP()                                               \
-  do {                                                                         \
-    pthread_mutexattr_init(&_fastlock_attr);                                   \
-    pthread_mutexattr_setpshared(&_fastlock_attr, PTHREAD_PROCESS_PRIVATE);    \
-  } while (0)
-#define QTHREAD_FASTLOCK_INIT(x) pthread_mutex_init(&(x), &_fastlock_attr)
-#define QTHREAD_FASTLOCK_INIT_PTR(x) pthread_mutex_init((x), &_fastlock_attr)
-#define QTHREAD_FASTLOCK_LOCK(x) pthread_mutex_lock((x))
-#define QTHREAD_FASTLOCK_UNLOCK(x) pthread_mutex_unlock((x))
-#define QTHREAD_FASTLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
-#define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
-#define QTHREAD_FASTLOCK_TYPE pthread_mutex_t
-#define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
-#endif /* */
 
 // Trylock declarations
-
-#if defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 
 #define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 #define QTHREAD_TRYLOCK_INIT(x)                                                \
@@ -141,41 +103,6 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
   return 0;
 }
 
-#elif defined(HAVE_PTHREAD_SPIN_INIT)
-
-#define QTHREAD_TRYLOCK_TYPE pthread_spinlock_t
-#define QTHREAD_TRYLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
-#define QTHREAD_TRYLOCK_INIT_PTR(x)                                            \
-  pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
-#define QTHREAD_TRYLOCK_LOCK(x) pthread_spin_lock((x))
-#define QTHREAD_TRYLOCK_UNLOCK(x) pthread_spin_unlock((x))
-#define QTHREAD_TRYLOCK_DESTROY(x) pthread_spin_destroy(&(x))
-#define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
-#define QTHREAD_TRYLOCK_TRY(x) (pthread_spin_trylock((x)) == 0)
-
-#else /* fallback */
-
-#include <pthread.h>
-#ifndef QTHREAD_FASTLOCK_ATTR
-#define QTHREAD_FASTLOCK_ATTR
-extern pthread_mutexattr_t _fastlock_attr;
-#ifdef QTHREAD_FASTLOCK_ATTRVAR
-#undef QTHREAD_FASTLOCK_ATTRVAR
-#endif
-#define QTHREAD_FASTLOCK_ATTRVAR pthread_mutexattr_t _fastlock_attr
-#endif
-#define QTHREAD_TRYLOCK_TYPE pthread_mutex_t
-#define QTHREAD_TRYLOCK_INIT(x) pthread_mutex_init((&(x)), &_fastlock_attr)
-#define QTHREAD_TRYLOCK_INIT_PTR(x) pthread_mutex_init((x), &_fastlock_attr)
-#define QTHREAD_TRYLOCK_LOCK(x) pthread_mutex_lock((x))
-#define QTHREAD_TRYLOCK_UNLOCK(x) pthread_mutex_unlock((x))
-#define QTHREAD_TRYLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
-#define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
-#define QTHREAD_TRYLOCK_TRY(x) (pthread_mutex_trylock((x)) == 0)
-
-#endif
-
-#include <pthread.h>
 #define QTHREAD_COND_DECL(c)                                                   \
   pthread_cond_t c;                                                            \
   pthread_mutex_t c##_lock
