@@ -53,14 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_ENABLE([memory-scribbling],
-              [AS_HELP_STRING([--enable-memory-scribbling],
-                              [writes to internal freed and allocated memory;
-                               intended to help identify when memory has been
-                               allocated (but not initialized) and freed.
-                               Allocated memory gets written with 0x55 and
-                               freed memory gets written with 0x77])])
-
 AC_ARG_ENABLE([spawn-cache],
               [AS_HELP_STRING([--disable-spawn-cache],
                               [prevents qthreads from using a worker-specific cache of spawns])])
@@ -411,9 +403,6 @@ AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
 AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
-
-AS_IF([test "x$enable_memory_scribbling" = "xyes"],
-      [AC_DEFINE([QTHREAD_MEMORY_SCRIBBLING], [1], [turns on memory scribbling])])
 
 AS_IF([test "x$enable_spawn_cache" = "xyes"],
       [AC_DEFINE([QTHREAD_USE_SPAWNCACHE],[1],[Define to use worker-specific spawn cache])

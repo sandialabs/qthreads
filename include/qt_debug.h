@@ -7,24 +7,6 @@
 #include "qt_alloc.h"
 
 #ifndef EXTERNAL_ALLOCATOR
-#ifdef QTHREAD_MEMORY_SCRIBBLING
-#include <string.h> /* for memset(), per C90 */
-#define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
-#define FREE_SCRIBBLE(ptr, sz) memset((ptr), 0x77, (sz))
-
-static inline void *MALLOC(size_t sz) {
-  void *ret = qt_malloc(sz);
-
-  ALLOC_SCRIBBLE(ret, sz);
-  return ret;
-}
-
-#define FREE(ptr, sz)                                                          \
-  do {                                                                         \
-    FREE_SCRIBBLE(ptr, sz);                                                    \
-    qt_free(ptr);                                                              \
-  } while (0)
-#else
 #define ALLOC_SCRIBBLE(ptr, sz)                                                \
   do {                                                                         \
   } while (0)
@@ -33,7 +15,6 @@ static inline void *MALLOC(size_t sz) {
   } while (0)
 #define MALLOC(sz) qt_malloc(sz)
 #define FREE(ptr, sz) qt_free(ptr)
-#endif
 #else
 #define ALLOC_SCRIBBLE(ptr, sz)                                                \
   do {                                                                         \
