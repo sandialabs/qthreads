@@ -22,14 +22,9 @@
 #include "qthread_innards.h" /* for qlib */
 
 /* Memory management macros */
-#if defined(UNPOOLED)
-#define ALLOC_TEAM() (qt_team_t *)MALLOC(sizeof(qt_team_t))
-#define FREE_TEAM(t) FREE(t, sizeof(qt_team_t))
-#else
 static qt_mpool generic_team_pool = NULL;
 #define ALLOC_TEAM() (qt_team_t *)qt_mpool_alloc(generic_team_pool)
 #define FREE_TEAM(t) qt_mpool_free(generic_team_pool, (t))
-#endif
 
 static void qt_internal_teams_shutdown(void);
 static void qt_internal_teams_destroy(void);
@@ -61,9 +56,7 @@ void INTERNAL qt_internal_teams_init(void) { /*{{{*/
   qlib->team_count = 0;  /* count of existing teams */
   QTHREAD_FASTLOCK_INIT(qlib->max_team_id_lock);
   QTHREAD_FASTLOCK_INIT(qlib->team_count_lock);
-#ifndef UNPOOLED
   generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
-#endif
   qthread_internal_cleanup(qt_internal_teams_shutdown);
   qthread_internal_cleanup_late(qt_internal_teams_destroy);
 } /*}}}*/
@@ -92,10 +85,8 @@ static void qt_internal_teams_shutdown(void) { /*{{{*/
 static void qt_internal_teams_destroy(void) { /*{{{*/
   qthread_debug(CORE_CALLS, "begin\n");
   QTHREAD_FASTLOCK_DESTROY(qlib->max_team_id_lock);
-#ifndef UNPOOLED
   qt_mpool_destroy(generic_team_pool);
   generic_team_pool = NULL;
-#endif
   qthread_debug(CORE_CALLS, "end\n");
 } /*}}}*/
 

@@ -12,21 +12,12 @@
 #include "qt_qthread_struct.h" /* to pass data back to worker */
 #include "qt_threadstate.h"
 #include "qt_visibility.h"
-#ifndef UNPOOLED
 #include "qt_subsystems.h" /* for qthread_internal_cleanup() */
-#endif
 #include "qthread_innards.h" /* for qlib */
 
 #include "qt_queue.h"
 
 /* Memory Management */
-#ifdef UNPOOLED
-#define ALLOC_TQNODE()                                                         \
-  (qthread_queue_node_t *)MALLOC(sizeof(qthread_queue_node_t))
-#define FREE_TQNODE(n) FREE((n), sizeof(qthread_queue_node_t))
-
-void INTERNAL qthread_queue_subsystem_init(void) {}
-#else
 static qt_mpool node_pool = NULL;
 #define ALLOC_TQNODE() (qthread_queue_node_t *)qt_mpool_alloc(node_pool)
 #define FREE_TQNODE(n) qt_mpool_free(node_pool, (n))
@@ -39,8 +30,6 @@ void INTERNAL qthread_queue_subsystem_init(void) {
   node_pool = qt_mpool_create(sizeof(qthread_queue_node_t));
   qthread_internal_cleanup(qthread_queue_subsystem_shutdown);
 }
-
-#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 qthread_queue_t API_FUNC qthread_queue_create(uint8_t flags, aligned_t length) {
   qthread_queue_t q = qt_calloc(1, sizeof(struct qthread_queue_s));

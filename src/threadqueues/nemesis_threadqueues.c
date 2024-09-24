@@ -68,15 +68,6 @@ struct _qt_threadqueue {
 } /* qt_threadqueue_t */;
 
 /* Memory Management */
-#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-#define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
-#define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
-#define ALLOC_TQNODE()                                                         \
-  (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
-#define FREE_TQNODE(t) FREE(t, sizeof(qt_threadqueue_node_t))
-
-void INTERNAL qt_threadqueue_subsystem_init(void) {}
-#else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = {NULL, NULL};
 #define ALLOC_THREADQUEUE()                                                    \
   (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
@@ -101,7 +92,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
     qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 8);
   qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
-#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 /* Thankfully, NEMESIS does not suffer from the ABA problem. */
 

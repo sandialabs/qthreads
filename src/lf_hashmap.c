@@ -59,13 +59,8 @@ struct qt_hash_s {
   size_t volatile size;
 };
 
-#ifndef UNPOOLED
 #define ALLOC_HASH_ENTRY() qt_mpool_alloc(hash_entry_pool)
 #define FREE_HASH_ENTRY(t) qt_mpool_free(hash_entry_pool, (t))
-#else
-#define ALLOC_HASH_ENTRY() MALLOC(sizeof(hash_entry))
-#define FREE_HASH_ENTRY(t) FREE(t, sizeof(hash_entry))
-#endif /* ifndef UNPOOLED */
 
 /* prototypes */
 static void *qt_lf_list_find(_Atomic marked_ptr_t *head,
@@ -213,7 +208,6 @@ static inline so_key_t so_regularkey(lkey_t const key) {
 
 static inline so_key_t so_dummykey(lkey_t const key) { return REVERSE(key); }
 
-#ifndef UNPOOLED
 static void qt_hash_subsystem_shutdown(void) {
   qthread_debug(CORE_CALLS, "begin\n");
 
@@ -224,15 +218,11 @@ static void qt_hash_subsystem_shutdown(void) {
   qthread_debug(CORE_CALLS, "end\n");
 }
 
-#endif
-
 void INTERNAL qt_hash_initialize_subsystem(void) {
   assert(hash_entry_pool == NULL);
-#ifndef UNPOOLED
   hash_entry_pool = qt_mpool_create(sizeof(hash_entry));
   assert(hash_entry_pool != NULL);
   qthread_internal_cleanup_late(qt_hash_subsystem_shutdown);
-#endif
 }
 
 int INTERNAL qt_hash_put(qt_hash h, qt_key_t key, void *value) {

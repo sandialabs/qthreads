@@ -52,9 +52,7 @@ typedef struct {
 static qt_blocking_queue_t theQueue;
 static saligned_t _Atomic io_worker_count = -1;
 static saligned_t io_worker_max = 10;
-#if !defined(UNPOOLED)
 qt_mpool syscall_job_pool = NULL;
-#endif
 static unsigned long timeout = 100; // in microseconds
 static int _Atomic proxy_exit = 0;
 TLS_DECL_INIT(qthread_t *, IO_task_struct);
@@ -69,9 +67,7 @@ static void qt_blocking_subsystem_internal_stopwork(void) { /*{{{*/
 } /*}}}*/
 
 static void qt_blocking_subsystem_internal_freemem(void) { /*{{{*/
-#if !defined(UNPOOLED)
   qt_mpool_destroy(syscall_job_pool);
-#endif
   QTHREAD_DESTROYLOCK(&theQueue.lock);
   QTHREAD_DESTROYCOND(&theQueue.notempty);
 } /*}}}*/
@@ -112,9 +108,7 @@ static void qt_blocking_subsystem_spawnworker(void) { /*{{{*/
 } /*}}}*/
 
 void INTERNAL qt_blocking_subsystem_init(void) { /*{{{*/
-#if !defined(UNPOOLED)
   syscall_job_pool = qt_mpool_create(sizeof(qt_blocking_queue_node_t));
-#endif
   theQueue.head = NULL;
   theQueue.tail = NULL;
   atomic_store_explicit(&io_worker_count, 0, memory_order_relaxed);

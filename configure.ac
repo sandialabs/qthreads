@@ -53,13 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_ENABLE([pooled-memory],
-              [AS_HELP_STRING([--disable-pooled-memory],
-                              [prevents qthreads from (in most cases) using
-                               memory pools, which is sometimes more compatible
-                               with machines that have unusual alignment
-                               issues])])
-
 AC_ARG_ENABLE([memory-scribbling],
               [AS_HELP_STRING([--enable-memory-scribbling],
                               [writes to internal freed and allocated memory;
@@ -418,10 +411,6 @@ AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
 AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
-
-AS_IF([test "x$enable_pooled_memory" = "xno"],
-      [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
-      [enable_pooled_memory=yes])
 
 AS_IF([test "x$enable_memory_scribbling" = "xyes"],
       [AC_DEFINE([QTHREAD_MEMORY_SCRIBBLING], [1], [turns on memory scribbling])])
@@ -838,9 +827,6 @@ echo    "   Debugging Output: $enable_debug"
 echo    "        Guard Pages: $enable_guard_pages"
 echo    "          Precaching: $enable_precache_guard_pages"
 echo    ""
-AS_IF([test "x$enable_pooled_memory" = "xyes"],
-      [pool_string="memory"],
-      [pool_string=""])
 AS_IF([test "x$enable_spawn_cache" = "xyes"],
       [AS_IF([test "x$pool_string" != "x"],
              [pool_string="$pool_string, spawns"],

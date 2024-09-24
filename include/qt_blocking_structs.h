@@ -59,27 +59,11 @@ typedef struct qthread_addrstat_s {
   uint_fast8_t valid;
 } qthread_addrstat_t;
 
-#ifdef UNPOOLED
-#define UNPOOLED_ADDRSTAT
-#define UNPOOLED_ADDRRES
-#endif
-
-#ifdef UNPOOLED_ADDRSTAT
-#define ALLOC_ADDRSTAT()                                                       \
-  (qthread_addrstat_t *)MALLOC(sizeof(qthread_addrstat_t))
-#define FREE_ADDRSTAT(t) FREE(t, sizeof(qthread_addrstat_t))
-#else
 extern qt_mpool generic_addrstat_pool;
 #define ALLOC_ADDRSTAT()                                                       \
   (qthread_addrstat_t *)qt_mpool_alloc(generic_addrstat_pool)
 #define FREE_ADDRSTAT(t) qt_mpool_free(generic_addrstat_pool, t)
 
-#endif // ifdef UNPOOLED_ADDRSTAT
-
-#ifdef UNPOOLED_ADDRRES
-#define ALLOC_ADDRRES() (qthread_addrres_t *)MALLOC(sizeof(qthread_addrres_t))
-#define FREE_ADDRRES(t) FREE(t, sizeof(qthread_addrres_t))
-#else
 extern qt_mpool generic_addrres_pool;
 
 static inline qthread_addrres_t *ALLOC_ADDRRES(void) { /*{{{ */
@@ -92,8 +76,6 @@ static inline qthread_addrres_t *ALLOC_ADDRRES(void) { /*{{{ */
 static inline void FREE_ADDRRES(qthread_addrres_t *t) { /*{{{ */
   qt_mpool_free(generic_addrres_pool, t);
 } /*}}} */
-
-#endif // ifdef UNPOOLED_ADDRRES
 
 #endif // ifndef QT_BLOCKING_STRUCTS_H
 /* vim:set expandtab: */

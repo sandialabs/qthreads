@@ -92,12 +92,8 @@ qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
 /********************************************************************
  * Shared Globals
  *********************************************************************/
-#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
 qt_mpool generic_addrstat_pool = NULL;
-#endif
-#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
 qt_mpool generic_addrres_pool = NULL;
-#endif
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
@@ -122,25 +118,17 @@ static void qt_feb_subsystem_shutdown(void) {
 #ifdef QTHREAD_COUNT_THREADS
   FREE(febs_stripes, sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
 #endif
-#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
   qt_mpool_destroy(generic_addrstat_pool);
   generic_addrstat_pool = NULL;
-#endif
-#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
   qt_mpool_destroy(generic_addrres_pool);
   generic_addrres_pool = NULL;
-#endif
 
   qthread_debug(CORE_CALLS, "end\n");
 }
 
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t need_sync) {
-#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
   generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
-#endif
-#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
   generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
-#endif
   FEBs = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
   assert(FEBs);
 #ifdef QTHREAD_COUNT_THREADS

@@ -177,22 +177,6 @@ static inline void sanity_check_queue(qt_threadqueue_t *q) {
 #endif /* ifndef QTHREAD_NO_ASSERTS */
 
 /* Memory Management */
-#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-#define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
-#define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
-#define ALLOC_TQNODE()                                                         \
-  (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
-#define FREE_TQNODE(t) FREE(t, sizeof(qt_threadqueue_node_t))
-
-static void qt_threadqueue_subsystem_shutdown(void) { free_agged_tasks(); }
-
-void INTERNAL qt_threadqueue_subsystem_init(void) {
-  init_agged_tasks();
-  steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
-  qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-}
-
-#else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 #define ALLOC_THREADQUEUE()                                                    \
   (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
@@ -220,7 +204,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
   steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
   qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
-#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
@@ -261,20 +244,9 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{*/
   return q;
 } /*}}}*/
 
-#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-#define ALLOC_QTHREAD()                                                        \
-  MALLOC(sizeof(qthread_t) + qlib->qthread_argcopy_size +                      \
-         qlib->qthread_tasklocal_size)
-#define FREE_QTHREAD(t)                                                        \
-  FREE(t,                                                                      \
-       sizeof(qthread_t) + qlib->qthread_argcopy_size +                        \
-         qlib->qthread_tasklocal_size)
-#else /* if defined(UNPOOLED_QTHREAD_T)                                        \
-         ||./src/threadqueues/nemesis_threadqueues.c defined(UNPOOLED) */
 extern qt_mpool generic_qthread_pool;
 #define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
 #define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
-#endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{*/
   if (q->head != q->tail) {
