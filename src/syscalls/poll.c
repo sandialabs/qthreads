@@ -43,15 +43,4 @@ int qt_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_POLL
-int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
-  if (qt_blockable()) {
-    return qt_poll(fds, nfds, timeout);
-  } else {
-    return syscall(SYS_poll, fds, nfds, timeout);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_POLL */
-
 /* vim:set expandtab: */

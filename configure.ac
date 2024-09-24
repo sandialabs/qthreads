@@ -482,7 +482,6 @@ AS_IF([test "$ac_cv_sizeof_void_p" -eq 8],
 AS_IF([test "$mutex_small_enough" = "yes"],
       [AC_DEFINE([PTHREAD_MUTEX_SMALL_ENOUGH], [1],
                  [this signifies that pthread_mutex_t is small enough to fit in the existing data structures])])
-QTHREAD_CHECK_SYSCALLTYPES()
 
 AC_CACHE_SAVE
 

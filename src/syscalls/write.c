@@ -46,15 +46,4 @@ ssize_t qt_write(int filedes, void const *buf, size_t nbyte) {
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_WRITE
-ssize_t write(int filedes, void const *buf, size_t nbyte) {
-  if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
-    return qt_write(filedes, buf, nbyte);
-  } else {
-    return syscall(SYS_write, filedes, buf, nbyte);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_WRITE */
-
 /* vim:set expandtab: */

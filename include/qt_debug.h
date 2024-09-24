@@ -48,15 +48,8 @@ static inline void *MALLOC(size_t sz) {
 
 /* System headers */
 #include <limits.h> // for INT_MAX, per C89
-#if defined(HAVE_SYS_SYSCALL_H) && defined(HAVE_DECL_SYS_WRITE)
-#include <sys/syscall.h> // for syscall()
-#include <unistd.h>      // for SYS_write
-#define WRITE(fd, ch, len) syscall(SYS_write, (fd), (ch), (len))
-#else
-#include <unistd.h> // for write()
-#define WRITE(fd, ch, len) write((fd), (ch), (len))
-#endif
 #include <stdarg.h> // for va_start and friends
+#include <unistd.h> // for write()
 
 /* Internal headers */
 #include "qt_asserts.h"
@@ -265,7 +258,7 @@ static inline void qthread_debug_(int level, char const *format, ...)
 
     QTHREAD_FASTLOCK_LOCK(&output_lock);
 
-    while (WRITE(2, "QDEBUG: ", 8) != 8);
+    while (write(2, "QDEBUG: ", 8) != 8);
 
     va_start(args, format);
     /* avoiding the obvious method, to save on memory
@@ -291,12 +284,12 @@ static inline void qthread_debug_(int level, char const *format, ...)
           case 's': {
             char *str = va_arg(args, char *);
 
-            qassert(WRITE(2, buf, head - buf), head - buf);
+            qassert(write(2, buf, head - buf), head - buf);
             head = buf;
             if (str == NULL) {
-              qassert(WRITE(2, "(null)", 6), 6);
+              qassert(write(2, "(null)", 6), 6);
             } else {
-              qassert(WRITE(2, str, strlen(str)), (ssize_t)strlen(str));
+              qassert(write(2, str, strlen(str)), (ssize_t)strlen(str));
             }
             break;
           }
@@ -480,12 +473,12 @@ static inline void qthread_debug_(int level, char const *format, ...)
     assert(head > buf);
     {
       char *curs = buf;
-      int ret = WRITE(2, curs, head - curs);
+      int ret = write(2, curs, head - curs);
       assert(ret >= 0);
       while (ret > 0 && (curs + ret) != head) {
         curs += ret;
         assert(head > curs);
-        ret = WRITE(2, curs, head - curs);
+        ret = write(2, curs, head - curs);
       }
     }
     va_end(args);

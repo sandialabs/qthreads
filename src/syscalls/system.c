@@ -41,15 +41,4 @@ int qt_system(char const *command) {
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_SYSTEM
-int system(char const *command) {
-  if (qt_blockable()) {
-    return qt_system(command);
-  } else {
-    return syscall(SYS_system, command);
-  }
-}
-
-#endif
-
 /* vim:set expandtab: */
