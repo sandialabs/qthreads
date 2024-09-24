@@ -45,14 +45,6 @@ AC_ARG_ENABLE([guard-pages],
                                help detect stack overruns (will triple memory
                                requirements per thread)])])
 
-AC_ARG_ENABLE([syscall-interception],
-              [AS_HELP_STRING([--enable-syscall-interception],
-                              [Intercept blocking syscalls (or attempt to). Experimental.])])
-
-AC_ARG_ENABLE([header-syscall-interception],
-              [AS_HELP_STRING([--enable-header-syscall-interception],
-                              [Intercept blocking syscalls by mangling them via #defs. Experimental.])])
-
 AC_ARG_ENABLE([oversubscription],
               [AS_HELP_STRING([--enable-oversubscription],
                               [This option configures qthreads in a way that
@@ -490,7 +482,7 @@ AS_IF([test "$ac_cv_sizeof_void_p" -eq 8],
 AS_IF([test "$mutex_small_enough" = "yes"],
       [AC_DEFINE([PTHREAD_MUTEX_SMALL_ENOUGH], [1],
                  [this signifies that pthread_mutex_t is small enough to fit in the existing data structures])])
-QTHREAD_CHECK_SYSCALLTYPES([$enable_syscall_interception])
+QTHREAD_CHECK_SYSCALLTYPES()
 
 AC_CACHE_SAVE
 
@@ -764,10 +756,6 @@ AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "xno"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])
        enable_lazy_threadids=no],
       [enable_lazy_threadids=yes])
-
-AS_IF([test "x$enable_header_syscall_interception" == xyes],
-      [AC_DEFINE([USE_HEADER_SYSCALLS], [1],
-                 [Define to allow blocking syscalls to be mangled into qthread-specific variants])])
 
 AC_CACHE_SAVE
 
