@@ -280,47 +280,6 @@ static qt_mpool generic_rdata_pool = NULL;
 #define FREE_RDATA(r) qt_mpool_free(generic_rdata_pool, (r))
 #endif /* if defined(UNPOOLED) */
 
-#ifdef NEED_RLIMIT
-#define RLIMIT_TO_NORMAL(thr)                                                  \
-  do {                                                                         \
-    qthread_debug(THREAD_DETAILS,                                              \
-                  "t(%p:%u): setting stack size limits back to normal...\n",   \
-                  (thr),                                                       \
-                  (thr)->thread_id);                                           \
-    if (!(atomic_load_explicit(&(thr)->flags, memory_order_relaxed) &          \
-          QTHREAD_REAL_MCCOY)) {                                               \
-      struct rlimit rlp;                                                       \
-      rlp.rlim_cur = qlib->master_stack_size;                                  \
-      rlp.rlim_max = qlib->max_stack_size;                                     \
-      qassert(setrlimit(RLIMIT_STACK, &rlp), 0);                               \
-    }                                                                          \
-  } while (0)
-#define RLIMIT_TO_TASK(thr)                                                    \
-  do {                                                                         \
-    struct rlimit rlp;                                                         \
-    qthread_debug(THREAD_DETAILS,                                              \
-                  "t(%p:%u): setting stack size limits... hopefully we don't " \
-                  "currently exceed them!\n",                                  \
-                  (thr),                                                       \
-                  (thr)->thread_id);                                           \
-    if (atomic_load_explicit(&(thr)->flags, memory_order_relaxed) &            \
-        QTHREAD_REAL_MCCOY) {                                                  \
-      rlp.rlim_cur = qlib->master_stack_size;                                  \
-    } else {                                                                   \
-      rlp.rlim_cur = qlib->qthread_stack_size;                                 \
-    }                                                                          \
-    rlp.rlim_max = qlib->max_stack_size;                                       \
-    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);                                 \
-  } while (0)
-#else /* ifdef NEED_RLIMIT */
-#define RLIMIT_TO_NORMAL(thr)                                                  \
-  do {                                                                         \
-  } while (0)
-#define RLIMIT_TO_TASK(thr)                                                    \
-  do {                                                                         \
-  } while (0)
-#endif /* ifdef NEED_RLIMIT */
-
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = NO_DEBUG_OUTPUT;
 QTHREAD_FASTLOCK_TYPE output_lock;
@@ -980,6 +939,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   QTHREAD_FASTLOCK_INIT(qlib->max_thread_id_lock);
   QTHREAD_FASTLOCK_INIT(qlib->max_unique_id_lock);
   QTHREAD_FASTLOCK_INIT(qlib->sched_shepherd_lock);
+
   {
     struct rlimit rlp;
 
@@ -2458,8 +2418,6 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
 
     atomic_store_explicit(&t->rdata->return_context, c, memory_order_relaxed);
 
-    RLIMIT_TO_TASK(t);
-
     qthread_debug(
       SHEPHERD_DETAILS,
       "t(%p): executing swapcontext(%p, %p)...\n",
@@ -2493,7 +2451,6 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
                         &t->rdata->context),
             0);
 #endif
-    RLIMIT_TO_NORMAL(t);
 #ifdef QTHREAD_PERFORMANCE
     QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
                               WKR_SHEPHERD);
@@ -2571,7 +2528,6 @@ void API_FUNC qthread_yield_(int k) { /*{{{ */
                                 atomic_load_explicit(&t->rdata->return_context,
                                                      memory_order_relaxed),
                                 memory_order_relaxed);
-          RLIMIT_TO_TASK(t);
           /* SWAP! */
           qthread_debug(SHEPHERD_DETAILS,
                         "t(%p): executing swapcontext(%p, %p)...\n",
@@ -2586,7 +2542,6 @@ void API_FUNC qthread_yield_(int k) { /*{{{ */
           qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
 #endif
           qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
-          RLIMIT_TO_NORMAL(t);
           QTPERF_WORKER_ENTER_STATE(
             qthread_internal_getworker()->performance_data, WKR_QTHREAD_ACTIVE);
           return;
@@ -3116,7 +3071,6 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f f,
 void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
   assert((atomic_load_explicit(&t->flags, memory_order_relaxed) &
           QTHREAD_SIMPLE) == 0);
-  RLIMIT_TO_NORMAL(t);
 #ifdef QTHREAD_PERFORMANCE
   QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
                             WKR_SHEPHERD);
@@ -3143,7 +3097,6 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
                                            memory_order_relaxed)),
           0);
 #endif
-  RLIMIT_TO_TASK(t);
 #ifdef QTHREAD_PERFORMANCE
   QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
                             WKR_QTHREAD_ACTIVE);
@@ -3153,7 +3106,6 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
 void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
   assert((atomic_load_explicit(&t->flags, memory_order_relaxed) &
           QTHREAD_SIMPLE) == 0);
-  RLIMIT_TO_NORMAL(t);
   // qtlog(WKR_DBG, "qthread_back_to_master2 called!!!");
 #ifdef QTHREAD_PERFORMANCE
   QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,

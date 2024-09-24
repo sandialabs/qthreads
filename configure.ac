@@ -45,13 +45,6 @@ AC_ARG_ENABLE([guard-pages],
                                help detect stack overruns (will triple memory
                                requirements per thread)])])
 
-AC_ARG_ENABLE([setrlimit],
-              [AS_HELP_STRING([--enable-setrlimit],
-                              [use setrlimit to limit the stack (not usually
-                               necessary, but technically more correct for
-                               applications that consult rlimit for the stack
-                               size, such as some printf implementations)])])
-
 AC_ARG_ENABLE([syscall-interception],
               [AS_HELP_STRING([--enable-syscall-interception],
                               [Intercept blocking syscalls (or attempt to). Experimental.])])
@@ -553,11 +546,7 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AS_IF([test "x$enable_setrlimit" = "xyes"],
-      [AC_CHECK_FUNCS([getrlimit setrlimit],
-                      [AC_DEFINE([NEED_RLIMIT], [1], [Whether the library should use get/set rlimit functions])],
-                      [AC_MSG_ERROR([setrlimit() calls enabled, but function is unavailable])])])
-AC_CHECK_FUNCS([strtol memalign posix_memalign memset memmove munmap memcpy fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl syscall])
+AC_CHECK_FUNCS([strtol memalign posix_memalign memset memmove munmap memcpy fstat64 lseek64 getrlimit getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl syscall])
 AC_CHECK_DECLS([MADV_ACCESS_LWP],[],[],[[#include <sys/types.h>
 #include <sys/mman.h>]])
 
