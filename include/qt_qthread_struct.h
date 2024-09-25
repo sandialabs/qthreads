@@ -67,9 +67,6 @@ struct qthread_runtime_data_s {
   /* affinity for children created by this task */
   qthread_shepherd_id_t child_affinity;
 #endif
-#ifdef QTHREAD_PERFORMANCE
-  qtperfdata_t *performance_data;
-#endif
 };
 
 /* Try very VERY hard to keep this under 1 cacheline (64 bytes) */

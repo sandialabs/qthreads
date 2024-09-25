@@ -1,7 +1,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <qthread/performance.h>
 /* The API */
 #include "qthread/qthread.h"
 
@@ -143,8 +142,6 @@ static inline void qt_feb_schedule(qthread_t *waiter,
                                    qthread_shepherd_t *shep) {
   atomic_store_explicit(
     &waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-  QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data,
-                             QTHREAD_STATE_RUNNING);
   if ((atomic_load_explicit(&waiter->flags, memory_order_relaxed) &
        QTHREAD_UNSTEALABLE) &&
       (waiter->rdata->shepherd_ptr != shep)) {
@@ -1258,8 +1255,6 @@ int API_FUNC qthread_readFE(aligned_t *restrict dest,
     m->FEQ = X;
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
-    QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data,
-                               QTHREAD_STATE_FEB_BLOCKED);
     /* so that the shepherd will unlock it */
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
@@ -1442,8 +1437,6 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t) { /*{{{*/
       m->FFQ = X;
       atomic_store_explicit(
         &t->thread_state, QTHREAD_STATE_NASCENT, memory_order_relaxed);
-      QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                 QTHREAD_STATE_NASCENT);
       QTHREAD_FASTLOCK_UNLOCK(&m->lock);
       return 1;
     }
@@ -1452,11 +1445,6 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t) { /*{{{*/
   // All input preconds are full
   atomic_store_explicit(
     &t->thread_state, QTHREAD_STATE_NEW, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-  if (t->rdata) {
-    QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_NEW);
-  }
-#endif
   qt_free(t->preconds);
   t->preconds = NULL;
 #ifdef QTHREAD_COUNT_THREADS

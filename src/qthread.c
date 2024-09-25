@@ -80,12 +80,6 @@
 #include "qt_output_macros.h"
 #include "qt_subsystems.h"
 
-#ifdef QTHREAD_PERFORMANCE
-#define WKR_DBG 1
-#include "qthread/logging.h"
-#include "qthread/performance.h"
-#endif // ifdef QTHREAD_PERFORMANCE
-
 #define QTHREAD_STACK_ALIGNMENT 16u
 
 /* Shared Globals */
@@ -234,13 +228,6 @@ static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
       VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
   }
 #endif
-#ifdef QTHREAD_PERFORMANCE
-  rdata->performance_data = NULL;
-  if (qtperf_should_instrument_qthreads) {
-    QTPERF_ASSERT(qtperf_qthreads_group != NULL);
-    rdata->performance_data = qtperf_create_perfdata(qtperf_qthreads_group);
-  }
-#endif
 } /*}}}*/
 
 /* the qthread_master() function is the loop responsible for actually
@@ -315,10 +302,6 @@ static void *qthread_master(void *arg) {
   assert(localpriorityqueue);
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   assert(threadqueue);
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                            WKR_IDLE);
-#endif /*  ifdef QTHREAD_PERFORMANCE  */
   while (!done) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_start(idle);
@@ -434,10 +417,6 @@ static void *qthread_master(void *arg) {
             atomic_store_explicit(
               &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
             t->rdata->shepherd_ptr = &qlib->shepherds[t->target_shepherd];
-#ifdef QTHREAD_PERFORMANCE
-            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                       QTHREAD_STATE_RUNNING);
-#endif /* ifdef QTHREAD_PERFORMANCE */
             assert(t->rdata->shepherd_ptr->ready != NULL);
             qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
             break;
@@ -448,10 +427,6 @@ static void *qthread_master(void *arg) {
           case QTHREAD_STATE_YIELDED_NEAR: /* reschedule it */
             atomic_store_explicit(
               &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                       QTHREAD_STATE_RUNNING);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
             {
 #ifdef QTHREAD_LOCAL_PRIORITY
               qthread_t *f = qt_scheduler_get_thread(
@@ -472,10 +447,6 @@ static void *qthread_master(void *arg) {
           case QTHREAD_STATE_YIELDED: /* reschedule it */
             atomic_store_explicit(
               &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                       QTHREAD_STATE_RUNNING);
-#endif /* ifdef QTHREAD_PERFORMANCE */
             assert(me->ready != NULL);
             qt_threadqueue_enqueue_yielded(me->ready, t);
             break;
@@ -499,10 +470,6 @@ static void *qthread_master(void *arg) {
             atomic_store_explicit(&t->thread_state,
                                   QTHREAD_STATE_PARENT_BLOCKED,
                                   memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                       QTHREAD_STATE_PARENT_BLOCKED);
-#endif /* ifdef QTHREAD_PERFORMANCE */
             break;
 
           case QTHREAD_STATE_PARENT_BLOCKED:
@@ -515,10 +482,6 @@ static void *qthread_master(void *arg) {
           case QTHREAD_STATE_SYSCALL:
             atomic_store_explicit(
               &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-            QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                       QTHREAD_STATE_RUNNING);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
             qt_blocking_subsystem_enqueue(t->rdata->blockedon.io);
             break;
           case QTHREAD_STATE_TERMINATED:
@@ -530,10 +493,6 @@ static void *qthread_master(void *arg) {
       }
     }
   }
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                            WKR_SHEPHERD);
-#endif /* ifdef QTHREAD_PERFORMANCE  */
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
   qtimer_destroy(idle);
@@ -833,15 +792,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   qlib->mccoy_thread->rdata = MALLOC(sizeof(struct qthread_runtime_data_s));
 
-#ifdef QTHREAD_PERFORMANCE
-  if (qtperf_should_instrument_qthreads) {
-    QTPERF_ASSERT(qtperf_qthreads_group != NULL);
-    qlib->mccoy_thread->rdata->performance_data =
-      qtperf_create_perfdata(qtperf_qthreads_group);
-  }
-  QTPERF_QTHREAD_ENTER_STATE(qlib->mccoy_thread->rdata->performance_data,
-                             QTHREAD_STATE_YIELDED);
-#endif /* endif QTHREAD_PERFORMANCE */
   assert(qlib->mccoy_thread->rdata != NULL);
   qlib->mccoy_thread->rdata->shepherd_ptr = &(qlib->shepherds[0]);
   qlib->mccoy_thread->rdata->stack = NULL;
@@ -859,14 +809,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   qlib->shepherds[0].workers[0].worker_id = 0;
   qlib->shepherds[0].workers[0].unique_id =
     qthread_internal_incr(&(qlib->max_unique_id), &qlib->max_unique_id_lock, 1);
-#ifdef QTHREAD_PERFORMANCE
-  if (qtperf_should_instrument_workers) {
-    QTPERF_ASSERT(qtperf_workers_group != NULL);
-    qlib->shepherds[0].workers[0].performance_data =
-      qtperf_create_perfdata(qtperf_workers_group);
-    QTPERF_ASSERT(qlib->shepherds[0].workers[0].performance_data != NULL);
-  }
-#endif
   qthread_makecontext(&(qlib->master_context),
                       qlib->master_stack,
                       qlib->master_stack_size,
@@ -904,12 +846,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   /* spawn the shepherds */
   /*  XXX: where does WKR_DBG come from? */
-#ifdef QTHREAD_PERFORMANCE
-  qtlogargs(WKR_DBG,
-            "nshepherds = %i, nworkerspershep = %i",
-            nshepherds,
-            nworkerspershep);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
   for (i = 0; i < nshepherds; ++i) {
     qthread_worker_id_t j;
     for (j = 0; j < nworkerspershep; ++j) {
@@ -917,28 +853,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
         qt_calloc(STEAL_BUFFER_LENGTH, sizeof(qthread_t *));
       qlib->shepherds[i].workers[j].stealbuffer =
         qt_calloc(STEAL_BUFFER_LENGTH, sizeof(qthread_t *));
-#ifdef QTHREAD_PERFORMANCE
-      QTPERF_ASSERT(((qtperf_should_instrument_workers != 0 &&
-                      (qtperf_workers_group != NULL)) ||
-                     (qtperf_should_instrument_workers == 0 &&
-                      (qtperf_workers_group == NULL))));
-      // only add perfdata struct if we're watching, and if it
-      // hasn't been done (which should be the case for all but
-      // the master thread)
-      if (qtperf_should_instrument_workers &&
-          qlib->shepherds[i].workers[j].performance_data == NULL) {
-        QTPERF_ASSERT(qtperf_workers_group != NULL);
-        qlib->shepherds[i].workers[j].performance_data =
-          qtperf_create_perfdata(qtperf_workers_group);
-        QTPERF_ASSERT(qlib->shepherds[i].workers[j].performance_data != NULL);
-        QTPERF_WORKER_ENTER_STATE(
-          qlib->shepherds[i].workers[j].performance_data, WKR_INIT);
-        qtlogargs(WKR_DBG,
-                  "created performance data for worker %i, shepherd %lu\n",
-                  j,
-                  i);
-      }
-#endif /* ifdef QTHREAD_PERFORMANCE */
 
       if ((i == 0) && (j == 0)) {
         continue; // original pthread becomes shep 0 worker 0
@@ -969,10 +883,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
       }
     }
   }
-
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_ASSERT(qtperf_check_invariants());
-#endif /* ifdef QTHREAD_PERFORMANCE */
 
   atexit(qthread_finalize);
 
@@ -1108,10 +1018,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
     atomic_store_explicit(&worker->current->thread_state,
                           QTHREAD_STATE_YIELDED,
                           memory_order_relaxed); /* Otherwise, put back */
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_QTHREAD_ENTER_STATE(worker->current->rdata->performance_data,
-                               QTHREAD_STATE_YIELDED);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
     //      qt_threadqueue_enqueue(shep0->ready, worker->current);
     return; // AKP 11/2/11 I think that is if statement catches the case that
             // exit is called within a
@@ -1135,10 +1041,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
       assert(t != NULL); /* what else can we do? */
       atomic_store_explicit(
         &t->thread_state, QTHREAD_STATE_TERM_SHEP, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-      QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                 QTHREAD_STATE_TERM_SHEP);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
       t->thread_id = QTHREAD_NON_TASK_ID;
       atomic_store_explicit(
         &t->flags, QTHREAD_UNSTEALABLE, memory_order_relaxed);
@@ -1758,10 +1660,6 @@ static void qthread_wrapper(void *ptr) {
     qthread_t *prev_t = t->rdata->blockedon.thread;
     atomic_store_explicit(
       &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                               QTHREAD_STATE_RUNNING);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
     assert(prev_t->rdata);
     assert(prev_t->rdata->shepherd_ptr);
     assert(prev_t->rdata->shepherd_ptr->ready);
@@ -1870,10 +1768,6 @@ static void qthread_wrapper(void *ptr) {
 
   atomic_store_explicit(
     &t->thread_state, QTHREAD_STATE_TERMINATED, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                             QTHREAD_STATE_TERMINATED);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
 
 #ifdef QTHREAD_COUNT_THREADS
   QTHREAD_FASTLOCK_LOCK(&effconcurrentthreads_lock);
@@ -1924,10 +1818,6 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
         QTHREAD_STATE_NEW) {
       atomic_store_explicit(
         &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-      QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                 QTHREAD_STATE_RUNNING);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
       qthread_makecontext(&t->rdata->context,
                           t->rdata->stack,
                           qlib->qthread_stack_size,
@@ -1954,10 +1844,6 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
       atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed),
       sizeof(qt_context_t));
 #endif
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                              WKR_QTHREAD_ACTIVE);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(atomic_load_explicit(&t->rdata->return_context,
                                              memory_order_relaxed),
@@ -1969,18 +1855,10 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
                         &t->rdata->context),
             0);
 #endif
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                              WKR_SHEPHERD);
-#endif /* ifdef QTHREAD_PERFORMANCE */
   } else {
     assert(t->thread_state == QTHREAD_STATE_NEW);
     atomic_store_explicit(
       &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                               QTHREAD_STATE_RUNNING);
-#endif /* ifdef QTHREAD_PERFORMANCE */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
     unsigned int high = (((uintptr_t)t) >> 32) & 0xffffffff;
     unsigned int low = ((uintptr_t)t) & 0xffffffff;
@@ -2005,19 +1883,11 @@ void API_FUNC qthread_yield_(int k) { /*{{{ */
       case 1: // Yield-near
         atomic_store_explicit(
           &t->thread_state, QTHREAD_STATE_YIELDED_NEAR, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                   QTHREAD_STATE_YIELDED_NEAR);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
         break;
       case 2: // direct-yield
       case 0: // general yield
         atomic_store_explicit(
           &t->thread_state, QTHREAD_STATE_YIELDED, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-        QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                                   QTHREAD_STATE_YIELDED);
-#endif /*  ifdef QTHREAD_PERFORMANCE */
         break;
     }
     qthread_back_to_master(t);
@@ -2152,10 +2022,6 @@ int API_FUNC qthread_spawn(qthread_f f,
     atomic_store_explicit(&t->thread_state,
                           QTHREAD_STATE_NASCENT,
                           memory_order_relaxed); // special non-executable state
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data,
-                               QTHREAD_STATE_NASCENT);
-#endif /*  QTHREAD_PERFORMANCE */
     t->preconds = preconds;
     assert(((aligned_t **)preconds)[0] == (aligned_t *)(uintptr_t)npreconds);
   } else {
@@ -2454,11 +2320,6 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f f,
 void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
   assert((atomic_load_explicit(&t->flags, memory_order_relaxed) &
           QTHREAD_SIMPLE) == 0);
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                            WKR_SHEPHERD);
-#endif /*  QTHREAD_PERFORMANCE */
-       /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
   VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
   VALGRIND_CHECK_MEM_IS_ADDRESSABLE(
@@ -2480,21 +2341,11 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
                                            memory_order_relaxed)),
           0);
 #endif
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                            WKR_QTHREAD_ACTIVE);
-#endif /*  QTHREAD_PERFORMANCE */
 } /*}}} */
 
 void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
   assert((atomic_load_explicit(&t->flags, memory_order_relaxed) &
           QTHREAD_SIMPLE) == 0);
-  // qtlog(WKR_DBG, "qthread_back_to_master2 called!!!");
-#ifdef QTHREAD_PERFORMANCE
-  QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data,
-                            WKR_SHEPHERD);
-#endif /*  QTHREAD_PERFORMANCE */
-       /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
   VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
   VALGRIND_CHECK_MEM_IS_ADDRESSABLE(
@@ -2539,10 +2390,6 @@ int API_FUNC qthread_migrate_to(qthread_shepherd_id_t const shepherd) { /*{{{ */
     me->target_shepherd = shepherd;
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_MIGRATING, memory_order_relaxed);
-#ifdef QTHREAD_PERFORMANCE
-    QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data,
-                               QTHREAD_STATE_MIGRATING);
-#endif /*  QTHREAD_PERFORMANCE */
     atomic_fetch_or_explicit(
       &me->flags, QTHREAD_UNSTEALABLE, memory_order_relaxed);
     qthread_back_to_master(me);

@@ -3,10 +3,6 @@
 
 #include <stdalign.h>
 
-#ifdef QTHREAD_PERFORMANCE
-#include <qthread/performance.h>
-#endif
-
 /* System Pre-requisites */
 #include <pthread.h>
 
@@ -52,9 +48,6 @@ struct qthread_worker_s {
   qthread_worker_id_t unique_id;
   qthread_worker_id_t worker_id;
   qthread_worker_id_t packed_worker_id;
-#ifdef QTHREAD_PERFORMANCE
-  struct qtperfdata_s *performance_data;
-#endif
   _Atomic alignas(8) uint_fast8_t active;
 };
 typedef struct qthread_worker_s qthread_worker_t;

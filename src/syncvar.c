@@ -1,7 +1,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <qthread/performance.h>
 
 /* System Headers */
 #include <limits.h>              /* for INT_MAX */
@@ -455,8 +454,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     m->FFQ = X;
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
-    QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data,
-                               QTHREAD_STATE_FEB_BLOCKED);
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
@@ -751,8 +748,6 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
     m->FEQ = X;
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
-    QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data,
-                               QTHREAD_STATE_FEB_BLOCKED);
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
@@ -894,8 +889,6 @@ static inline void qthread_syncvar_schedule(qthread_t *waiter,
   assert(shep);
   atomic_store_explicit(
     &waiter->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
-  QTPERF_QTHREAD_ENTER_STATE(waiter->rdata->performance_data,
-                             QTHREAD_STATE_RUNNING);
   if (atomic_load_explicit(&waiter->flags, memory_order_relaxed) &
       QTHREAD_UNSTEALABLE) {
     qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
@@ -1188,8 +1181,6 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
     m->EFQ = X;
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
-    QTPERF_QTHREAD_ENTER_STATE(me->rdata->performance_data,
-                               QTHREAD_STATE_FEB_BLOCKED);
     me->rdata->blockedon.addr = m;
     QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
