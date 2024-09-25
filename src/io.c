@@ -77,17 +77,7 @@ static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) { /*{{{*/
     if (qt_process_blocking_call()) { break; }
     MACHINE_FENCE;
   }
-  qthread_debug(IO_DETAILS,
-                "proxy_exit = %i, exiting\n",
-                atomic_load_explicit(&proxy_exit, memory_order_relaxed));
-#ifdef QTHREAD_DEBUG
-  unsigned ct =
-    atomic_fetch_sub_explicit(&io_worker_count, 1, memory_order_relaxed);
-  qthread_debug(
-    IO_BEHAVIOR, "worker_count post exit is %u\n", (unsigned)ct - 1);
-#else
   atomic_fetch_sub_explicit(&io_worker_count, 1, memory_order_relaxed);
-#endif
   pthread_exit(NULL);
   return 0;
 } /*}}}*/
@@ -140,10 +130,7 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
     ret = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
     switch (ret) {
       case ETIMEDOUT:
-        qthread_debug(IO_BEHAVIOR, "condwait timed out\n");
         if (theQueue.head == NULL) {
-          qthread_debug(IO_BEHAVIOR,
-                        "------------------------------------- exit()\n");
           QTHREAD_UNLOCK(&theQueue.lock);
           return 1;
         } else {
@@ -153,7 +140,6 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
 
       case EINVAL:
         /* chances are, this is because ts is in the past */
-        qthread_debug(IO_DETAILS, "condwait returned EINVAL\n");
         break;
 
       default: break;
@@ -164,14 +150,6 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
   theQueue.head = item->next;
   if (theQueue.tail == item) { theQueue.tail = theQueue.head; }
   theQueue.length--;
-  qthread_debug(
-    IO_DETAILS,
-    "dequeue... theQueue.head = %p, .tail = %p, item:%p, thread:%p, rdata:%p\n",
-    theQueue.head,
-    theQueue.tail,
-    item,
-    item->thread,
-    item->thread->rdata);
   QTHREAD_UNLOCK(&theQueue.lock);
   item->next = NULL;
   /* do something with <item> */
@@ -256,20 +234,7 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
       qt_context_t my_context;
       TLS_SET(IO_task_struct, item->thread);
       getcontext(&my_context);
-      qthread_debug(
-        IO_DETAILS,
-        "blocking proxy context is %p (item:%p, thread:%p, rdata:%p)\n",
-        &my_context,
-        item,
-        item->thread,
-        item->thread->rdata);
       qthread_exec(item->thread, &my_context);
-      qthread_debug(
-        IO_DETAILS,
-        "proxy back from qthread_exec (item:%p, thread:%p, rdata:%p)\n",
-        item,
-        item->thread,
-        item->thread->rdata);
       // TLS_SET(IO_task_struct, NULL);
       break;
     }
@@ -287,19 +252,9 @@ void INTERNAL
 qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job) { /*{{{*/
   qt_blocking_queue_node_t *prev;
 
-  qthread_debug(IO_FUNCTIONS,
-                "entering, job = %p, thread:%p, rdata:%p\n",
-                job,
-                job->thread,
-                job->thread->rdata);
   assert(job->next == NULL);
   assert(job->thread->rdata);
   QTHREAD_LOCK(&theQueue.lock);
-  qthread_debug(IO_DETAILS,
-                "1) theQueue.head = %p, .tail = %p, job = %p\n",
-                theQueue.head,
-                theQueue.tail,
-                job);
   prev = theQueue.tail;
   theQueue.tail = job;
   if (prev == NULL) {
@@ -308,29 +263,16 @@ qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job) { /*{{{*/
     prev->next = job;
   }
   theQueue.length++;
-  qthread_debug(IO_DETAILS,
-                "2) theQueue.head = %p, .tail = %p, job = %p\n",
-                theQueue.head,
-                theQueue.tail,
-                job);
   if (atomic_load_explicit(&io_worker_count, memory_order_relaxed) <
       theQueue.length) {
     if (atomic_load_explicit(&io_worker_count, memory_order_relaxed) <
         io_worker_max) {
-      qthread_debug(IO_DETAILS,
-                    "++++++++++++++++++++ I think I oughta spawn a worker\n");
       qt_blocking_subsystem_spawnworker();
     }
   } else {
-    qthread_debug(
-      IO_DETAILS,
-      "Queue is %u long, there are %u workers\n",
-      (unsigned)theQueue.length,
-      (unsigned)atomic_load_explicit(&io_worker_count, memory_order_relaxed));
     QTHREAD_COND_SIGNAL(theQueue.notempty);
   }
   QTHREAD_UNLOCK(&theQueue.lock);
-  qthread_debug(IO_FUNCTIONS, "exiting, job = %p\n", job);
 } /*}}}*/
 
 /* vim:set expandtab: */

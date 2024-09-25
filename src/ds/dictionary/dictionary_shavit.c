@@ -197,14 +197,12 @@ static int qt_lf_list_delete(marked_ptr_t *head,
     marked_ptr_t lnext;
     if (qt_lf_list_find(
           head, hashed_key, key, &lprev, &lcur, &lnext, op_equals) == NULL) {
-      qthread_debug(ALWAYS_OUTPUT, "### inside delete - return 0\n");
       return 0;
     }
     if (qthread_cas_ptr(&PTR_OF(lcur)->next,
                         (void *)CONSTRUCT(0, lnext),
                         (void *)CONSTRUCT(1, lnext)) !=
         (void *)CONSTRUCT(0, lnext)) {
-      qthread_debug(ALWAYS_OUTPUT, "### inside delete - cas failed continue\n");
       continue;
     }
     if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) ==

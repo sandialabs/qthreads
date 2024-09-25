@@ -349,9 +349,6 @@ int qthread_migrate_to(qthread_shepherd_id_t const shepherd);
 /* Resets the default shepherd spawn order for tasks that use NO_SHEPHERD */
 void qthread_reset_target_shep(void);
 
-/* This function sets the debug level if debugging has been enabled */
-int qthread_debuglevel(int);
-
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 #define QTHREAD_NULL_TASK_ID UINT_MAX

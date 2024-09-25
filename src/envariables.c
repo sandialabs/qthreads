@@ -21,7 +21,6 @@ static char const *qt_internal_envstr(char const *envariable,
 
   snprintf(mod_envariable, 100, "QT_%s", envariable);
   str = getenv(mod_envariable);
-  qthread_debug(CORE_BEHAVIOR, "checking envariable %s\n", envariable);
   if (str && *str) {
     if (info) { printf("%s = %s\n", mod_envariable, str); }
     return str;
@@ -92,14 +91,7 @@ unsigned long INTERNAL qt_internal_get_env_num(char const *envariable,
       tmp = dflt;
     }
     if (tmp == 0) {
-      qthread_debug(CORE_DETAILS,
-                    "since envariable %s is 0, choosing default: %u\n",
-                    envariable,
-                    zerodflt);
       tmp = zerodflt;
-    } else {
-      qthread_debug(
-        CORE_DETAILS, "envariable %s parsed as %u\n", envariable, tmp);
     }
   }
   return tmp;
@@ -130,10 +122,6 @@ unsigned char INTERNAL qt_internal_get_env_bool(char const *envariable,
         tmp = dflt;
       }
     }
-    qthread_debug(CORE_DETAILS,
-                  "envariable %s parsed as %s\n",
-                  envariable,
-                  tmp ? "TRUE" : "FALSE");
   }
   return tmp;
 }
@@ -146,7 +134,6 @@ int INTERNAL qt_internal_unset_envstr(char const *envariable) {
 
   snprintf(mod_envariable, 100, "QT_%s", envariable);
   str = getenv(mod_envariable);
-  qthread_debug(CORE_BEHAVIOR, "checking envariable %s\n", envariable);
   if (str && *str) {
     if (info) { printf("%s = %s\n", mod_envariable, str); }
     return unsetenv(mod_envariable);

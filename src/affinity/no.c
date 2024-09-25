@@ -21,7 +21,6 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw)) {
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t *sheps,
                                   qthread_shepherd_id_t nshepherds) { /*{{{ */
-  qthread_debug(AFFINITY_CALLS, "start (%p, %i)\n", sheps, (int)nshepherds);
   for (size_t i = 0; i < nshepherds; ++i) {
     sheps[i].sorted_sheplist =
       qt_calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));

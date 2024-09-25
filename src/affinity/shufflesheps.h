@@ -26,12 +26,6 @@ extern inline INTERNAL void sort_sheps(unsigned int *restrict dists,
   size_t tmp_base = 0;
   size_t tmp_max = 0;
 
-  qthread_debug(AFFINITY_FUNCTIONS,
-                "dists:%p, s:%p, num:%u .. s_max:%u\n",
-                dists,
-                s,
-                (unsigned int)num,
-                s_max);
   while (s_max > 0) {
     size_t i, k;
     unsigned int mindist = UINT_MAX;

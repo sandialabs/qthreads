@@ -1021,8 +1021,6 @@ static aligned_t qqloop_wrapper(void *arg_void) { /*{{{*/
       }
       if (!qthread_shep_ok()) {
         /* my shepherd has been disabled while I was running */
-        qthread_debug(
-          LOOP_DETAILS, "my shepherd (%i) has been disabled!\n", (int)shep);
         safeexit = 0;
         qthread_incr(&(stat->activesheps), -1);
         break;

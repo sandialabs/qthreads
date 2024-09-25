@@ -76,11 +76,6 @@ qt_barrier_t API_FUNC *qt_barrier_create(size_t size,
                                          qt_barrier_btype type) { /*{{{ */
   qt_barrier_t *b = qt_calloc(1, sizeof(qt_barrier_t));
 
-  qthread_debug(BARRIER_CALLS,
-                "size(%i), type(%i), debug(%i): begin\n",
-                size,
-                (int)type,
-                debug);
   assert(b);
   if (b) {
     assert(type == REGION_BARRIER);

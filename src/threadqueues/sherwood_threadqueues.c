@@ -662,14 +662,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
         }
 #endif /* ifdef QTHREAD_TASK_AGGREGATION */
 
-        qthread_debug(THREADQUEUE_DETAILS,
-                      "q(%p), qc(%p), active(%u): qc->qlen(%u) Push remaining "
-                      "items onto the real queue\n",
-                      q,
-                      qc,
-                      active,
-                      qc->qlength);
-
         if (qc->qlength > 0) {
           qt_threadqueue_node_t *first = qc->head;
           qt_threadqueue_node_t *last = qc->tail;

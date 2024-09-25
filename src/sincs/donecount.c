@@ -102,10 +102,6 @@ void API_FUNC qt_sinc_init(qt_sinc_t *restrict sinc_,
   }
   sinc->counter = expect;
   if (sinc->counter != 0) {
-    qthread_debug(FEB_DETAILS,
-                  "tid %u emptying sinc ready (%p)\n",
-                  qthread_id(),
-                  &sinc->ready);
     qthread_empty(&sinc->ready);
   } else {
     qthread_fill(&sinc->ready);
@@ -153,10 +149,6 @@ void API_FUNC qt_sinc_reset(qt_sinc_t *sinc_, size_t const will_spawn) { /*{{{*/
   // Reset termination detection
   sinc->counter = will_spawn;
   if (sinc->counter != 0) {
-    qthread_debug(FEB_DETAILS,
-                  "tid %u emptying sinc ready (%p)\n",
-                  qthread_id(),
-                  &sinc->ready);
     qthread_empty(&sinc->ready);
     /*} else {
      *  qthread_fill(&sinc->ready);*/
@@ -202,10 +194,6 @@ void API_FUNC qt_sinc_fini(qt_sinc_t *sinc_) { /*{{{*/
     FREE(rdata, sizeof(qt_sinc_reduction_t));
     sinc->rdata = NULL;
   }
-  qthread_debug(FEB_DETAILS,
-                "tid %u filling sinc ready as part of destruction (%p)\n",
-                qthread_id(),
-                &sinc->ready);
   qassert(qthread_fill(&sinc->ready), QTHREAD_SUCCESS);
 } /*}}}*/
 
@@ -228,10 +216,6 @@ void API_FUNC qt_sinc_expect(qt_sinc_t *sinc_, size_t count) { /*{{{*/
 
   if (count != 0) {
     if (qthread_incr(&sinc->counter, count) == 0) {
-      qthread_debug(FEB_DETAILS,
-                    "tid %u emptying sinc ready (%p)\n",
-                    qthread_id(),
-                    &sinc->ready);
       qthread_empty(&sinc->ready);
     }
   }

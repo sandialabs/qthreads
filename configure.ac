@@ -57,57 +57,6 @@ AC_ARG_ENABLE([performance-monitoring],
               [AS_HELP_STRING([--enable-performance-monitoring],
                               [enable performance monitoring infrastructure])])
 
-
-AC_ARG_ENABLE([debug],
-              [AS_HELP_STRING([--enable-debug=[[areas]]],
-                              [prints out debugging information as programs
-                               run, tracing their qthread-related behavior.
-                               Uses the environment variable
-                               QTHREAD_DEBUG_LEVEL. The higher the level, the
-                               greater the detail. This enables debugging in
-                               the specified areas. Default area is "all".
-                               Other available areas are:
-                               affinity,
-                               barrier,
-                               core,
-                               febs,
-                               futurelib,
-                               io,
-                               loops,
-                               mpool,
-                               qarray,
-                               shepherd,
-                               syncvars,
-                               syscalls,
-                               team,
-                               thread,
-                               threadqueues,
-                               xomp])],
-              [AS_IF([test "x$enable_debug" = "xyes"],
-                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,futurelib,xomp"])
-               for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
-                 case "$area" in
-                     affinity) enable_debug_affinity=yes ;;
-                     threadqueue|threadqueues) enable_debug_threadqueues=yes ;;
-                     thread|threads) enable_debug_threads=yes ;;
-                     shepherd|shepherds) enable_debug_shepherd=yes ;;
-                     core) enable_debug_core=yes ;;
-                     team|teams) enable_debug_team=yes ;;
-                     mpool|mpools) enable_debug_mpool=yes ;;
-                     syscall|syscalls) enable_debug_syscalls=yes ;;
-                     feb|febs) enable_debug_febs=yes ;;
-                     syncvar|syncvars) enable_debug_syncvars=yes ;;
-                     io) enable_debug_io=yes ;;
-                     loop|loops) enable_debug_loops=yes ;;
-                     barrier|barriers) enable_debug_barrier=yes ;;
-                     qarray|qarrays) enable_debug_qarray=yes ;;
-                     futurelib) enable_debug_futurelib=yes ;;
-                     xomp) enable_debug_xomp=yes ;;
-                     *) AC_MSG_ERROR([Unrecognized debug category ($area).]) ;;
-                 esac
-               done],
-              [enable_debug=no])
-
 AC_ARG_ENABLE([profiling],
               [AS_HELP_STRING([--enable-profiling=[[areas]]],
                               [turn on the specified comma-separated types of
@@ -274,13 +223,6 @@ AC_CACHE_SAVE
 ## ------------------- ##
 ## Checks for programs ##
 ## ------------------- ##
-dnl Test for this *before* AC_PROG_CC, to avoid getting the default CFLAGS
-dnl However, that means we don't know a ton about this machine or this compiler
-dnl yet, so we may have to reset it later.
-AS_IF([test "x$enable_debugging" = xyes],
-      [CFLAGS="$CFLAGS -O0 -g"
-       CXXFLAGS="$CXXFLAGS -O0 -g"
-      ])
 AC_PROG_CC
 dnl We use system extensions.  This includes setting _GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
@@ -570,43 +512,6 @@ AS_IF([test "x$enable_asserts" != "xyes"],
 AS_IF([test "x$with_stack_alignment" = "x"],
       [with_stack_alignment=16])
 
-AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
-      [enable_debug=no],
-      [AC_DEFINE([QTHREAD_DEBUG], [1], [enables printing debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_affinity],
-                      [QTHREAD_DEBUG_AFFINITY], [prints out affinity debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_threadqueues],
-                      [QTHREAD_DEBUG_THREADQUEUES], [prints out threadqueue debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_threads],
-                      [QTHREAD_DEBUG_THREADS], [prints out thread debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_core],
-                      [QTHREAD_DEBUG_CORE], [prints out core debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_team],
-                      [QTHREAD_DEBUG_TEAM], [prints out team debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_mpool],
-              [QTHREAD_DEBUG_MPOOL], [prints out memory pool debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_shepherd],
-                      [QTHREAD_DEBUG_SHEPHERD], [prints out shepherd debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_syscalls],
-                      [QTHREAD_DEBUG_SYSCALLS], [prints out syscall debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_febs],
-                      [QTHREAD_DEBUG_FEBS], [prints out feb debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_syncvars],
-                      [QTHREAD_DEBUG_SYNCVARS], [prints out syncvar debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_loops],
-                      [QTHREAD_DEBUG_LOOPS], [prints out loop debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_io],
-                      [QTHREAD_DEBUG_IO], [prints out I/O debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_barrier],
-                      [QTHREAD_DEBUG_BARRIER], [prints out barrier debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_qarray],
-                      [QTHREAD_DEBUG_QARRAY], [prints out qarray debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_futurelib],
-                      [QTHREAD_DEBUG_FUTURELIB], [prints out futurelib debugging information at runtime])
-       QT_COND_DEFINE([$enable_debug_xomp],
-                      [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
-       ])
-
 AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <unistd.h>
 
@@ -645,7 +550,7 @@ AS_IF([test "x$enable_feb_profiling" = "xyes"],
       [AC_DEFINE([QTHREAD_FEB_PROFILING], [1], [adds code to monitor how much time is spent waiting for FEB states])],
       [enable_feb_profiling="no"])
 
-AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "xno"],
+AS_IF([test "x$enable_lazy_threadids" = "xno"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])
        enable_lazy_threadids=no],
       [enable_lazy_threadids=yes])
@@ -750,7 +655,6 @@ echo    "Safety/Debugging:"
 echo    "   Sanity assert()s: $enable_asserts"
 echo    "    Check alignment: $enable_aligncheck"
 echo    "          Profiling: $enable_profiling"
-echo    "   Debugging Output: $enable_debug"
 echo    "        Guard Pages: $enable_guard_pages"
 echo    "          Precaching: $enable_precache_guard_pages"
 echo    ""

@@ -159,7 +159,6 @@ qthread_disable_shepherd(qthread_shepherd_id_t const shep) { /*{{{ */
      * policy based on gut feeling rather than specific issues. */
     return QTHREAD_NOT_ALLOWED;
   }
-  qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
   qthread_internal_incr(
     &(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), -1);
   (void)QT_CAS(qlib->shepherds[shep].active, 1, 0);
@@ -170,7 +169,6 @@ void API_FUNC
 qthread_enable_shepherd(qthread_shepherd_id_t const shep) { /*{{{ */
   assert(qthread_library_initialized);
   assert(shep < qlib->nshepherds);
-  qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
   qthread_internal_incr(
     &(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
   (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
@@ -192,7 +190,6 @@ qthread_find_active_shepherd(qthread_shepherd_id_t *l,
   qthread_shepherd_t *sheps = qlib->shepherds;
   qthread_shepherd_id_t const nsheps = (qthread_shepherd_id_t)qlib->nshepherds;
 
-  qthread_debug(SHEPHERD_FUNCTIONS, "l(%p): from %i sheps\n", l, (int)nsheps);
   if (l == NULL) {
     /* if l==NULL, there's no locality info, so just find the least-busy active
      * shepherd */
@@ -206,20 +203,10 @@ qthread_find_active_shepherd(qthread_shepherd_id_t *l,
 
         if (found == 0) {
           found = 1;
-          qthread_debug(SHEPHERD_FUNCTIONS,
-                        "l(%p): shep %i is the least busy (%i) so far\n",
-                        l,
-                        (int)i,
-                        shep_busy_level);
           busyness = shep_busy_level;
           target = i;
         } else if ((shep_busy_level < busyness) ||
                    ((shep_busy_level == busyness) && (random() % 2 == 0))) {
-          qthread_debug(SHEPHERD_FUNCTIONS,
-                        "l(%p): shep %i is the least busy (%i) so far\n",
-                        l,
-                        (int)i,
-                        shep_busy_level);
           busyness = shep_busy_level;
           target = i;
         }
@@ -227,12 +214,8 @@ qthread_find_active_shepherd(qthread_shepherd_id_t *l,
     }
     assert(found);
     if (found == 0) {
-      qthread_debug(
-        SHEPHERD_FUNCTIONS, "l(%p): DID NOT FIND ANY ACTIVE SHEPHERDS!!!\n", l);
       return NULL;
     } else {
-      qthread_debug(
-        SHEPHERD_FUNCTIONS, "l(%p): found bored target %i\n", l, (int)target);
       return &(sheps[target]);
     }
   } else {
@@ -250,11 +233,6 @@ qthread_find_active_shepherd(qthread_shepherd_id_t *l,
     }
     if (target >= (nsheps - 1)) { return NULL; }
     target_dist = d[l[target]];
-    qthread_debug(SHEPHERD_FUNCTIONS,
-                  "l(%p): nearest active shepherd (%i) is %u away\n",
-                  l,
-                  (int)l[target],
-                  target_dist);
     busyness = qt_threadqueue_advisory_queuelen(sheps[l[target]].ready);
     for (alt = target + 1; alt < (nsheps - 1) && d[l[alt]] == target_dist;
          alt++) {
@@ -262,18 +240,11 @@ qthread_find_active_shepherd(qthread_shepherd_id_t *l,
         qt_threadqueue_advisory_queuelen(sheps[l[alt]].ready);
       if ((shep_busy_level < busyness) ||
           ((shep_busy_level == busyness) && (random() % 2 == 0))) {
-        qthread_debug(SHEPHERD_FUNCTIONS,
-                      "l(%p): shep %i is the least busy (%i) so far\n",
-                      l,
-                      l[alt],
-                      shep_busy_level);
         busyness = shep_busy_level;
         target = alt;
         target_dist = d[l[alt]];
       }
     }
-    qthread_debug(
-      SHEPHERD_FUNCTIONS, "l(%p): found target %i\n", l, (int)target);
     return &(sheps[l[target]]);
   }
 } /*}}} */

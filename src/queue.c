@@ -95,23 +95,9 @@ static void qthread_queue_internal_launch(qthread_t *t,
   if ((atomic_load_explicit(&t->flags, memory_order_relaxed) &
        QTHREAD_UNSTEALABLE) &&
       (t->rdata->shepherd_ptr != cur_shep)) {
-    qthread_debug(
-      FEB_DETAILS,
-      "qthread(%p:%i) enqueueing in target_shep's ready queue (%p:%i)\n",
-      t,
-      (int)t->thread_id,
-      t->rdata->shepherd_ptr,
-      (int)t->rdata->shepherd_ptr->shepherd_id);
     qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
   } else
   {
-    qthread_debug(
-      FEB_DETAILS,
-      "qthread(%p:%i) enqueueing in cur_shep's ready queue (%p:%i)\n",
-      t,
-      (int)t->thread_id,
-      cur_shep,
-      (int)cur_shep->shepherd_id);
     qt_threadqueue_enqueue(cur_shep->ready, t);
   }
 }
@@ -144,7 +130,6 @@ int API_FUNC qthread_queue_release_all(qthread_queue_t q) {
   assert(q);
   qthread_t *t;
   qthread_shepherd_t *shep = qthread_internal_getshep();
-  qthread_debug(FEB_DETAILS, "releasing all members of queue %p\n", q);
   switch (q->type) {
     case NOSYNC:
       while ((t = qthread_queue_internal_nosync_dequeue(&q->q.nosync)) !=

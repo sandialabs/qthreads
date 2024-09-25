@@ -36,7 +36,6 @@ int API_FUNC qthread_disable_worker(qthread_worker_id_t const w) { /*{{{*/
      * policy based on gut feeling rather than specific issues. */
     return QTHREAD_NOT_ALLOWED;
   }
-  qthread_debug(SHEPHERD_CALLS, "began on worker(%i-%i)\n", shep, worker);
 
   (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 1, 0);
   qlib->nworkers_active--; // decrement active count
@@ -55,7 +54,6 @@ void API_FUNC qthread_enable_worker(qthread_worker_id_t const w) { /*{{{ */
   assert(shep < qlib->nshepherds);
 
   if (worker == 0) { qthread_enable_shepherd(shep); }
-  qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
   if (worker < qlib->nworkerspershep) {
     qthread_internal_incr(
       &(qlib->nworkers_active), &(qlib->nworkers_active_lock), 1);

@@ -250,9 +250,6 @@ static qarray *qarray_create_internal(size_t const count,
     count / ret->segment_size + ((count % ret->segment_size) ? 1 : 0);
 
   /* figure out dist_specific data */
-  qthread_debug(QARRAY_DETAILS,
-                "qarray_create(): figuring out dist_specific data (d=%i)\n",
-                (int)d);
   switch (d) {
     case ALL_SAME:
     case ALL_LOCAL:
@@ -332,9 +329,6 @@ static qarray *qarray_create_internal(size_t const count,
     size_t segment, target_shep;
     qthread_shepherd_id_t const max_sheps = qthread_num_shepherds();
 
-    qthread_debug(QARRAY_DETAILS,
-                  "qarray_create(): segment_count = %i\n",
-                  (int)segment_count);
     for (segment = 0; segment < segment_count; segment++) {
       switch (d) {
         case FIXED_HASH: target_shep = segment % qthread_num_shepherds(); break;
@@ -375,10 +369,6 @@ static qarray *qarray_create_internal(size_t const count,
         qarray_internal_segment_shep_write(ret, seghead, target_shep);
       }
       assert(target_shep < max_sheps);
-      qthread_debug(QARRAY_DETAILS,
-                    "qarray_create(): segment %i assigned to shep %i\n",
-                    segment,
-                    target_shep);
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
       {
         /* make sure this shep has a node; if it does, put this segment there */
@@ -393,14 +383,6 @@ static qarray *qarray_create_internal(size_t const count,
       qthread_incr(&chunk_distribution_tracker[target_shep], 1);
     }
   }
-  for (unsigned int i = 0; i < qthread_num_shepherds(); i++) {
-    qthread_debug(QARRAY_DETAILS,
-                  "qarray_create(): shep %i has %i segments\n",
-                  i,
-                  chunk_distribution_tracker[i]);
-  }
-  qthread_debug(QARRAY_DETAILS,
-                "qarray_create(): done assigning segments, returning\n");
   return ret;
 
   qgoto(badret_exit);

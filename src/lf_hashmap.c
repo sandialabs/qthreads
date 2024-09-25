@@ -209,13 +209,10 @@ static inline so_key_t so_regularkey(lkey_t const key) {
 static inline so_key_t so_dummykey(lkey_t const key) { return REVERSE(key); }
 
 static void qt_hash_subsystem_shutdown(void) {
-  qthread_debug(CORE_CALLS, "begin\n");
 
   assert(hash_entry_pool != NULL);
   qt_mpool_destroy(hash_entry_pool);
   hash_entry_pool = NULL;
-
-  qthread_debug(CORE_CALLS, "end\n");
 }
 
 void INTERNAL qt_hash_initialize_subsystem(void) {
