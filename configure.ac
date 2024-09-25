@@ -147,12 +147,12 @@ AC_ARG_ENABLE([lf-febs],
 AC_ARG_WITH([cacheline-width],
             [AS_HELP_STRING([--with-cacheline-width=bytes],
                             [Specify the cacheline width for the target
-                             machine. Defaults to 256. Used only for optimizing
+                             machine. Defaults to 64. Used only for optimizing
                              internal data structure layout;
                              qthread_cacheline() still detects this at
                              runtime.])],
             [],
-            [with_cacheline_width=256])
+            [with_cacheline_width=64])
 
 AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
 AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
