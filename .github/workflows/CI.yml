@@ -39,7 +39,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        clang_version: [11, 12, 13, 14, 15, 16, 17]
+        clang_version: [11, 12, 13, 14, 15, 16, 17, 18]
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         include:
@@ -56,6 +56,8 @@ jobs:
           - clang_version: 16
             gcc_version: 13
           - clang_version: 17
+            gcc_version: 13
+          - clang_version: 18
             gcc_version: 13
     env:
       CC: clang-${{ matrix.clang_version }}
@@ -249,8 +251,8 @@ jobs:
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
     env:
-      CC: clang-18
-      CXX: clang++-18
+      CC: clang-19
+      CXX: clang++-19
       CFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
       CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) || format('-fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) }}
       LDFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
@@ -265,10 +267,10 @@ jobs:
     - name: install compiler
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
-        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main' && break || sleep 1
-        sudo apt-get install clang-18
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main' && break || sleep 1
+        sudo apt-get install clang-19
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install libc++-18-dev libc++abi-18-dev
+      run: sudo apt-get install libc++-19-dev libc++abi-19-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
@@ -297,8 +299,8 @@ jobs:
           - compiler: gcc
             use_libcxx: true
     env:
-      CC: ${{ matrix.compiler == 'gcc' && 'gcc-14' || 'clang-18' }}
-      CXX: ${{ matrix.compiler == 'gcc' && 'g++-14' || 'clang++-18' }}
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc-14' || 'clang-19' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++-14' || 'clang++-19' }}
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
@@ -309,10 +311,10 @@ jobs:
     - if: ${{ matrix.compiler == 'clang' }}
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
-        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main' && break || sleep 1
-        sudo apt-get install clang-18
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main' && break || sleep 1
+        sudo apt-get install clang-19
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install libc++-18-dev libc++abi-18-dev
+      run: sudo apt-get install libc++-19-dev libc++abi-19-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
