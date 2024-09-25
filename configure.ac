@@ -276,14 +276,6 @@ AS_IF([test "x$enable_third_party_benchmarks" = xyes],
        AC_LANG_POP([C++])
        ])
 
-# Check for native TLS support (thread-local-storage)
-case "$qthread_cv_c_compiler_type" in
-    Clang)
-      # sadly, Clang does not initialize TLS values correctly
-      enable_native_tls=no
-    ;;
-esac
-
 AS_IF([test "x$enable_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_GUARD_PAGES], [1], [Use guard pages to detect stack overruns])],
       [enable_guard_pages="no"])
