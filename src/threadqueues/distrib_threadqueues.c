@@ -13,6 +13,7 @@
 #include "qthread/qthread.h"
 
 /* Internal Headers */
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_envariables.h"
 #include "qt_prefetch.h"
