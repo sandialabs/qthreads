@@ -51,9 +51,6 @@ struct qthread_shepherd_s {
   qthread_worker_t *workers;         // dymanic length qlib->nworkerspershep
   qthread_t *current;
   qt_threadqueue_t *ready;
-#ifdef QTHREAD_LOCAL_PRIORITY
-  qt_threadqueue_t *local_priority_queue;
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   /* round robin scheduler - can probably be smarter */
   aligned_t sched_shepherd;
   _Atomic uintptr_t active;

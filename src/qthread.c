@@ -253,9 +253,6 @@ static void *qthread_master(void *arg) {
   qthread_shepherd_id_t my_id = me->shepherd_id;
   qt_context_t my_context;
   qt_threadqueue_t *threadqueue;
-#ifdef QTHREAD_LOCAL_PRIORITY
-  qt_threadqueue_t *localpriorityqueue;
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   qt_threadqueue_private_t *localqueue = NULL;
   qthread_t *t;
   qthread_t **current;
@@ -289,28 +286,16 @@ static void *qthread_master(void *arg) {
   /*******************************************************************************/
 
   threadqueue = me->ready;
-#ifdef QTHREAD_LOCAL_PRIORITY
-  localpriorityqueue = me->local_priority_queue;
-  assert(localpriorityqueue);
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   assert(threadqueue);
   while (!done) {
 
     while (!atomic_load_explicit(&me_worker->active, memory_order_relaxed)) {
       SPINLOCK_BODY();
     }
-#ifdef QTHREAD_LOCAL_PRIORITY
-    t = qt_scheduler_get_thread(
-      threadqueue,
-      localpriorityqueue,
-      localqueue,
-      atomic_load_explicit(&me->active, memory_order_relaxed));
-#else
     t = qt_scheduler_get_thread(
       threadqueue,
       localqueue,
       atomic_load_explicit(&me->active, memory_order_relaxed));
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     assert(t);
 
     // Process input preconditions if this is a NASCENT thread
@@ -403,18 +388,10 @@ static void *qthread_master(void *arg) {
             atomic_store_explicit(
               &t->thread_state, QTHREAD_STATE_RUNNING, memory_order_relaxed);
             {
-#ifdef QTHREAD_LOCAL_PRIORITY
-              qthread_t *f = qt_scheduler_get_thread(
-                threadqueue,
-                localpriorityqueue,
-                NULL,
-                atomic_load_explicit(&me->active, memory_order_relaxed));
-#else
               qthread_t *f = qt_scheduler_get_thread(
                 threadqueue,
                 NULL,
                 atomic_load_explicit(&me->active, memory_order_relaxed));
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
               qt_threadqueue_enqueue(me->ready, t);
               qt_threadqueue_enqueue(me->ready, f);
             }
@@ -598,10 +575,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
     (qthread_shepherd_t *)qt_calloc(nshepherds, sizeof(qthread_shepherd_t));
   qlib->threadqueues =
     (qt_threadqueue_t **)MALLOC(nshepherds * sizeof(qt_threadqueue_t *));
-#ifdef QTHREAD_LOCAL_PRIORITY
-  qlib->local_priority_queues =
-    (qt_threadqueue_t **)MALLOC(nshepherds * sizeof(qt_threadqueue_t *));
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
 
   qt_mpool_subsystem_init();
@@ -707,14 +680,8 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
     qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t)i;
     QTHREAD_CASLOCK_INIT(qlib->shepherds[i].active, 1);
     qlib->shepherds[i].ready = qt_threadqueue_new();
-#ifdef QTHREAD_LOCAL_PRIORITY
-    qlib->shepherds[i].local_priority_queue = qt_threadqueue_new();
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
     qlib->threadqueues[i] = qlib->shepherds[i].ready;
-#ifdef QTHREAD_LOCAL_PRIORITY
-    qlib->local_priority_queues[i] = qlib->shepherds[i].local_priority_queue;
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   }
 
   spinlocks_initialize();
@@ -1061,9 +1028,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
          qlib->nworkerspershep * sizeof(qthread_worker_t));
     if (i == 0) { continue; }
     qt_threadqueue_free(shep->ready);
-#ifdef QTHREAD_LOCAL_PRIORITY
-    qt_threadqueue_free(shep->local_priority_queue);
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   }
   qt_threadqueue_free(shep0->ready);
 
@@ -1138,10 +1102,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
   generic_rdata_pool = NULL;
   FREE(qlib->shepherds, qlib->nshepherds * sizeof(qthread_shepherd_t));
   FREE(qlib->threadqueues, qlib->nshepherds * sizeof(qt_threadqueue_t *));
-#ifdef QTHREAD_LOCAL_PRIORITY
-  FREE(qlib->local_priority_queues,
-       qlib->nshepherds * sizeof(qt_threadqueue_t *));
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   FREE(qlib, sizeof(struct qlib_s));
   qlib = NULL;
   TLS_DELETE(shepherd_structs);
@@ -1932,11 +1892,6 @@ int API_FUNC qthread_spawn(qthread_f f,
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif /* ifdef QTHREAD_COUNT_THREADS */
     {
-#ifdef QTHREAD_LOCAL_PRIORITY
-      if (feature_flag & QTHREAD_SPAWN_LOCAL_PRIORITY)
-        qt_threadqueue_enqueue(qlib->local_priority_queues[dest_shep], t);
-      else
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
         qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
     }
   }
@@ -2145,20 +2100,6 @@ int API_FUNC qthread_fork_to(qthread_f f,
   }
   return qthread_spawn(f, arg, 0, ret, 0, NULL, shepherd, 0);
 } /*}}}*/
-
-#ifdef QTHREAD_LOCAL_PRIORITY
-int API_FUNC
-qthread_fork_to_local_priority(qthread_f f,
-                               void const *arg,
-                               aligned_t *ret,
-                               qthread_shepherd_id_t shepherd) { /*{{{*/
-  if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
-    shepherd %= qlib->nshepherds;
-  }
-  return qthread_spawn(
-    f, arg, 0, ret, 0, NULL, shepherd, QTHREAD_SPAWN_LOCAL_PRIORITY);
-} /*}}}*/
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
 int API_FUNC qthread_fork_syncvar_to(qthread_f f,
                                      void const *arg,

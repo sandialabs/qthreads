@@ -522,9 +522,6 @@ void INTERNAL qt_add_first_agg_task(qthread_t *agg_task,
 
 /* dequeue at tail */
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
-#ifdef QTHREAD_LOCAL_PRIORITY
-                                            qt_threadqueue_t *lpq,
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t active) { /*{{{*/
   qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
@@ -548,30 +545,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
     curr_cost = 0;
     ret_agg_task = 0;
 #endif
-
-#ifdef QTHREAD_LOCAL_PRIORITY
-    /* First check local priority queue */
-    if (lpq->head) {
-      QTHREAD_TRYLOCK_LOCK(&lpq->qlock);
-      PARANOIA_ONLY(sanity_check_queue(lpq));
-      node = lpq->tail;
-      if (node != NULL) {
-        assert(lpq->head);
-        assert(lpq->qlength > 0);
-
-        lpq->tail = node->prev;
-        if (lpq->tail == NULL) {
-          lpq->head = NULL;
-        } else {
-          lpq->tail->next = NULL;
-        }
-        assert(lpq->qlength > 0);
-        lpq->qlength--;
-        lpq->qlength_stealable -= node->stealable;
-      }
-      QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
-    } else
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
       // printf("Total number of items: %d+%d\n",
       // (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
@@ -978,9 +951,6 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
 
   qt_threadqueue_t *myqueue = thief_shepherd->ready;
 
-#ifdef QTHREAD_LOCAL_PRIORITY
-  qt_threadqueue_t *mypriorityqueue = thief_shepherd->local_priority_queue;
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   while (stolen == NULL) {
     qt_threadqueue_t *victim_queue = shepherds[sorted_sheplist[i]].ready;
     if (0 != victim_queue->qlength_stealable) {
@@ -995,9 +965,6 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
         break;
       }
     }
-#ifdef QTHREAD_LOCAL_PRIORITY
-    if ((0 < mypriorityqueue->qlength)) { break; }
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
     if ((0 < myqueue->qlength) ||
         steal_disable) { // work at home quit steal attempt

@@ -264,13 +264,6 @@ int qthread_fork_to(qthread_f f,
                     aligned_t *ret,
                     qthread_shepherd_id_t shepherd);
 
-#ifdef QTHREAD_LOCAL_PRIORITY
-int qthread_fork_to_local_priority(qthread_f f,
-                                   void const *arg,
-                                   aligned_t *ret,
-                                   qthread_shepherd_id_t shepherd);
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
-
 int qthread_fork_precond_to(qthread_f f,
                             void const *arg,
                             aligned_t *ret,
