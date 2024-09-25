@@ -501,35 +501,22 @@ echo    "System Characteristics:"
 echo    "       Target Style: $qthread_implementation"
 echo    "       Topology API: ${qthread_topo:-none}"
 echo    "        Qtimer type: ${qthread_timer_type:-none}"
-echo    "     Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"
 echo    " Default Stack size: $stack_string"
 echo    ""
 echo    "Safety/Debugging:"
 echo    "   Sanity assert()s: $enable_asserts"
-echo    "    Check alignment: $enable_aligncheck"
 echo    "        Guard Pages: $enable_guard_pages"
-echo    "          Precaching: $enable_precache_guard_pages"
 echo    ""
-AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
-      [incr_string="Compiler Builtin (both)"],
-      [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
-             [incr_string="Compiler Builtin/$qthread_cv_asm_arch"],
-             [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
-                    [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
-                    [incr_string="$qthread_cv_asm_arch"])])])
 AS_IF([test "x$enable_lf_febs" = xno],
       [feb_string="lock-based hash"],
       [feb_string="lock-free"])
-AS_IF([test "x$using_mdlifo" = "xyes"],
-      [with_scheduler=mdlifo],
-      [])
 echo    "Speed:"
-echo    "          Scheduler: $with_scheduler"
-echo    "         Sinc Style: $with_sinc"
-echo    "        Alloc Style: $with_alloc"
-echo    "      Barrier Style: $with_barrier"
-echo    "   Dictionary Style: $with_dict"
-echo    "       Pools/caches: $pool_string"
-echo    "Increments/CAS/FEBs: $incr_string, $feb_string"
+echo    "       Scheduler: $with_scheduler"
+echo    "      Sinc Style: $with_sinc"
+echo    "     Alloc Style: $with_alloc"
+echo    "   Barrier Style: $with_barrier"
+echo    "Dictionary Style: $with_dict"
+echo    "    Pools/caches: $pool_string"
+echo    "            FEBs: $incr_string, $feb_string"
 echo ""
 
