@@ -260,9 +260,6 @@ AC_CACHE_SAVE
 AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xIntel"],
       [CXXFLAGS="-restrict $CXXFLAGS"])
 
-AC_C_CONST
-AC_C_INLINE
-AC_C_VOLATILE
 AS_IF([test "x$enable_third_party_benchmarks" = xyes],
       [AX_OPENMP([have_openmp=yes], [have_openmp=no])
        AC_CHECK_FUNC([__cilkrts_get_nworkers], [have_cilk=yes], [have_cilk=no])
