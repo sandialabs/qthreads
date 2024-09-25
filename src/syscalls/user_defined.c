@@ -15,7 +15,6 @@
 
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_io.h"
 #include "qt_qthread_mgmt.h"
 #include "qthread_innards.h" /* for qlib */

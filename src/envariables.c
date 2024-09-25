@@ -8,7 +8,6 @@
 #include <strings.h> /* for strcasecmp() */
 
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_envariables.h"
 #include "qt_visibility.h"
 

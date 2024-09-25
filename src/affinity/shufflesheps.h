@@ -3,8 +3,6 @@
 
 #include <stdlib.h> // for rand()
 
-#include "qt_debug.h"
-
 extern inline INTERNAL void shuffle_sheps(qthread_shepherd_id_t *s,
                                           size_t len) { /*{{{*/
   for (size_t i = 0; i < len; ++i) {

@@ -9,7 +9,6 @@
 
 /* Internal Headers */
 #include "qt_blocking_structs.h"
-#include "qt_debug.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 

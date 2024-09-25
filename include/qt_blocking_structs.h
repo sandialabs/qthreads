@@ -4,7 +4,6 @@
 #include <stdlib.h> /* for malloc() and free() */
 #include <sys/types.h>
 
-#include "qt_debug.h"
 #include "qt_mpool.h"
 #include "qt_profiling.h"
 #include "qt_shepherd_innards.h"

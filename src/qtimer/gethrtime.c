@@ -6,7 +6,7 @@
 
 #include <qthread/qtimer.h>
 
-#include "qt_debug.h" /* for malloc debug wrappers */
+#include "qt_alloc.h"
 
 struct qtimer_s {
   hrtime_t start;

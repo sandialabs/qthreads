@@ -16,7 +16,6 @@
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_atomics.h"
-#include "qt_debug.h"
 
 /*
  * The hash table in this file is based on the work by Ori Shalev and Nir Shavit

@@ -13,8 +13,6 @@
 #include "qthread/qthread.h" /* for aligned_t */
 #include "qthread/qtimer.h"
 
-#include "qt_debug.h" /* for malloc debug wrappers */
-
 static aligned_t inited = 0;
 static double conversion = 0.0;
 

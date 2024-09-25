@@ -17,7 +17,6 @@
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_blocking_structs.h"
-#include "qt_debug.h"
 #include "qt_hash.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_profiling.h"

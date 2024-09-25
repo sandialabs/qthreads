@@ -6,7 +6,6 @@
 
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_mpool.h"
 #include "qt_qthread_mgmt.h"   /* for qthread_internal_self() */
 #include "qt_qthread_struct.h" /* to pass data back to worker */

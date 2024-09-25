@@ -10,6 +10,9 @@ void INTERNAL *qt_malloc(size_t size);
 
 void INTERNAL qt_free(void *ptr);
 
+#define MALLOC(sz) qt_malloc(sz)
+#define FREE(ptr, sz) qt_free(ptr)
+
 void INTERNAL *qt_calloc(size_t nmemb, size_t size);
 
 void INTERNAL *qt_realloc(void *ptr, size_t size);

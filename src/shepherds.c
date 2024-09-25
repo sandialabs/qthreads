@@ -11,7 +11,6 @@
 
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_macros.h"
 #include "qt_qthread_mgmt.h"

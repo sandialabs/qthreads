@@ -23,7 +23,6 @@
 
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h" /* for malloc debug wrappers */
 
 struct qtimer_s {
   struct timespec start, stop;

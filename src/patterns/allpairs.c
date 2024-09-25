@@ -1,3 +1,8 @@
+#include <stdio.h>  /* for printf */
+#include <stdlib.h> /* for malloc() */
+
+#include <unistd.h> /* for getpagesize() */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -5,14 +10,9 @@
 #include <qthread/qdqueue.h>
 #include <qthread/qthread.h>
 
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_macros.h"
-
-#include <stdio.h>  /* for printf */
-#include <stdlib.h> /* for malloc() */
-#include <unistd.h> /* for getpagesize() */
-
-#include "qt_debug.h" /* for malloc debug wrappers */
 
 // #define QTHREAD_TRACK_DISTANCES
 #ifdef QTHREAD_TRACK_DISTANCES

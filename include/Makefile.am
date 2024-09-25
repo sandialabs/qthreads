@@ -23,7 +23,6 @@ noinst_HEADERS = \
 	qt_barrier.h \
 	qt_blocking_structs.h \
 	qt_context.h \
-	qt_debug.h \
 	qt_envariables.h \
 	qt_filters.h \
 	qt_gcd.h \

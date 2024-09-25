@@ -11,8 +11,8 @@
 #include "qthread/qthread.h" /* for qthread_incr() and qthread_cas() */
 
 /* Internal Headers */
+#include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_mpool.h"
 #include "qt_subsystems.h"
 

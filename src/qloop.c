@@ -18,7 +18,6 @@
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_barrier.h"
-#include "qt_debug.h"
 #include "qt_expect.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 

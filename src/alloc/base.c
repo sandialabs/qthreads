@@ -18,7 +18,6 @@ static inline int getpagesize() { return 4096; }
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 
 /* local constants */
 size_t _pagesize = 0;

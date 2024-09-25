@@ -9,7 +9,6 @@
 
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_shepherd_innards.h"
 #include "qt_visibility.h"

@@ -7,7 +7,6 @@
 #include "qt_affinity.h"
 #include "qt_alloc.h"
 #include "qt_asserts.h" /* for qassert() */
-#include "qt_debug.h"
 #include "qt_envariables.h"
 #include "qt_subsystems.h"
 #include "shufflesheps.h"

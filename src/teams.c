@@ -10,7 +10,6 @@
 
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_expect.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_mpool.h"

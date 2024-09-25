@@ -45,6 +45,7 @@
 /******************************************************/
 /* Internal Headers                                   */
 /******************************************************/
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_barrier.h"
@@ -57,7 +58,6 @@
 #endif
 #include "qt_affinity.h"
 #include "qt_blocking_structs.h"
-#include "qt_debug.h"
 #include "qt_envariables.h"
 #include "qt_feb.h"
 #include "qt_io.h"

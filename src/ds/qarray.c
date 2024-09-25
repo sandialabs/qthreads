@@ -19,7 +19,6 @@
 /* Local Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_gcd.h" /* for qt_lcm() */
 #include "qt_int_ceil.h"
 #include "qt_shepherd_innards.h" /* for shep_to_node */

@@ -14,7 +14,6 @@
 
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_envariables.h"
 #include "qt_prefetch.h"
 #include "qt_qthread_mgmt.h"
