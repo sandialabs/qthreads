@@ -41,11 +41,11 @@ struct qloop_wrapper_args {
 };
 
 static inline void qt_loop_balance_inner(size_t const start,
-                                          size_t const stop,
-                                          qt_loop_f const func,
-                                          void *argptr,
-                                          uint_fast8_t const flags,
-                                          synctype_t sync_type);
+                                         size_t const stop,
+                                         qt_loop_f const func,
+                                         void *argptr,
+                                         uint_fast8_t const flags,
+                                         synctype_t sync_type);
 
 static aligned_t qloop_wrapper(void *restrict arg_void) { /*{{{ */
   /* tree-based spawning (credit: AKP) */
@@ -318,11 +318,11 @@ void API_FUNC qt_loop_sinc(size_t start,
 #define QT_LOOP_BALANCE_SIMPLE (1 << 0)
 
 static inline void qt_loop_balance_inner(size_t const start,
-                                          size_t const stop,
-                                          qt_loop_f const func,
-                                          void *argptr,
-                                          uint_fast8_t const flags,
-                                          synctype_t sync_type) { /*{{{ */
+                                         size_t const stop,
+                                         qt_loop_f const func,
+                                         void *argptr,
+                                         uint_fast8_t const flags,
+                                         synctype_t sync_type) { /*{{{ */
   qthread_shepherd_id_t i;
   qthread_shepherd_id_t const maxworkers =
     ((stop - start) > qthread_num_workers()) ? qthread_num_workers()
@@ -557,14 +557,14 @@ static aligned_t qloopaccum_wrapper(void *restrict arg_void) { /*{{{ */
 } /*}}} */
 
 static inline void qt_loopaccum_balance_inner(size_t const start,
-                                               size_t const stop,
-                                               size_t const size,
-                                               void *restrict out,
-                                               qt_loopr_f const func,
-                                               void *restrict argptr,
-                                               qt_accum_f const acc,
-                                               uint_fast8_t const flags,
-                                               synctype_t sync_type) { /*{{{ */
+                                              size_t const stop,
+                                              size_t const size,
+                                              void *restrict out,
+                                              qt_loopr_f const func,
+                                              void *restrict argptr,
+                                              qt_accum_f const acc,
+                                              uint_fast8_t const flags,
+                                              synctype_t sync_type) { /*{{{ */
   qthread_shepherd_id_t const maxworkers = qthread_num_workers();
   struct qloopaccum_wrapper_args *const qwa =
     (struct qloopaccum_wrapper_args *)MALLOC(

@@ -135,8 +135,7 @@ static inline void qt_int_prod_acc(void *restrict a, void const *restrict b) {
   *(saligned_t *)a *= *(saligned_t *)b;
 }
 
-static inline void qt_uint_prod_acc(void *restrict a,
-                                      void const *restrict b) {
+static inline void qt_uint_prod_acc(void *restrict a, void const *restrict b) {
   *(aligned_t *)a *= *(aligned_t *)b;
 }
 

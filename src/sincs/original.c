@@ -316,7 +316,6 @@ void qt_sinc_submit(qt_sinc_t *restrict sinct, void const *restrict value) {
       } else if (old_count != 0) {
         return;
       }
-
     }
   }
   // now check other shepherds
@@ -347,7 +346,6 @@ void qt_sinc_submit(qt_sinc_t *restrict sinct, void const *restrict value) {
       } else if (old_count != 0) {
         return;
       }
-
     }
   }
 }

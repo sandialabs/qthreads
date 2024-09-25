@@ -24,9 +24,11 @@
 #include "qthread/qalloc.h"
 
 #if __STDC_VERSION__ < 202311L
-_Static_assert(sizeof(pthread_mutex_t) + sizeof(void*) < 124u, "pthread_mutex_t is too big.");
+_Static_assert(sizeof(pthread_mutex_t) + sizeof(void *) < 124u,
+               "pthread_mutex_t is too big.");
 #else
-static_assert(sizeof(pthread_mutex_t) + sizeof(void*) < 124u, "pthread_mutex_t is too big.");
+static_assert(sizeof(pthread_mutex_t) + sizeof(void *) < 124u,
+              "pthread_mutex_t is too big.");
 #endif
 
 #if defined(__linux__) && !defined(_GNU_SOURCE)

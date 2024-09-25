@@ -28,7 +28,8 @@ void *qt_realloc(void *ptr, size_t size) { return realloc(ptr, size); }
 
 void qt_internal_alignment_init(void) { _pagesize = getpagesize(); }
 
-void *qt_internal_aligned_alloc(size_t alloc_size, uint_fast16_t alignment_small) {
+void *qt_internal_aligned_alloc(size_t alloc_size,
+                                uint_fast16_t alignment_small) {
   size_t alignment = alignment_small;
   // round alloc_size up to the nearest multiple of alignment
   // since that's required by the standard aligned_alloc

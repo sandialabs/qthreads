@@ -75,7 +75,7 @@ static char *pos_strs[16] = {"NW",
                              "NWES"};
 
 typedef struct partition_s {
-  alignas(8) position_t pos;    // Position of this partition in matrix
+  alignas(8) position_t pos;      // Position of this partition in matrix
   size_t row;                     // Row index in partition matrix
   size_t col;                     // Col index in partition matrix
   size_t nrows;                   // Number of rows in this partition

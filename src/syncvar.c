@@ -3,7 +3,7 @@
 #endif
 
 /* System Headers */
-#include <limits.h>              /* for INT_MAX */
+#include <limits.h> /* for INT_MAX */
 #include <stdint.h>
 
 /* API Headers */
@@ -28,13 +28,13 @@
 
 /* Internal Prototypes */
 static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
+                                                qthread_addrstat_t *m,
+                                                syncvar_t *maddr,
+                                                uint64_t const ret);
+static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                  qthread_addrstat_t *m,
                                                  syncvar_t *maddr,
                                                  uint64_t const ret);
-static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
-                                                  qthread_addrstat_t *m,
-                                                  syncvar_t *maddr,
-                                                  uint64_t const ret);
 static inline void qthread_syncvar_remove(void *maddr);
 
 /* Internal Structs */
@@ -96,9 +96,9 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
                           BUILD_UNLOCKED_SYNCVAR(val, state),                  \
                           memory_order_relaxed);                               \
   } while (0)
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                         \
-      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                         \
-      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                          \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                              \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
@@ -361,10 +361,10 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
 
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF); }
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                              \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
   {
     /* I'm being optimistic here; this only works if a basic 64-bit load is
      * atomic (on most platforms it is). Thus, if I've done an atomic read
@@ -381,9 +381,9 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
       return QTHREAD_SUCCESS;
     }
   }
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) || \
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
+             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                   \
+             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                         \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
   if (e.cf) { /* there was a timeout */
@@ -471,10 +471,10 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
 
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF_NB); }
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||      \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||  \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||        \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                              \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
   {
     /* I'm being optimistic here; this only works if a basic 64-bit load is
      * atomic (on most platforms it is). Thus, if I've done an atomic read
@@ -489,9 +489,9 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
       return QTHREAD_SUCCESS;
     }
   }
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||       \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||   \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||         \
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
+             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                   \
+             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                         \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, 1, &e);
   if (e.cf) { /* there was a timeout */
@@ -869,7 +869,7 @@ int API_FUNC qthread_syncvar_readFE_nb(uint64_t *restrict dest,
 } /*}}} */
 
 static inline void qthread_syncvar_schedule(qthread_t *waiter,
-                                             qthread_shepherd_t *shep) { /*{{{*/
+                                            qthread_shepherd_t *shep) { /*{{{*/
   assert(waiter);
   assert(shep);
   atomic_store_explicit(
@@ -878,7 +878,7 @@ static inline void qthread_syncvar_schedule(qthread_t *waiter,
       QTHREAD_UNSTEALABLE) {
     qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
   } else {
-      qt_threadqueue_enqueue(shep->ready, waiter);
+    qt_threadqueue_enqueue(shep->ready, waiter);
   }
 } /*}}}*/
 
@@ -891,21 +891,15 @@ static inline void qthread_syncvar_remove(void *maddr) { /*{{{*/
     qthread_addrstat_t *m2;
     m = qt_hash_get(syncvars[lockbin], (void *)maddr);
   got_m:
-    if (!m) {
-      return;
-    }
+    if (!m) { return; }
     hazardous_ptr(0, m);
     if (m != (m2 = qt_hash_get(syncvars[lockbin], (void *)maddr))) {
       m = m2;
       goto got_m;
     }
-    if (!m->valid) {
-      return;
-    }
+    if (!m->valid) { return; }
     QTHREAD_FASTLOCK_LOCK(&m->lock);
-    if (!m->valid) {
-      return;
-    }
+    if (!m->valid) { return; }
     if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
       m->valid = 0;
       qassertnot(qt_hash_remove(syncvars[lockbin], (void *)maddr), 0);
@@ -941,9 +935,9 @@ static inline void qthread_syncvar_remove(void *maddr) { /*{{{*/
 } /*}}}*/
 
 static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
-                                                  qthread_addrstat_t *m,
-                                                  syncvar_t *maddr,
-                                                  uint64_t const sf) { /*{{{ */
+                                                 qthread_addrstat_t *m,
+                                                 syncvar_t *maddr,
+                                                 uint64_t const sf) { /*{{{ */
   qthread_addrres_t *X = NULL;
   int removeable;
 
@@ -969,9 +963,9 @@ static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
 } /*}}} */
 
 static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
-                                                 qthread_addrstat_t *m,
-                                                 syncvar_t *maddr,
-                                                 uint64_t const ret) { /*{{{ */
+                                                qthread_addrstat_t *m,
+                                                syncvar_t *maddr,
+                                                uint64_t const ret) { /*{{{ */
   qthread_addrres_t *X = NULL;
   int removeable;
 

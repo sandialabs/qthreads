@@ -89,9 +89,7 @@ unsigned long INTERNAL qt_internal_get_env_num(char const *envariable,
       fprintf(stderr, "unparsable %s (%s)\n", envariable, str);
       tmp = dflt;
     }
-    if (tmp == 0) {
-      tmp = zerodflt;
-    }
+    if (tmp == 0) { tmp = zerodflt; }
   }
   return tmp;
 }

@@ -9,9 +9,9 @@
 #include "qt_mpool.h"
 #include "qt_qthread_mgmt.h"   /* for qthread_internal_self() */
 #include "qt_qthread_struct.h" /* to pass data back to worker */
+#include "qt_subsystems.h"     /* for qthread_internal_cleanup() */
 #include "qt_threadstate.h"
 #include "qt_visibility.h"
-#include "qt_subsystems.h" /* for qthread_internal_cleanup() */
 #include "qthread_innards.h" /* for qlib */
 
 #include "qt_queue.h"
@@ -95,8 +95,7 @@ static void qthread_queue_internal_launch(qthread_t *t,
        QTHREAD_UNSTEALABLE) &&
       (t->rdata->shepherd_ptr != cur_shep)) {
     qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
-  } else
-  {
+  } else {
     qt_threadqueue_enqueue(cur_shep->ready, t);
   }
 }

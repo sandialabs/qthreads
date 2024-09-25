@@ -40,13 +40,10 @@ void INTERNAL qt_internal_teams_init(void) { /*{{{*/
 
 void INTERNAL qt_internal_teams_reclaim(void) {
   // Wait for all team structures to be reclaimed.
-  while (qlib->team_count) {
-    qthread_yield();
-  }
+  while (qlib->team_count) { qthread_yield(); }
 }
 
-static void qt_internal_teams_shutdown(void) { /*{{{*/
-} /*}}}*/
+static void qt_internal_teams_shutdown(void) { /*{{{*/ } /*}}}*/
 
 static void qt_internal_teams_destroy(void) { /*{{{*/
   QTHREAD_FASTLOCK_DESTROY(qlib->max_team_id_lock);
@@ -182,7 +179,6 @@ void INTERNAL qt_internal_teamfinish(qt_team_t *team,
       FREE_TEAM(team);
 
       qthread_internal_incr(&(qlib->team_count), &qlib->team_count_lock, -1);
-
     }
 
   } else {

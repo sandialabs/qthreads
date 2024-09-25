@@ -16,16 +16,16 @@
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_envariables.h"
+#include "qt_expect.h"
 #include "qt_prefetch.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 #include "qt_shepherd_innards.h"
+#include "qt_subsystems.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-#include "qt_expect.h"
-#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -168,8 +168,8 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
 } /*}}}*/
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   /* only works if a basic load is atomic */
   return q->qlength;
 
@@ -180,8 +180,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
   tmp = q->qlength;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   return tmp;
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
+             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)                      \
         */
 } /*}}}*/
 
@@ -546,50 +546,50 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
     ret_agg_task = 0;
 #endif
 
-      // printf("Total number of items: %d+%d\n",
-      // (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
-      if (qc && (qc->on_deck != NULL)) {
-        assert(qc->tail == NULL || qc->tail->next == NULL);
-        assert(qc->head == NULL || qc->head->prev == NULL);
-        node = qc->on_deck;
-        qc->on_deck = NULL;
-        assert(node->next == NULL);
-        assert(node->prev == NULL);
+    // printf("Total number of items: %d+%d\n",
+    // (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
+    if (qc && (qc->on_deck != NULL)) {
+      assert(qc->tail == NULL || qc->tail->next == NULL);
+      assert(qc->head == NULL || qc->head->prev == NULL);
+      node = qc->on_deck;
+      qc->on_deck = NULL;
+      assert(node->next == NULL);
+      assert(node->prev == NULL);
 #ifdef QTHREAD_TASK_AGGREGATION
-        if (QTHREAD_TASK_IS_AGGREGABLE(atomic_load_explicit(
-              &node->value->flags, memory_order_relaxed)) &&
-            ((max_t = (qc->qlength + 1 + q->qlength) /
-                      qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR) > 1)) {
-          max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
-          assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
-          qt_add_first_agg_task(t, &curr_cost, node);
-          node = NULL;
+      if (QTHREAD_TASK_IS_AGGREGABLE(
+            atomic_load_explicit(&node->value->flags, memory_order_relaxed)) &&
+          ((max_t = (qc->qlength + 1 + q->qlength) /
+                    qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR) > 1)) {
+        max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
+        assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
+        qt_add_first_agg_task(t, &curr_cost, node);
+        node = NULL;
 
-          int *count_addr = &(((int *)t->preconds)[0]);
-          int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
-          if ((qc->qlength == 0) &&
-              ((curr_cost < qlib->max_c) && (*count_addr < max_t))) {
-            // cache empty and can still add, get more from q
-            QTHREAD_TRYLOCK_LOCK(&q->qlock);
-            if (q->head) {
-              lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
-            }
-            QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-          } else { // done, spill remaining cache
+        int *count_addr = &(((int *)t->preconds)[0]);
+        int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
+        if ((qc->qlength == 0) &&
+            ((curr_cost < qlib->max_c) && (*count_addr < max_t))) {
+          // cache empty and can still add, get more from q
+          QTHREAD_TRYLOCK_LOCK(&q->qlock);
+          if (q->head) {
+            lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
           }
-          ret_agg_task = 1;
-        } else { // no agg, spill cache
-                 // t = NULL;
+          QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+        } else { // done, spill remaining cache
         }
+        ret_agg_task = 1;
+      } else { // no agg, spill cache
+               // t = NULL;
+      }
 #endif /* ifdef QTHREAD_TASK_AGGREGATION */
 
-        if (qc->qlength > 0) {
-          qt_threadqueue_node_t *first = qc->head;
-          qt_threadqueue_node_t *last = qc->tail;
-          assert(last->next == NULL);
-          assert(first->prev == NULL);
-          /* Note: I tried doing the this code with a TRY rather than a
-           * LOCK and performance of UTS suffered (slightly). */
+      if (qc->qlength > 0) {
+        qt_threadqueue_node_t *first = qc->head;
+        qt_threadqueue_node_t *last = qc->tail;
+        assert(last->next == NULL);
+        assert(first->prev == NULL);
+        /* Note: I tried doing the this code with a TRY rather than a
+         * LOCK and performance of UTS suffered (slightly). */
 #if 0
                 if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
                     assert((q->head && q->tail) || (!q->head && !q->tail));
@@ -621,64 +621,64 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
                     qc->qlength_stealable -= qc->on_deck->stealable;
                 }
 #else /* if 0 */
-          QTHREAD_TRYLOCK_LOCK(&q->qlock);
-          PARANOIA_ONLY(sanity_check_queue(q));
-          assert(q->head != first);
-          assert(q->tail != last);
-          first->prev = q->tail;
-          q->tail = last;
-          if (q->head == NULL) {
-            q->head = first;
-          } else {
-            first->prev->next = first;
-          }
-          q->qlength += qc->qlength;
-          q->qlength_stealable += qc->qlength_stealable;
-          assert(q->tail->next == NULL);
-          assert(q->head->prev == NULL);
-          QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-          qc->head = qc->tail = NULL;
-          qc->qlength = qc->qlength_stealable = 0;
-#endif /* if 0 */
-        }
-      } else if (q->head) {
         QTHREAD_TRYLOCK_LOCK(&q->qlock);
         PARANOIA_ONLY(sanity_check_queue(q));
-        node = q->tail;
-        if (node != NULL) {
-          assert(q->head);
-          assert(q->qlength > 0);
-
-          q->tail = node->prev;
-          if (q->tail == NULL) {
-            q->head = NULL;
-          } else {
-            q->tail->next = NULL;
-          }
-          assert(q->qlength > 0);
-          q->qlength--;
-          q->qlength_stealable -= node->stealable;
-#ifdef QTHREAD_TASK_AGGREGATION
-          if (QTHREAD_TASK_IS_AGGREGABLE(atomic_load_explicit(
-                &node->value->flags, memory_order_relaxed)) &&
-              ((max_t = (q->qlength) / qthread_readstate(ACTIVE_WORKERS) /
-                        DIV_FACTOR) >
-               1)) { // no point creating an agg task with a single simple task
-            max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
-            assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
-            qt_add_first_agg_task(t, &curr_cost, node);
-            node = NULL;
-            if (q->head) {
-              int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
-            }
-            ret_agg_task = 1;
-          } else { // no agg, free agg task (delay)
-                   // t = NULL;
-          }
-#endif /* ifdef QTHREAD_TASK_AGGREGATION */
+        assert(q->head != first);
+        assert(q->tail != last);
+        first->prev = q->tail;
+        q->tail = last;
+        if (q->head == NULL) {
+          q->head = first;
+        } else {
+          first->prev->next = first;
         }
+        q->qlength += qc->qlength;
+        q->qlength_stealable += qc->qlength_stealable;
+        assert(q->tail->next == NULL);
+        assert(q->head->prev == NULL);
         QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+        qc->head = qc->tail = NULL;
+        qc->qlength = qc->qlength_stealable = 0;
+#endif /* if 0 */
       }
+    } else if (q->head) {
+      QTHREAD_TRYLOCK_LOCK(&q->qlock);
+      PARANOIA_ONLY(sanity_check_queue(q));
+      node = q->tail;
+      if (node != NULL) {
+        assert(q->head);
+        assert(q->qlength > 0);
+
+        q->tail = node->prev;
+        if (q->tail == NULL) {
+          q->head = NULL;
+        } else {
+          q->tail->next = NULL;
+        }
+        assert(q->qlength > 0);
+        q->qlength--;
+        q->qlength_stealable -= node->stealable;
+#ifdef QTHREAD_TASK_AGGREGATION
+        if (QTHREAD_TASK_IS_AGGREGABLE(atomic_load_explicit(
+              &node->value->flags, memory_order_relaxed)) &&
+            ((max_t =
+                (q->qlength) / qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR) >
+             1)) { // no point creating an agg task with a single simple task
+          max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
+          assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
+          qt_add_first_agg_task(t, &curr_cost, node);
+          node = NULL;
+          if (q->head) {
+            int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
+          }
+          ret_agg_task = 1;
+        } else { // no agg, free agg task (delay)
+                 // t = NULL;
+        }
+#endif /* ifdef QTHREAD_TASK_AGGREGATION */
+      }
+      QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+    }
 
 #ifdef QTHREAD_TASK_AGGREGATION
     if (ret_agg_task) { // use t, node is NULL

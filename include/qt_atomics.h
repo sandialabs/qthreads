@@ -31,9 +31,9 @@
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section
                                         ordering */
-  aligned_t _Atomic
-    enter;                /* and not call pthreads spin_lock -- hard to debug */
-  aligned_t _Atomic exit; /* near the lock under gdb -- 4/1/11 akp */
+  aligned_t _Atomic enter; /* and not call pthreads spin_lock -- hard to debug
+                            */
+  aligned_t _Atomic exit;  /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
@@ -63,8 +63,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 #define QTHREAD_FASTLOCK_DESTROY(x)
 #define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 #define QTHREAD_FASTLOCK_TYPE qt_spin_exclusive_t
-#define QTHREAD_FASTLOCK_INITIALIZER                                           \
-  (qt_spin_exclusive_t) { 0, 0 }
+#define QTHREAD_FASTLOCK_INITIALIZER (qt_spin_exclusive_t){0, 0}
 
 // Trylock declarations
 
@@ -252,7 +251,7 @@ static inline aligned_t qthread_internal_incr_mod_(
 } /*}}} */
 
 static inline void *qt_internal_atomic_swap_ptr(void **addr,
-                                                 void *newval) { /*{{{*/
+                                                void *newval) { /*{{{*/
   void *oldval =
     atomic_load_explicit((void *_Atomic *)addr, memory_order_relaxed);
   void *tmp;

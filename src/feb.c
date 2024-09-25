@@ -19,13 +19,13 @@
 #include "qt_blocking_structs.h"
 #include "qt_hash.h"
 #include "qt_initialized.h" // for qthread_library_initialized
+#include "qt_output_macros.h"
 #include "qt_profiling.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 #include "qt_subsystems.h"
 #include "qt_threadqueues.h"
 #include "qthread_innards.h" /* for qlib */
-#include "qt_output_macros.h"
 
 /********************************************************************
  * Local Variables
@@ -66,8 +66,8 @@ typedef struct {
  * Local Prototypes
  *********************************************************************/
 static inline void qthread_gotlock_fill(qthread_shepherd_t *shep,
-                                         qthread_addrstat_t *m,
-                                         void *maddr);
+                                        qthread_addrstat_t *m,
+                                        void *maddr);
 static inline void
 qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
                            qthread_addrstat_t *m,
@@ -75,8 +75,8 @@ qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
                            uint_fast8_t const recursive,
                            qthread_addrres_t **precond_tasks);
 static inline void qthread_gotlock_empty(qthread_shepherd_t *shep,
-                                          qthread_addrstat_t *m,
-                                          void *maddr);
+                                         qthread_addrstat_t *m,
+                                         void *maddr);
 static inline void
 qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
                             qthread_addrstat_t *m,
@@ -115,7 +115,6 @@ static void qt_feb_subsystem_shutdown(void) {
   generic_addrstat_pool = NULL;
   qt_mpool_destroy(generic_addrres_pool);
   generic_addrres_pool = NULL;
-
 }
 
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t need_sync) {
@@ -145,8 +144,7 @@ static inline void qt_feb_schedule(qthread_t *waiter,
        QTHREAD_UNSTEALABLE) &&
       (waiter->rdata->shepherd_ptr != shep)) {
     qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
-  } else
-  {
+  } else {
     qt_threadqueue_enqueue(shep->ready, waiter);
   }
 }
@@ -260,17 +258,13 @@ static inline void qthread_FEB_remove(void *maddr) { /*{{{ */
     qthread_addrstat_t *m2;
     m = qt_hash_get(FEBs[lockbin], maddr);
   got_m:
-    if (!m) {
-      return;
-    }
+    if (!m) { return; }
     hazardous_ptr(0, m);
     if (m != (m2 = qt_hash_get(FEBs[lockbin], maddr))) {
       m = m2;
       goto got_m;
     }
-    if (!m->valid) {
-      return;
-    }
+    if (!m->valid) { return; }
     QTHREAD_FASTLOCK_LOCK(&m->lock);
     if (!m->valid) {
       QTHREAD_FASTLOCK_UNLOCK(&m->lock);
@@ -379,8 +373,8 @@ qthread_gotlock_empty_inner(qthread_shepherd_t *shep,
 } /*}}} */
 
 static inline void qthread_gotlock_empty(qthread_shepherd_t *shep,
-                                          qthread_addrstat_t *m,
-                                          void *maddr) {
+                                         qthread_addrstat_t *m,
+                                         void *maddr) {
   qthread_addrres_t *tmp = NULL;
 
   qthread_gotlock_empty_inner(shep, m, maddr, 0, &tmp);
@@ -487,15 +481,13 @@ qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     if (*precond_tasks) { qthread_precond_launch(shep, *precond_tasks); }
     /* now, remove it if it needs to be removed */
-    if (removeable) {
-      qthread_FEB_remove(maddr);
-    }
+    if (removeable) { qthread_FEB_remove(maddr); }
   }
 } /*}}} */
 
 static inline void qthread_gotlock_fill(qthread_shepherd_t *shep,
-                                         qthread_addrstat_t *m,
-                                         void *maddr) {
+                                        qthread_addrstat_t *m,
+                                        void *maddr) {
   qthread_addrres_t *tmp = NULL;
 
   qthread_gotlock_fill_inner(shep, m, maddr, 0, &tmp);
@@ -571,9 +563,7 @@ int API_FUNC qthread_empty(aligned_t const *dest) { /*{{{ */
   } /* END CRITICAL SECTION */
   qt_hash_unlock(FEBbin);
 #endif /* ifdef LOCK_FREE_FEBS */
-  if (m) {
-    qthread_gotlock_empty(shep, m, (void *)alignedaddr);
-  }
+  if (m) { qthread_gotlock_empty(shep, m, (void *)alignedaddr); }
   return QTHREAD_SUCCESS;
 } /*}}} */
 
@@ -761,9 +751,7 @@ int API_FUNC qthread_purge_to(aligned_t *restrict dest,
 #endif /* ifdef LOCK_FREE_FEBS */
   MACHINE_FENCE;
   if (dest && (dest != src)) { *(aligned_t *)dest = *(aligned_t *)src; }
-  if (m) {
-    qthread_gotlock_empty(shep, m, (void *)alignedaddr);
-  }
+  if (m) { qthread_gotlock_empty(shep, m, (void *)alignedaddr); }
   return QTHREAD_SUCCESS;
 } /*}}} */
 
@@ -822,9 +810,7 @@ int API_FUNC qthread_writeEF(aligned_t *restrict dest,
         m = m2;
         goto got_m;
       }
-      if (!m->valid) {
-        continue;
-      }
+      if (!m->valid) { continue; }
       QTHREAD_FASTLOCK_LOCK(&m->lock);
       if (!m->valid) {
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
@@ -1356,7 +1342,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t) { /*{{{*/
       }
       break;
     } while (1);
-#else  /* ifdef LOCK_FREE_FEBS */
+#else                /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(FEBs[lockbin]);
     {
       m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin],
@@ -1364,7 +1350,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t) { /*{{{*/
       if (m) { QTHREAD_FASTLOCK_LOCK(&m->lock); }
     }
     qt_hash_unlock(FEBs[lockbin]);
-#endif /* ifdef LOCK_FREE_FEBS */
+#endif               /* ifdef LOCK_FREE_FEBS */
     if (m == NULL) { /* already full! */
       these_preconds[0] = (aligned_t *)(((uintptr_t)these_preconds[0]) - 1);
     } else if (m->full == 1) {

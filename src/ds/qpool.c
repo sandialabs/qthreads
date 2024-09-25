@@ -15,16 +15,12 @@ qpool *qpool_create(size_t const item_size) { /*{{{ */
   return qpool_create_aligned(item_size, 0);
 } /*}}} */
 
-void *qpool_alloc(qpool *pool) {
-  return qt_mpool_alloc(pool);
-}
+void *qpool_alloc(qpool *pool) { return qt_mpool_alloc(pool); }
 
 void qpool_free(qpool *restrict pool, void *restrict mem) {
   qt_mpool_free(pool, mem);
 }
 
-void qpool_destroy(qpool *pool) {
-  qt_mpool_destroy(pool);
-}
+void qpool_destroy(qpool *pool) { qt_mpool_destroy(pool); }
 
 /* vim:set expandtab: */

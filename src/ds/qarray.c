@@ -46,8 +46,9 @@ qarray_internal_segment_shep(qarray const *a,
   return (qthread_shepherd_id_t *)ptr;
 } /*}}} */
 
-static inline qthread_shepherd_id_t qarray_internal_segment_shep_read(
-  qarray const *a, void const *segment_head) { /*{{{*/
+static inline qthread_shepherd_id_t
+qarray_internal_segment_shep_read(qarray const *a,
+                                  void const *segment_head) { /*{{{*/
   qthread_shepherd_id_t retval;
   qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(a, segment_head);
 
@@ -312,8 +313,7 @@ static qarray *qarray_create_internal(size_t const count,
       }
       break;
   }
-  if (ret->base_ptr == NULL) {
-  }
+  if (ret->base_ptr == NULL) {}
 #else  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
   /* For speed, we want page-aligned memory, if we can get it */
   ret->base_ptr =

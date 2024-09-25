@@ -106,8 +106,8 @@ void INTERNAL qt_mpool_subsystem_init(void) {
 }
 
 /* local funcs */
-static inline void *
-qt_mpool_internal_aligned_alloc(size_t alloc_size, size_t alignment) { /*{{{ */
+static inline void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
+                                                    size_t alignment) { /*{{{ */
   void *ret = qt_internal_aligned_alloc(alloc_size, alignment);
 
   VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
@@ -115,7 +115,7 @@ qt_mpool_internal_aligned_alloc(size_t alloc_size, size_t alignment) { /*{{{ */
 } /*}}} */
 
 static inline void qt_mpool_internal_aligned_free(void *freeme,
-                                                   size_t alignment) { /*{{{ */
+                                                  size_t alignment) { /*{{{ */
   qt_internal_aligned_free(freeme, alignment);
 } /*}}} */
 
@@ -240,9 +240,7 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool) {
         qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
         tc = newtc;
         TLS_SET(pool_caches, newtc);
-        if (wkr != NO_WORKER) {
-          pool_cache_array[wkr] = newtc;
-        }
+        if (wkr != NO_WORKER) { pool_cache_array[wkr] = newtc; }
       }
       memset(tc + count_caches,
              0,
@@ -260,9 +258,7 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool) {
       if ((wkr == 0) && (pool_cache_array[0] == NULL) && (tc != NULL)) {
         tc = NULL;
       }
-      if (wkr != NO_WORKER) {
-        assert(pool_cache_array[wkr] == tc);
-      }
+      if (wkr != NO_WORKER) { assert(pool_cache_array[wkr] == tc); }
 #endif
     }
   }

@@ -17,13 +17,13 @@
 #include "qt_envariables.h"
 #include "qt_macros.h"
 #include "qt_prefetch.h"
+#include "qt_qthread_mgmt.h" /* for qthread_thread_free() */
 #include "qt_qthread_struct.h"
+#include "qt_subsystems.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-#include "qt_qthread_mgmt.h" /* for qthread_thread_free() */
-#include "qt_subsystems.h"
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
@@ -314,7 +314,6 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
 
   PARANOIA(sanity_check_tq(&q->q));
   if (node == NULL) {
-
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     i = num_spins_before_condwait;
     while (q->q.shadow_head == NULL &&

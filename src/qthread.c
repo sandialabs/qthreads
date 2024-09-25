@@ -10,8 +10,8 @@
 /******************************************************/
 /* System Headers                                     */
 /******************************************************/
-#include <limits.h>              /* for INT_MAX */
-#include <stdarg.h>              /* for va_list, va_start() and va_end() */
+#include <limits.h> /* for INT_MAX */
+#include <stdarg.h> /* for va_list, va_start() and va_end() */
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -39,8 +39,8 @@
 /******************************************************/
 /* Public Headers                                     */
 /******************************************************/
-#include "qthread/cacheline.h"
 #include "qthread/barrier.h"
+#include "qthread/cacheline.h"
 
 /******************************************************/
 /* Internal Headers                                   */
@@ -57,25 +57,25 @@
 #include "omp_affinity.h"
 #endif
 #include "qt_affinity.h"
+#include "qt_alloc.h"
 #include "qt_blocking_structs.h"
 #include "qt_envariables.h"
 #include "qt_feb.h"
+#include "qt_hash.h"
+#include "qt_int_log.h"
 #include "qt_io.h"
 #include "qt_locks.h"
+#include "qt_output_macros.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 #include "qt_queue.h"
 #include "qt_shepherd_innards.h"
 #include "qt_spawncache.h"
+#include "qt_subsystems.h"
 #include "qt_syncvar.h"
+#include "qt_teams.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
-#include "qt_alloc.h"
-#include "qt_teams.h"
-#include "qt_hash.h"
-#include "qt_int_log.h"
-#include "qt_output_macros.h"
-#include "qt_subsystems.h"
 
 #define QTHREAD_STACK_ALIGNMENT 16u
 
@@ -116,17 +116,17 @@ static void qthread_wrapper(void *ptr);
 #endif
 
 static inline void qthread_makecontext(qt_context_t *const c,
-                                        void *const stack,
-                                        size_t const stacksize,
-                                        void (*func)(void),
-                                        void const *const arg,
-                                        qt_context_t *const returnc);
+                                       void *const stack,
+                                       size_t const stacksize,
+                                       void (*func)(void),
+                                       void const *const arg,
+                                       qt_context_t *const returnc);
 static inline qthread_t *qthread_thread_new(qthread_f f,
-                                             void const *arg,
-                                             size_t arg_size,
-                                             void *ret,
-                                             qt_team_t *team,
-                                             int team_leader);
+                                            void const *arg,
+                                            size_t arg_size,
+                                            void *ret,
+                                            qt_team_t *team,
+                                            int team_leader);
 
 /*Make method externally available for the scheduler; to be used when agg
  * tasks*/
@@ -288,7 +288,6 @@ static void *qthread_master(void *arg) {
   threadqueue = me->ready;
   assert(threadqueue);
   while (!done) {
-
     while (!atomic_load_explicit(&me_worker->active, memory_order_relaxed)) {
       SPINLOCK_BODY();
     }
@@ -354,9 +353,7 @@ static void *qthread_master(void *arg) {
             qlib->shepherds[t->target_shepherd].shep_dists);
         }
         assert(t->rdata->shepherd_ptr);
-        if (t->rdata->shepherd_ptr == NULL) {
-          t->rdata->shepherd_ptr = me;
-        }
+        if (t->rdata->shepherd_ptr == NULL) { t->rdata->shepherd_ptr = me; }
         assert(t->rdata->shepherd_ptr->ready != NULL);
         qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
       } else { /* me->active */
@@ -380,9 +377,7 @@ static void *qthread_master(void *arg) {
             assert(t->rdata->shepherd_ptr->ready != NULL);
             qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
             break;
-          default:
-            assert(0 && "Illegal thread state");
-            break;
+          default: assert(0 && "Illegal thread state"); break;
 
           case QTHREAD_STATE_YIELDED_NEAR: /* reschedule it */
             atomic_store_explicit(
@@ -535,9 +530,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   QTHREAD_FASTLOCK_SETUP();
 
-  if (qlib != NULL) {
-    return QTHREAD_SUCCESS;
-  }
+  if (qlib != NULL) { return QTHREAD_SUCCESS; }
   qlib = (qlib_t)MALLOC(sizeof(struct qlib_s));
   qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
@@ -608,14 +601,11 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
     qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
     if ((rlp.rlim_cur == RLIM_INFINITY) || (rlp.rlim_cur == 0)) {
-      if (rlp.rlim_cur == 0) {
-      }
+      if (rlp.rlim_cur == 0) {}
       rlp.rlim_cur = 8 * 1024 * 1024;
     }
     qlib->master_stack_size = rlp.rlim_cur;
-    if (rlp.rlim_max < rlp.rlim_cur) {
-      rlp.rlim_max = rlp.rlim_cur;
-    }
+    if (rlp.rlim_max < rlp.rlim_cur) { rlp.rlim_max = rlp.rlim_cur; }
     qlib->max_stack_size = rlp.rlim_max;
   }
 
@@ -632,9 +622,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   {
     int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
-    if (ret != QTHREAD_SUCCESS) {
-      return ret;
-    }
+    if (ret != QTHREAD_SUCCESS) { return ret; }
     assert(qlib->shepherds[0].sorted_sheplist);
     assert(qlib->shepherds[0].shep_dists);
   }
@@ -824,11 +812,11 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
 static inline void qthread_makecontext(qt_context_t *const c,
-                                        void *const stack,
-                                        size_t const stacksize,
-                                        void (*func)(void),
-                                        void const *const arg,
-                                        qt_context_t *const returnc) { /*{{{ */
+                                       void *const stack,
+                                       size_t const stacksize,
+                                       void (*func)(void),
+                                       void const *const arg,
+                                       qt_context_t *const returnc) { /*{{{ */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
   unsigned int const high = ((uintptr_t)arg) >> 32;
   unsigned int const low = ((uintptr_t)arg) & 0xffffffff;
@@ -1325,11 +1313,11 @@ aligned_t API_FUNC *qthread_retloc(void) { /*{{{ */
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
 static inline qthread_t *qthread_thread_new(qthread_f const f,
-                                             void const *arg,
-                                             size_t arg_size,
-                                             void *ret,
-                                             qt_team_t *team,
-                                             int team_leader) { /*{{{ */
+                                            void const *arg,
+                                            size_t arg_size,
+                                            void *ret,
+                                            qt_team_t *team,
+                                            int team_leader) { /*{{{ */
   qthread_t *t;
 
   if ((arg_size > 0) && (arg_size <= qlib->qthread_argcopy_size)) {
@@ -1705,7 +1693,8 @@ void API_FUNC qthread_yield_(int k) { /*{{{ */
   }
 } /*}}} */
 
-void API_FUNC qthread_flushsc(void) { /*{{{*/
+void API_FUNC qthread_flushsc(void){
+  /*{{{*/
 } /*}}}*/
 
 /***********************************************
@@ -1891,9 +1880,7 @@ int API_FUNC qthread_spawn(qthread_f f,
       ((double)concurrentthreads / threadcount);
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif /* ifdef QTHREAD_COUNT_THREADS */
-    {
-        qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
-    }
+    { qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t); }
   }
 
   if (feature_flag & QTHREAD_SPAWN_NETWORK)

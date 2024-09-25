@@ -61,9 +61,7 @@ static unsigned int num_usable_by_depth(unsigned int depth) {
   for (int i = 0; i < max; ++i) {
     hwloc_obj_t obj =
       hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, depth, i);
-    if (obj == NULL) {
-      continue;
-    }
+    if (obj == NULL) { continue; }
     if (hwloc_get_nbobjs_inside_cpuset_by_type(
           topology, obj->cpuset, HWLOC_OBJ_PU) == 0) {
       continue;
@@ -410,13 +408,9 @@ guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds) { /*{{{ */
       total += weight;
       if ((idx == 0) || (ret < weight)) { ret = weight; }
     }
-    if (ret * nshepherds > total) {
-      ret = total / nshepherds;
-    }
+    if (ret * nshepherds > total) { ret = total / nshepherds; }
   }
-  if (ret == 0) {
-    ret = 1;
-  }
+  if (ret == 0) { ret = 1; }
   return ret;
 } /*}}} */
 
@@ -491,9 +485,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t *sheps,
 #ifdef QTHREAD_HAVE_HWLOC_DISTS
   const struct hwloc_distances_s *matrix =
     hwloc_get_whole_distance_matrix_by_type(topology, HWLOC_OBJ_NODE);
-  if (matrix) {
-    assert(matrix->latency);
-  }
+  if (matrix) { assert(matrix->latency); }
   size_t node_to_NUMAnode[num_extant_objs];
   for (size_t i = 0; i < num_extant_objs; ++i) {
     hwloc_obj_t node_obj = hwloc_get_obj_inside_cpuset_by_depth(

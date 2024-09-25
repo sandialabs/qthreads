@@ -208,9 +208,7 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
     /* case SEND:
      * case SENDTO: */
     /* case SIGWAIT: */
-    case SYSTEM:
-      item->ret = system((char const *)item->args[0]);
-      break;
+    case SYSTEM: item->ret = system((char const *)item->args[0]); break;
     case WAIT4: {
       pid_t pid;
       int options;

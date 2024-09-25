@@ -105,8 +105,7 @@ void qarray_dist_like(qarray const *ref, qarray *mod);
 #define qarray_elem(a, i) qarray_elem_nomigrate(a, i)
 void *qarray_elem_migrate(qarray const *a, size_t const index);
 
-inline static void *qarray_elem_nomigrate(qarray const *a,
-                                           size_t const index) {
+inline static void *qarray_elem_nomigrate(qarray const *a, size_t const index) {
   if ((a == NULL) || (index > a->count)) { return NULL; }
 
   {

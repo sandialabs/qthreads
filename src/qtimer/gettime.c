@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #endif
 
-#include <qthread/hash.h>        /* for qt_hash64() */
+#include <qthread/hash.h> /* for qt_hash64() */
 #include <qthread/qtimer.h>
 
 #include "qt_alloc.h"
