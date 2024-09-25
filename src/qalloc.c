@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#define _GNU_SOURCE
+
 #include <fcntl.h> /* for open() */
 #include <pthread.h>
 #include <stdio.h>     /* for perror() */

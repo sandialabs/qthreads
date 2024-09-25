@@ -164,8 +164,6 @@ AC_CACHE_SAVE
 ## Checks for programs ##
 ## ------------------- ##
 AC_PROG_CC
-dnl We use system extensions.  This includes setting _GNU_SOURCE
-AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC_C99
 AS_IF([test "x$ac_cv_prog_cc_c99" == "xno"],
       [AC_MSG_ERROR([Qthreads requires a C compiler that supports the C99 standard.])])
