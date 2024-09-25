@@ -111,12 +111,6 @@ AC_ARG_ENABLE([paranoia],
               [AS_HELP_STRING([--enable-paranoia],
                               [adds expensive sanity checks])])
 
-AC_ARG_ENABLE([lazy-threadids],
-              [AS_HELP_STRING([--disable-lazy-threadids],
-                              [makes qthread assign thread IDs at spawning
-                               time, rather than as necessary; this ensures
-                               every thread gets a unique thread id])])
-
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
@@ -540,11 +534,6 @@ AS_IF([test "x$enable_feb_profiling" = "xyes"],
       [AC_DEFINE([QTHREAD_FEB_PROFILING], [1], [adds code to monitor how much time is spent waiting for FEB states])],
       [enable_feb_profiling="no"])
 
-AS_IF([test "x$enable_lazy_threadids" = "xno"],
-      [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])
-       enable_lazy_threadids=no],
-      [enable_lazy_threadids=yes])
-
 AC_CACHE_SAVE
 
 ## External libraries that help on some architectures
@@ -666,7 +655,6 @@ echo    "         Sinc Style: $with_sinc"
 echo    "        Alloc Style: $with_alloc"
 echo    "      Barrier Style: $with_barrier"
 echo    "   Dictionary Style: $with_dict"
-echo    "    Lazy Thread IDs: $enable_lazy_threadids"
 echo    "       Pools/caches: $pool_string"
 echo    "Increments/CAS/FEBs: $incr_string, $feb_string"
 echo ""

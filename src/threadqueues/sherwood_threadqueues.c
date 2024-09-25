@@ -349,24 +349,7 @@ qthread_t INTERNAL *qt_init_agg_task(void) // partly a duplicate from qthread.c
 {
   qthread_t *t = ALLOC_QTHREAD();
 
-#ifdef QTHREAD_NONLAZY_THREADIDS
-  /* give the thread an ID number */
-  t->thread_id =
-    qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
-  if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NULL_TASK_ID)) {
-    /* yes, this is wrapping around, but... thread_id should be prevented from
-     * being NULL */
-    t->thread_id = qthread_internal_incr(
-      &(qlib->max_thread_id), &qlib->max_thread_id_lock, 2);
-  } else if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NON_TASK_ID)) {
-    /* yes, this is wrapping around, but... thread_id should be prevented from
-     * being NON */
-    t->thread_id = qthread_internal_incr(
-      &(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
-  }
-#else  /* ifdef QTHREAD_NONLAZY_THREADIDS */
   t->thread_id = QTHREAD_NON_TASK_ID;
-#endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 
   t->thread_state = QTHREAD_STATE_NEW;
   atomic_store_explicit(&t->flags, 0, memory_order_relaxed);

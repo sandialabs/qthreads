@@ -1510,27 +1510,7 @@ static inline qthread_t *qthread_thread_new(qthread_f const f,
   t->rdata = NULL;
   t->team = team;
 
-#ifdef QTHREAD_NONLAZY_THREADIDS
-  /* give the thread an ID number */
-  t->thread_id =
-    qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
-  switch (t->thread_id) {
-    case QTHREAD_NULL_TASK_ID:
-      /* yes, this is wrapping around, but... thread_id should be prevented from
-       * being NULL */
-      t->thread_id = qthread_internal_incr(
-        &(qlib->max_thread_id), &qlib->max_thread_id_lock, 2);
-      break;
-    case QTHREAD_NON_TASK_ID:
-      /* yes, this is wrapping around, but... thread_id should be prevented from
-       * being NON */
-      t->thread_id = qthread_internal_incr(
-        &(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
-      break;
-  }
-#else  /* ifdef QTHREAD_NONLAZY_THREADIDS */
   t->thread_id = QTHREAD_NON_TASK_ID;
-#endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 
   t->target_shepherd = NO_SHEPHERD;
 
@@ -2418,10 +2398,6 @@ unsigned int API_FUNC qthread_id(void) { /*{{{ */
   assert(qthread_library_initialized);
   qthread_t *t = qthread_internal_self();
 
-#ifdef QTHREAD_NONLAZY_THREADIDS
-  return t ? t->thread_id : QTHREAD_NON_TASK_ID;
-
-#else
   if (!t) { return QTHREAD_NON_TASK_ID; }
   if (t->thread_id != QTHREAD_NON_TASK_ID) { return t->thread_id; }
   t->thread_id =
@@ -2438,7 +2414,6 @@ unsigned int API_FUNC qthread_id(void) { /*{{{ */
       &(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
   }
   return t->thread_id;
-#endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 } /*}}} */
 
 void qt_set_barrier(qt_barrier_t *bar) { /*{{{ */
