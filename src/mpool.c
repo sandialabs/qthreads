@@ -305,12 +305,10 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool) { /*{{{*/
     qt_mpool_cache_t *cache = tc->cache;
     tc->cache = atomic_load_explicit(&cache->next, memory_order_relaxed);
     --tc->count;
-    ALLOC_SCRIBBLE(cache, pool->item_size);
     return cache;
   } else if (tc->block) {
     void *ret = &(tc->block[tc->i * pool->item_size]);
     if (++tc->i == pool->items_per_alloc) { tc->block = NULL; }
-    ALLOC_SCRIBBLE(ret, pool->item_size);
     return ret;
   } else {
     size_t const items_per_alloc = pool->items_per_alloc;
@@ -361,14 +359,12 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool) { /*{{{*/
       /* store the block for later allocation */
       tc->block = p;
       tc->i = 1;
-      ALLOC_SCRIBBLE(p, pool->item_size);
       return p;
     } else {
       tc->cache = atomic_load_explicit(&cache->next, memory_order_relaxed);
       tc->count = cnt - 1;
       // cache->next       = NULL; // unnecessary
       // cache->block_tail = NULL; // unnecessary
-      ALLOC_SCRIBBLE(cache, pool->item_size);
       return cache;
     }
   }
@@ -383,7 +379,6 @@ void INTERNAL qt_mpool_free(qt_mpool pool, void *mem) { /*{{{*/
 
   qassert_retvoid((mem != NULL));
   qassert_retvoid((pool != NULL));
-  FREE_SCRIBBLE(mem, pool->item_size);
   tc = qt_mpool_internal_getcache(pool);
   cache = tc->cache;
   cnt = tc->count;
@@ -445,7 +440,6 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool) { /*{{{ */
     }
     p = pool->alloc_list;
     pool->alloc_list = pool->alloc_list[pagesize / sizeof(void *) - 1];
-    FREE_SCRIBBLE(p, pagesize);
     qt_internal_aligned_free(p, pagesize);
   }
   qt_mpool_threadlocal_cache_t *freeme;

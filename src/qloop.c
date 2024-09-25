@@ -196,7 +196,6 @@ qt_loop_spawner(size_t const start, size_t const stop, void *args_) { /*{{{*/
     case ALIGNED:
       retptr = sync.aligned = qt_internal_aligned_alloc(
         steps * sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
-      ALLOC_SCRIBBLE(retptr, steps * sizeof(aligned_t));
       assert(sync.aligned);
       for (i = 0; i < (stop - start); ++i) { qthread_empty(&sync.aligned[i]); }
       break;
@@ -245,7 +244,6 @@ qt_loop_spawner(size_t const start, size_t const stop, void *args_) { /*{{{*/
       break;
     case ALIGNED:
       for (i = 0; i < steps; i++) { qthread_readFF(NULL, sync.aligned + i); }
-      FREE_SCRIBBLE(sync.aligned, steps * sizeof(aligned_t));
       qt_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
       break;
     case SINC_T:
@@ -359,7 +357,6 @@ static inline void qt_loop_balance_inner(size_t const start,
       sync.aligned = qt_internal_aligned_alloc(maxworkers * sizeof(aligned_t),
                                                QTHREAD_ALIGNMENT_ALIGNED_T);
       assert(sync.aligned);
-      ALLOC_SCRIBBLE(sync.aligned, maxworkers * sizeof(aligned_t));
       break;
     case SINC_T:
       sync.sinc = qt_sinc_create(0, NULL, NULL, maxworkers);
@@ -433,7 +430,6 @@ static inline void qt_loop_balance_inner(size_t const start,
       for (i = 0; i < maxworkers; i++) {
         qthread_readFF(NULL, sync.aligned + i);
       }
-      FREE_SCRIBBLE(sync.aligned, maxworkers * sizeof(aligned_t));
       qt_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
       break;
     case SINC_T:
