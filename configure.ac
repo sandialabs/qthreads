@@ -290,11 +290,7 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 ## Check for library functions ##
 ## --------------------------- ##
-AC_FUNC_VPRINTF
-AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol memalign posix_memalign memset memmove munmap memcpy fstat64 lseek64 getrlimit getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl syscall])
-AC_CHECK_DECLS([MADV_ACCESS_LWP],[],[],[[#include <sys/types.h>
-#include <sys/mman.h>]])
+AC_CHECK_FUNCS([memalign memcpy fstat64 lseek64 sched_yield sysconf])
 
 AC_CACHE_SAVE
 

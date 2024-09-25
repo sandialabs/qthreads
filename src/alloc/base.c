@@ -9,11 +9,7 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h> /* for memalign() */
 #endif
-#ifdef HAVE_GETPAGESIZE
-#include <unistd.h>
-#else
-static inline int getpagesize() { return 4096; }
-#endif
+#include <unistd.h> /* for getpagesize() */
 
 /* Internal Headers */
 #include "qt_alloc.h"

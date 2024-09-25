@@ -6,11 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef HAVE_GETPAGESIZE
 #include <unistd.h>
-#else
-static inline int getpagesize() { return 4096; }
-#endif
 
 #include "chpl-linefile-support.h"
 #include "chpl-mem.h"
