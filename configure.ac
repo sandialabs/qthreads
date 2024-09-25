@@ -220,14 +220,6 @@ AS_IF([test "x$enable_picky" = xyes],
 
 AC_CACHE_SAVE
 
-## --------------- ##
-## Check for types ##
-## --------------- ##
-AC_TYPE_OFF_T
-AC_TYPE_PID_T
-
-AC_CACHE_SAVE
-
 ## -------------------- ##
 ## Checks for libraries ##
 ## -------------------- ##
