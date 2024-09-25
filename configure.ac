@@ -245,7 +245,7 @@ AC_CHECK_FUNCS([pthread_yield])
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
-AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
+AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
 AC_CACHE_SAVE
@@ -497,7 +497,6 @@ AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
 AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
 AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
-AM_CONDITIONAL([HAVE_LIBM], [test "x$have_libm" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_FILES([Makefile
