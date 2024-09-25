@@ -357,13 +357,9 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
   eflags_t e = {0, 0, 0, 0, 0};
   uint64_t ret;
   qthread_t *me = qthread_internal_self();
-  QTHREAD_FEB_TIMER_DECLARATION(febblock);
-
   assert(src);
 
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF); }
-  QTHREAD_FEB_UNIQUERECORD(feb, src, me);
-  QTHREAD_FEB_TIMER_START(febblock);
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
@@ -391,7 +387,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
   if (e.cf) { /* there was a timeout */
-    QTHREAD_WAIT_TIMER_DECLARATION;
     int const lockbin = QTHREAD_CHOOSE_STRIPE(src);
     qthread_addrstat_t *m;
     qthread_addrres_t *X;
@@ -455,9 +450,7 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
     me->rdata->blockedon.addr = m;
-    QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
-    QTHREAD_WAIT_TIMER_STOP(me, febwait);
   } else {
   locked_full:
     /* at this point, the syncvar is locked and e.pf should be 0 */
@@ -465,7 +458,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, e.sf);
     if (dest) { *dest = ret; }
   }
-  QTHREAD_FEB_TIMER_STOP(febblock, me);
   return QTHREAD_SUCCESS;
 } /*}}} */
 
@@ -663,7 +655,6 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
   uint64_t ret;
   int const lockbin = QTHREAD_CHOOSE_STRIPE(src);
   qthread_t *me = qthread_internal_self();
-  QTHREAD_FEB_TIMER_DECLARATION(febblock);
 
   assert(src);
 
@@ -674,11 +665,8 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
   assert(me->rdata->shepherd_ptr->ready);
   assert(me->rdata->shepherd_ptr->shepherd_id < qthread_num_shepherds());
 
-  QTHREAD_FEB_UNIQUERECORD(feb, src, me);
-  QTHREAD_FEB_TIMER_START(febblock);
   ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
   if (e.cf) { /* there was a timeout */
-    QTHREAD_WAIT_TIMER_DECLARATION;
     qthread_addrstat_t *m;
     qthread_addrres_t *X;
 
@@ -749,9 +737,7 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
     me->rdata->blockedon.addr = m;
-    QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
-    QTHREAD_WAIT_TIMER_STOP(me, febwait);
   } else if (e.sf == 1) { /* waiters! */
     qthread_addrstat_t *m;
 
@@ -805,7 +791,6 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
     UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_NO_WAITERS);
   }
   if (dest) { *dest = ret; }
-  QTHREAD_FEB_TIMER_STOP(febblock, me);
   return QTHREAD_SUCCESS;
 } /*}}} */
 
@@ -963,7 +948,6 @@ static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
   int removeable;
 
   m->full = 0;
-  QTHREAD_EMPTY_TIMER_START(m);
   if (m->EFQ != NULL) {
     /* dequeue one EFQ, do its operation, and schedule the thread */
     X = m->EFQ;
@@ -992,7 +976,6 @@ static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
   int removeable;
 
   m->full = 1;
-  QTHREAD_EMPTY_TIMER_STOP(m);
   /* dequeue all FFQ, do their operation, and schedule them */
   while (m->FFQ != NULL) {
     /* dQ */
@@ -1034,7 +1017,6 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict dest,
   if (!shep) {
     return qthread_syncvar_nonblocker_func(dest, (void *)src, WRITEF);
   }
-  QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
   qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
   qassert_ret(e.cf == 0,
               QTHREAD_TIMEOUT);     /* there better not have been a timeout */
@@ -1106,16 +1088,12 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
   eflags_t e = {0, 0, 0, 0, 0};
   int const lockbin = QTHREAD_CHOOSE_STRIPE(dest);
   qthread_t *me = qthread_internal_self();
-  QTHREAD_FEB_TIMER_DECLARATION(febblock);
 
   qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
 
   if (!me) { return qthread_syncvar_blocker_func(dest, (void *)src, WRITEEF); }
-  QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
-  QTHREAD_FEB_TIMER_START(febblock);
   (void)qthread_mwaitc(dest, SYNCFEB_EMPTY, INITIAL_TIMEOUT, &e);
   if (e.cf) { /* there was a timeout */
-    QTHREAD_WAIT_TIMER_DECLARATION;
     qthread_addrstat_t *m;
     qthread_addrres_t *X;
 
@@ -1182,9 +1160,7 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
     atomic_store_explicit(
       &me->thread_state, QTHREAD_STATE_FEB_BLOCKED, memory_order_relaxed);
     me->rdata->blockedon.addr = m;
-    QTHREAD_WAIT_TIMER_START();
     qthread_back_to_master(me);
-    QTHREAD_WAIT_TIMER_STOP(me, febwait);
   } else if (e.sf == 1) { /* there are waiters to release! */
     qthread_addrstat_t *m;
 
@@ -1244,7 +1220,6 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
     // e.pf = 0;                    // now mark it full
     UNLOCK_THIS_MODIFIED_SYNCVAR(dest, val, SYNCFEB_STATE_FULL_NO_WAITERS);
   }
-  QTHREAD_FEB_TIMER_STOP(febblock, me);
   return QTHREAD_SUCCESS;
 } /*}}} */
 

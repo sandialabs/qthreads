@@ -52,9 +52,6 @@ typedef struct qthread_addrstat_s {
   qthread_addrres_t *FEQ;
   qthread_addrres_t *FFQ;
   qthread_addrres_t *FFWQ;
-#ifdef QTHREAD_FEB_PROFILING
-  qtimer_t empty_timer;
-#endif
   uint_fast8_t full;
   uint_fast8_t valid;
 } qthread_addrstat_t;

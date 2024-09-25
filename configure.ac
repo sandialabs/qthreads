@@ -53,56 +53,6 @@ AC_ARG_WITH([default-stack-size],
                              Depending on your OS, standard Pthread threads may
                              get anywhere from 2MB to 10MB default stacks.])])
 
-AC_ARG_ENABLE([profiling],
-              [AS_HELP_STRING([--enable-profiling=[[areas]]],
-                              [turn on the specified comma-separated types of
-                               profiling. Available types are: shepherd, lock,
-                               steal, cas_steal, threadc, sincs, teams, and spr
-                               . Shepherd profiling counts the wall-clock 
-                               time that each shepherd spends idle. FEB
-                               profiling counts the time spent waiting for FEB 
-                               states. Steal profiling counts the amount of 
-                               workstealing that was done. Cas_steal profiling 
-                               counts how many CAS failures happen in 
-                               nottingham steal operations. Threadc counts the 
-                               number of threads spawned and the number of 
-                               threads available to run concurrently. Sincs 
-                               profiling reports sinc counter usage data. Teams
-                               profiling reports team counter usage data. SPR
-                               profiling reports communication information. ])],
-              [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
-                 case "$area" in
-                   shepherd|shepherds)
-                     enable_shepherd_profiling=yes
-                     ;;
-                   feb|FEB|febs|FEBs|lock|locks)
-                     enable_feb_profiling=yes
-                     ;;
-                   steal)
-                     enable_steal_profiling=yes
-                     ;;
-                   cas_steal|cas-steal)
-                     enable_cas_steal_profiling=yes
-                     ;;
-                   threadc|tc)
-                     enable_thread_count=yes
-                     ;;
-                   sincs|sinc)
-                     enable_sincs_profiling=yes
-                     ;;
-                   teams|team)
-                     enable_teams_profiling=yes
-                     ;;
-                   spr)
-                     enable_spr_profiling=yes
-                     ;;
-                   *)
-                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr])
-                     ;;
-                 esac
-               done],
-              [enable_profiling=none])
-
 AC_ARG_ENABLE([asserts],
               [AS_HELP_STRING([--enable-asserts],
                               [adds sanity checks to most qthread functions])])
@@ -429,26 +379,6 @@ AS_IF([test "x$with_scheduler" != "x"],
       [with_scheduler="sherwood"])
 EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
 
-AS_IF([test "x$enable_steal_profiling" = xyes],
-      [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
-      [enable_steal_profiling="no"])
-
-AS_IF([test "x$enable_sincs_profiling" = xyes],
-      [AC_DEFINE([SINCS_PROFILE], [1], [Support dynamic profile of sincs infomation])],
-      [enable_sincs_profiling="no"])
-
-AS_IF([test "x$enable_teams_profiling" = xyes],
-      [AC_DEFINE([TEAM_PROFILE], [1], [Support dynamic profile of teams infomation])],
-      [enable_teams_profiling="no"])
-
-AS_IF([test "x$enable_spr_profiling" = xyes],
-      [AC_DEFINE([SPR_PROFILE], [1], [Support dynamic profile of SPR infomation])],
-      [enable_spr_profiling="no"])
-
-AS_IF([test "x$enable_cas_steal_profiling" = xyes],
-      [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
-      [enable_cas_steal_profiling="no"])
-
 AS_IF([test "x$with_sinc" = "x"],
       [with_sinc="donecount"],
       [])
@@ -525,14 +455,6 @@ AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size], [What 
 AS_IF([test "x$enable_thread_count" = "xyes"],
       [AC_DEFINE([QTHREAD_COUNT_THREADS], [1], [keeps track of the number of threads])],
       [enable_thread_count="no"])
-
-AS_IF([test "x$enable_shepherd_profiling" = "xyes"],
-      [AC_DEFINE([QTHREAD_SHEPHERD_PROFILING], [1], [adds code to monitor how much time shepherds spend idle])],
-      [enable_shepherd_profiling="no"])
-
-AS_IF([test "x$enable_feb_profiling" = "xyes"],
-      [AC_DEFINE([QTHREAD_FEB_PROFILING], [1], [adds code to monitor how much time is spent waiting for FEB states])],
-      [enable_feb_profiling="no"])
 
 AC_CACHE_SAVE
 
@@ -632,7 +554,6 @@ echo    ""
 echo    "Safety/Debugging:"
 echo    "   Sanity assert()s: $enable_asserts"
 echo    "    Check alignment: $enable_aligncheck"
-echo    "          Profiling: $enable_profiling"
 echo    "        Guard Pages: $enable_guard_pages"
 echo    "          Precaching: $enable_precache_guard_pages"
 echo    ""

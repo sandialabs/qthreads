@@ -13,14 +13,6 @@
 #include "qt_mpool.h"
 #include "qt_threadqueues.h"
 
-#ifdef QTHREAD_SHEPHERD_PROFILING
-#include "qthread/qtimer.h"
-#endif
-
-#ifdef QTHREAD_FEB_PROFILING
-#include "qt_hash.h"
-#endif
-
 #ifdef QTHREAD_OMP_AFFINITY
 #include "omp_affinity.h"
 #endif
@@ -77,42 +69,6 @@ struct qthread_shepherd_s {
 #ifdef QTHREAD_OMP_AFFINITY
   unsigned int stealing_mode; /* Specifies when a shepherd may steal */
 #endif
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-  size_t steal_called;
-  size_t steal_elected;
-  size_t steal_attempted;
-  size_t steal_failed;
-#endif
-#ifdef QTHREAD_SHEPHERD_PROFILING
-  qtimer_t total_time; /* how much time the shepherd spent running */
-  double idle_maxtime; /* max time the shepherd spent waiting for new threads */
-  double
-    idle_time; /* how much time the shepherd spent waiting for new threads */
-  size_t idle_count;  /* how many times the shepherd did a blocking dequeue */
-  size_t num_threads; /* number of threads handled */
-#endif
-#ifdef QTHREAD_FEB_PROFILING
-  qt_hash uniquelockaddrs;   /* the unique addresses that are locked */
-  double aquirelock_maxtime; /* max time spent aquiring locks */
-  double aquirelock_time;    /* total time spent aquiring locks */
-  size_t aquirelock_count;   /* num locks aquired */
-  double lockwait_maxtime;   /* max time spent blocked on a lock */
-  double lockwait_time;      /* total time spent blocked on a lock */
-  size_t lockwait_count;     /* num times blocked on a lock */
-  double hold_maxtime;       /* max time spent holding locks */
-  double hold_time; /* total time spent holding locks (use aquirelock_count) */
-
-  qt_hash uniquefebaddrs;  /* unique addresses that are associated with febs */
-  double febblock_maxtime; /* max time spent aquiring FEB words */
-  double febblock_time;    /* total time spent aquiring FEB words */
-  size_t febblock_count;   /* num FEB words aquired */
-  double febwait_maxtime;  /* max time spent blocking on FEBs */
-  double febwait_time;     /* total time spent blocking on FEBs */
-  size_t febwait_count;    /* num FEB blocking waits required */
-  double empty_maxtime;    /* max time addresses spent empty */
-  double empty_time;       /* total time addresses spent empty */
-  size_t empty_count;      /* num times addresses were empty */
-#endif                     // ifdef QTHREAD_FEB_PROFILING
   uint32_t padding[CACHELINE_WIDTH / sizeof(uint32_t)];
 };
 

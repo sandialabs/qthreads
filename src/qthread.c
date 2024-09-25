@@ -40,9 +40,6 @@
 /* Public Headers                                     */
 /******************************************************/
 #include "qthread/cacheline.h"
-#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
-#include "qthread/qtimer.h"
-#endif
 #include "qthread/barrier.h"
 
 /******************************************************/
@@ -264,11 +261,6 @@ static void *qthread_master(void *arg) {
   qthread_t **current;
   int done = 0;
 
-#ifdef QTHREAD_SHEPHERD_PROFILING
-  me->total_time = qtimer_create();
-  qtimer_t idle = qtimer_create();
-#endif
-
   assert(me != NULL);
   assert(me->shepherd_id <= qlib->nshepherds);
 #ifndef QTHREAD_NO_ASSERTS
@@ -303,9 +295,6 @@ static void *qthread_master(void *arg) {
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   assert(threadqueue);
   while (!done) {
-#ifdef QTHREAD_SHEPHERD_PROFILING
-    qtimer_start(idle);
-#endif
 
     while (!atomic_load_explicit(&me_worker->active, memory_order_relaxed)) {
       SPINLOCK_BODY();
@@ -323,14 +312,6 @@ static void *qthread_master(void *arg) {
       atomic_load_explicit(&me->active, memory_order_relaxed));
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     assert(t);
-#ifdef QTHREAD_SHEPHERD_PROFILING
-    qtimer_stop(idle);
-    me->idle_count++;
-    me->idle_time += qtimer_secs(idle);
-    if (me->idle_maxtime < qtimer_secs(idle)) {
-      me->idle_maxtime = qtimer_secs(idle);
-    }
-#endif
 
     // Process input preconditions if this is a NASCENT thread
     if (atomic_load_explicit(&t->thread_state, memory_order_relaxed) ==
@@ -342,9 +323,6 @@ static void *qthread_master(void *arg) {
 
     if (atomic_load_explicit(&t->thread_state, memory_order_relaxed) ==
         QTHREAD_STATE_TERM_SHEP) {
-#ifdef QTHREAD_SHEPHERD_PROFILING
-      if ((my_id != 0)) { qtimer_stop(me->total_time); }
-#endif
       done = 1;
       qthread_thread_free(t); /* free qthread data structures */
     } else {
@@ -397,9 +375,6 @@ static void *qthread_master(void *arg) {
         assert(t->rdata->shepherd_ptr->ready != NULL);
         qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
       } else { /* me->active */
-#ifdef QTHREAD_SHEPHERD_PROFILING
-        if (t->thread_state == QTHREAD_STATE_NEW) { me->num_threads++; }
-#endif
 
         *current = t;
 
@@ -494,9 +469,6 @@ static void *qthread_master(void *arg) {
     }
   }
 
-#ifdef QTHREAD_SHEPHERD_PROFILING
-  qtimer_destroy(idle);
-#endif
   pthread_exit(NULL);
   return NULL;
 } /*}}} */
@@ -615,11 +587,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   avg_eff_concurrent_threads = 1;
   QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
   QTHREAD_FASTLOCK_INIT(effconcurrentthreads_lock);
-#endif
-
-#ifdef CAS_STEAL_PROFILE
-  qlib->cas_steal_profile = qt_internal_aligned_alloc(
-    sizeof(uint64_strip_t) * nshepherds * nworkerspershep, 64);
 #endif
 
   /* initialize the kernel threads and scheduler */
@@ -748,11 +715,6 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 #ifdef QTHREAD_LOCAL_PRIORITY
     qlib->local_priority_queues[i] = qlib->shepherds[i].local_priority_queue;
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
-#ifdef QTHREAD_FEB_PROFILING
-    qlib->shepherds[i].uniquelockaddrs = qt_hash_create(need_sync);
-    qlib->shepherds[i].uniquefebaddrs = qt_hash_create(need_sync);
-#endif
-
   }
 
   spinlocks_initialize();
@@ -1003,15 +965,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
 
   qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
-#ifdef STEAL_PROFILE
-  qthread_steal_stat();
-#endif
-#ifdef CAS_STEAL_PROFILE
-  qthread_cas_steal_stat();
-  // outstanding threads remain
-  // free(qlib->cas_steal_profile);
-  qlib->cas_steal_profile = NULL;
-#endif
   worker = qthread_internal_getworker();
   if (worker && (worker->packed_worker_id !=
                  0)) { /* Only run finalize on shepherd 0 worker 0*/
@@ -1027,10 +980,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
   }
 
   /* enqueue the termination thread sentinal */
-#ifdef QTHREAD_SHEPHERD_PROFILING
-  qtimer_stop(shep0->total_time);
-#endif
-
   for (i = 0; i < qlib->nshepherds; i++) {
     qthread_worker_id_t j;
     for (j = 0; j < qlib->nworkerspershep; j++) {
@@ -1051,17 +1000,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
       }
     }
   }
-
-#ifdef QTHREAD_SHEPHERD_PROFILING
-  print_status("Shepherd 0 spent %f%% of the time idle, handling %lu threads\n",
-               shep0->idle_time / qtimer_secs(shep0->total_time) * 100.0,
-               (unsigned long)shep0->num_threads);
-  print_status(
-    "Shepherd 0 averaged %g secs to find a new thread, max %g secs\n",
-    shep0->idle_time / shep0->idle_count,
-    shep0->idle_maxtime);
-  qtimer_destroy(shep0->total_time);
-#endif
 
   while (qt_cleanup_early_funcs != NULL) {
     struct qt_cleanup_funcs_s *tmp = qt_cleanup_early_funcs;
@@ -1126,45 +1064,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
 #ifdef QTHREAD_LOCAL_PRIORITY
     qt_threadqueue_free(shep->local_priority_queue);
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
-
-#ifdef QTHREAD_SHEPHERD_PROFILING
-    print_status(
-      "Shepherd %i spent %f%% of the time idle, handling %lu threads\n",
-      i,
-      shep->idle_time / qtimer_secs(shep->total_time) * 100.0,
-      (unsigned long)shep->num_threads);
-    qtimer_destroy(shep->total_time);
-    print_status(
-      "Shepherd %i averaged %g secs to find a new thread, max %g secs\n",
-      i,
-      shep->idle_time / shep->idle_count,
-      shep->idle_maxtime);
-#endif
-#ifdef QTHREAD_FEB_PROFILING
-    QTHREAD_ACCUM_MAX(shep0->aquirelock_maxtime, shep->aquirelock_maxtime);
-    shep0->aquirelock_time += shep->aquirelock_time;
-    shep0->aquirelock_count += shep->aquirelock_count;
-    QTHREAD_ACCUM_MAX(shep0->lockwait_maxtime, shep->lockwait_maxtime);
-    shep0->lockwait_time += shep->lockwait_time;
-    shep0->lockwait_count += shep->lockwait_count;
-    QTHREAD_ACCUM_MAX(shep0->hold_maxtime, shep->hold_maxtime);
-    shep0->hold_time += shep->hold_time;
-    QTHREAD_ACCUM_MAX(shep0->febblock_maxtime, shep->febblock_maxtime);
-    shep0->febblock_time += shep->febblock_time;
-    shep0->febblock_count += shep->febblock_count;
-    QTHREAD_ACCUM_MAX(shep0->febwait_maxtime, shep->febwait_maxtime);
-    shep0->febwait_time += shep->febwait_time;
-    shep0->febwait_count += shep->febwait_count;
-    QTHREAD_ACCUM_MAX(shep0->empty_maxtime, shep->empty_maxtime);
-    shep0->empty_time += shep->empty_time;
-    shep0->empty_count += shep->empty_count;
-    qt_hash_callback(
-      shep->uniquelockaddrs, qthread_unique_collect, shep0->uniquelockaddrs);
-    qt_hash_destroy(shep->uniquelockaddrs);
-    qt_hash_callback(
-      shep->uniquefebaddrs, qthread_unique_collect, shep0->uniquefebaddrs);
-    qt_hash_destroy(shep->uniquefebaddrs);
-#endif /* ifdef QTHREAD_FEB_PROFILING */
   }
   qt_threadqueue_free(shep0->ready);
 
@@ -1176,31 +1075,6 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
     tmp->func();
     FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
   }
-
-#ifdef QTHREAD_FEB_PROFILING
-  print_status("%ld unique addresses used with FEB, blocked %g secs\n",
-               qt_hash_count(shep0->uniquefebaddrs),
-               (shep0->febblock_count == 0) ? 0 : shep0->febblock_time);
-  qt_hash_destroy(shep0->uniquefebaddrs);
-  print_status(
-    "%llu potentially-blocking FEB operations, average %g secs, max %g secs\n",
-    (unsigned long long)shep0->febblock_count,
-    (shep0->febblock_count == 0)
-      ? 0
-      : (shep0->febblock_time / shep0->febblock_count),
-    shep0->febblock_maxtime);
-  print_status(
-    "%llu FEB operations blocked, average wait %g secs, max %g secs\n",
-    (unsigned long long)shep0->febwait_count,
-    (shep0->febwait_count == 0) ? 0
-                                : (shep0->febwait_time / shep0->febwait_count),
-    shep0->febwait_maxtime);
-  print_status(
-    "%llu FEB bits emptied, stayed empty average %g secs, max %g secs\n",
-    (unsigned long long)shep0->empty_count,
-    (shep0->empty_count == 0) ? 0 : (shep0->empty_time / shep0->empty_count),
-    shep0->empty_maxtime);
-#endif /* ifdef QTHREAD_FEB_PROFILING */
 
 #ifdef LOCK_FREE_FEBS
   extern unsigned int QTHREAD_LOCKING_STRIPES;
@@ -1672,9 +1546,6 @@ static void qthread_wrapper(void *ptr) {
   if ((NULL != t->team) &&
       (atomic_load_explicit(&t->flags, memory_order_relaxed) &
        QTHREAD_TEAM_LEADER)) {
-#ifdef TEAM_PROFILE
-    qthread_incr(&qlib->team_leader_start, 1);
-#endif
     if (NULL != t->team->parent_eureka) {
       // This is a subteam's team-leader
       qt_internal_subteam_leader(t);
