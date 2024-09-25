@@ -158,10 +158,6 @@ AC_ARG_ENABLE([profiling],
                done],
               [enable_profiling=none])
 
-AC_ARG_ENABLE([cxx-tests],
-              [AS_HELP_STRING([--disable-cxx-tests],
-                              [disables all C++ test programs])])
-
 AC_ARG_ENABLE([asserts],
               [AS_HELP_STRING([--enable-asserts],
                               [adds sanity checks to most qthread functions])])
@@ -686,7 +682,6 @@ AC_SUBST(OPENMP_CFLAGS)
 AC_SUBST(TBB_LIBS)
 AC_SUBST(CHPL_OPTS)
 
-AM_CONDITIONAL([ENABLE_CXX_TESTS], [test "x$enable_cxx_tests" != "xno"])
 AM_CONDITIONAL([QTHREAD_NEED_OWN_MAKECONTEXT], [test "x$qthread_makecontext_type" = "xown"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xclock_gettime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])

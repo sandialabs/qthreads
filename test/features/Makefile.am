@@ -25,18 +25,15 @@ TESTS = \
 		qdqueue \
 		allpairs \
 		subteams \
-		qt_dictionary
+		qt_dictionary \
+		cxx_qt_loop \
+		cxx_qt_loop_balance
 
 if HAVE_GUARD_PAGES
 TESTS += guard_pages
 endif
 
 EXTRA_PROGRAMS = wavefront
-
-if ENABLE_CXX_TESTS
-TESTS += cxx_qt_loop \
-		 cxx_qt_loop_balance
-endif
 
 check_PROGRAMS = $(TESTS)
 
