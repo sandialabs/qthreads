@@ -23,9 +23,12 @@
 #include "qt_int_ceil.h"
 #include "qthread/qalloc.h"
 
-#ifndef PTHREAD_MUTEX_SMALL_ENOUGH
-# warning The pthread_mutex_t structure is either too big or hasn't been checked. If you're compiling by hand, you can probably ignore this warning, or define PTHREAD_MUTEX_SMALL_ENOUGH to make it go away.
+#if __STDC_VERSION__ < 202311L
+_Static_assert(sizeof(pthread_mutex_t) + sizeof(void*) < 124u, "pthread_mutex_t is too big.");
+#else
+static_assert(sizeof(pthread_mutex_t) + sizeof(void*) < 124u, "pthread_mutex_t is too big.");
 #endif
+
 #if defined(__linux__) && !defined(_GNU_SOURCE)
 # error On Linux you must compile this code with _GNU_SOURCE defined! You will probably see several errors about fstat64 and such, otherwise.
 #endif

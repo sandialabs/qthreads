@@ -250,18 +250,6 @@ AC_CACHE_SAVE
 AC_MSG_CHECKING([cacheline width])
 AC_MSG_RESULT([$with_cacheline_width])
 AC_DEFINE_UNQUOTED([CACHELINE_WIDTH],[$with_cacheline_width],[The cacheline width])
-AC_CHECK_SIZEOF(pthread_mutex_t)
-AC_CHECK_SIZEOF(void *)
-AS_IF([test "$ac_cv_sizeof_void_p" -eq 8],
-      [AS_IF([test "$ac_cv_sizeof_pthread_mutex_t" -le 116],
-             [mutex_small_enough=yes],
-             [mutex_small_enough=no])],
-      [AS_IF([test "$ac_cv_sizeof_pthread_mutex_t" -le 120],
-             [mutex_small_enough=yes],
-             [mutex_small_enough=no])])
-AS_IF([test "$mutex_small_enough" = "yes"],
-      [AC_DEFINE([PTHREAD_MUTEX_SMALL_ENOUGH], [1],
-                 [this signifies that pthread_mutex_t is small enough to fit in the existing data structures])])
 
 AC_CACHE_SAVE
 
