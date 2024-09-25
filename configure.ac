@@ -224,7 +224,6 @@ AC_CACHE_SAVE
 ## Check for types ##
 ## --------------- ##
 AC_TYPE_OFF_T
-AC_TYPE_SIZE_T
 AC_TYPE_PID_T
 
 AC_CACHE_SAVE
