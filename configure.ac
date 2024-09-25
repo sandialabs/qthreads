@@ -218,13 +218,6 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          esac])
 
-case "$qthread_cv_asm_arch" in
-    POWERPC*)
-    AS_IF([test "x$qthread_cv_c_compiler_type" = "xApple-GNU4.0"],
-          [AC_MSG_ERROR([The Apple GCC 4.0 compiler on PPC does not sufficiently support memory barriers to be safe. Please use a newer compiler (the Apple GCC 4.2 compiler seems to work just fine).])])
-    ;;
-esac
-
 AC_CACHE_SAVE
 
 ## --------------- ##
