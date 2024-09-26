@@ -290,7 +290,7 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 ## Check for library functions ##
 ## --------------------------- ##
-AC_CHECK_FUNCS([memalign memcpy fstat64 lseek64 sched_yield sysconf])
+AC_CHECK_FUNCS([memalign memcpy fstat64 lseek64 sched_yield sysconf getcontext])
 
 AC_CACHE_SAVE
 
