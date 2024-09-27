@@ -16,7 +16,6 @@ libqthread_la_SOURCES = \
 	feb.c \
 	hazardptrs.c \
 	io.c \
-	performance.c \
 	locks.c \
 	qalloc.c \
 	qloop.c \
@@ -43,14 +42,6 @@ if COMPILE_LF_HASH
 libqthread_la_SOURCES += lf_hashmap.c
 else
 libqthread_la_SOURCES += hashmap.c
-endif
-
-if COMPILE_SPAWNCACHE
-libqthread_la_SOURCES += spawncache.c
-endif
-
-if COMPILE_EUREKAS
-libqthread_la_SOURCES += eurekas.c
 endif
 
 include qtimer/Makefile.inc

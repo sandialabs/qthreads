@@ -9,18 +9,11 @@
 
 /* Internal Headers */
 #include "qt_blocking_structs.h"
-#include "qt_debug.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 
-#if defined(UNPOOLED)
-#define ALLOC_SYSCALLJOB()                                                     \
-  (qt_blocking_queue_node_t *)MALLOC(sizeof(qt_blocking_queue_node_t))
-#define FREE_SYSCALLJOB(s) FREE(s, sizeof(qt_blocking_queue_node_t))
-#else
 #define ALLOC_SYSCALLJOB() qt_mpool_alloc(syscall_job_pool);
 #define FREE_SYSCALLJOB(j) qt_mpool_free(syscall_job_pool, j);
-#endif
 
 extern qt_mpool syscall_job_pool;
 

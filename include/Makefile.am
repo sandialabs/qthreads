@@ -23,7 +23,6 @@ noinst_HEADERS = \
 	qt_barrier.h \
 	qt_blocking_structs.h \
 	qt_context.h \
-	qt_debug.h \
 	qt_envariables.h \
 	qt_filters.h \
 	qt_gcd.h \
@@ -55,8 +54,4 @@ noinst_HEADERS = \
 	qt_touch.h \
 	qt_visibility.h \
 	spr_innards.h
-
-if COMPILE_EUREKAS
-noinst_HEADERS += qt_eurekas.h
-endif
 

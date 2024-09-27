@@ -25,22 +25,15 @@ TESTS = \
 		qdqueue \
 		allpairs \
 		subteams \
-		qt_dictionary
-
-if COMPILE_EUREKAS
-TESTS += eureka
-endif
+		qt_dictionary \
+		cxx_qt_loop \
+		cxx_qt_loop_balance
 
 if HAVE_GUARD_PAGES
 TESTS += guard_pages
 endif
 
 EXTRA_PROGRAMS = wavefront
-
-if ENABLE_CXX_TESTS
-TESTS += cxx_qt_loop \
-		 cxx_qt_loop_balance
-endif
 
 check_PROGRAMS = $(TESTS)
 
@@ -105,5 +98,3 @@ cxx_qt_loop_SOURCES = cxx_qt_loop.cpp
 cxx_qt_loop_balance_SOURCES = cxx_qt_loop_balance.cpp
 
 wavefront_SOURCES = wavefront.c
-
-eureka_SOURCES = eureka.c

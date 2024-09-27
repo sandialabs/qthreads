@@ -52,19 +52,4 @@ int qt_select(int nfds,
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_SELECT
-int select(int nfds,
-           fd_set *restrict readfds,
-           fd_set *restrict writefds,
-           fd_set *restrict errorfds,
-           struct timeval *restrict timeout) {
-  if (qt_blockable()) {
-    return qt_select(nfds, readfds, writefds, errorfds, timeout);
-  } else {
-    return syscall(SYS_select, nfds, readfds, writefds, errorfds, timeout);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_SELECT */
-
 /* vim:set expandtab: */

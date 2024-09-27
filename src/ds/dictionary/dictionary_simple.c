@@ -5,8 +5,8 @@
 #include <qthread/dictionary.h>
 #include <qthread/qthread.h> // using CAS_ptr, qthread_worker_unique and qthread_num_workers
 
+#include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include <56reader-rwlock.h> // using rwlock_*
 
 struct qt_dictionary {

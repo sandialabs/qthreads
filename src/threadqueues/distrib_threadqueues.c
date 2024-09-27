@@ -13,22 +13,19 @@
 #include "qthread/qthread.h"
 
 /* Internal Headers */
+#include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_expect.h"
 #include "qt_prefetch.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 #include "qt_shepherd_innards.h"
+#include "qt_subsystems.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-#ifdef QTHREAD_USE_EUREKAS
-#include "qt_eurekas.h" /* for qt_eureka_check() */
-#endif                  /* QTHREAD_USE_EUREKAS */
-#include "qt_expect.h"
-#include "qt_subsystems.h"
 
 // Non portable
 typedef uint8_t cacheline[CACHELINE_WIDTH];

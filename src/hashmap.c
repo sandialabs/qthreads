@@ -13,7 +13,6 @@
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_atomics.h"
-#include "qt_debug.h"
 #include "qt_hash.h"
 #include "qt_prefetch.h"
 #include "qt_visibility.h"
@@ -243,7 +242,6 @@ static void brehash(qt_hash h, size_t len) { /*{{{*/
   }
   assert(atomic_load_explicit(&h->population, memory_order_relaxed) ==
          atomic_load_explicit(&d->population, memory_order_relaxed));
-  FREE_SCRIBBLE(h->entries, sizeof(hash_entry) * h->num_entries);
   qt_internal_aligned_free(h->entries, linesize);
   h->entries = d->entries;
   h->mask = d->mask;

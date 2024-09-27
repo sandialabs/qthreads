@@ -9,11 +9,9 @@
 #include <mach/mach_time.h>
 
 #include "qt_alloc.h"
-#include "qt_atomics.h" /* for SPINLOCK_BODY() */
+#include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qthread/qthread.h" /* for aligned_t */
 #include "qthread/qtimer.h"
-
-#include "qt_debug.h" /* for malloc debug wrappers */
 
 static aligned_t inited = 0;
 static double conversion = 0.0;

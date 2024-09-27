@@ -135,10 +135,6 @@ void qt_sinc_init(qt_sinc_t *restrict sinc_,
     }
 
     for (size_t s = 0; s < num_sheps; s++) {
-#if defined(SINCS_PROFILE)
-      snzi->count_spawns[s] = num_per_shep;
-      if (extras > 0) { snzi->count_spawns[s]++; }
-#endif /* defined(SINCS_PROFILE) */
       if (extras > 0) {
         SNZI_ASSIGN(snzi->counts[s].c, num_per_shep + 1);
         extras--;
@@ -214,70 +210,6 @@ void qt_sinc_reset(qt_sinc_t *sinc_, size_t const will_spawn) {
 
 void qt_sinc_fini(qt_sinc_t *sinc_) {
   qt_internal_sinc_t *restrict const sinc = (qt_internal_sinc_t *)sinc_;
-
-#if defined(SINCS_PROFILE)
-  for (size_t s = 0; s < num_sheps; s++) {
-    for (size_t w = 0; w < num_wps; w++) {
-      size_t const shep_offset = s;
-      size_t const offset = shep_offset + w;
-
-      fprintf(stderr,
-              "CI %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->count_incrs[offset]);
-      fprintf(stderr,
-              "CL %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->count_locals[offset]);
-      fprintf(stderr,
-              "CD %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->count_decrs[offset]);
-      fprintf(stderr,
-              "CR %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->count_remaining[offset]);
-      fprintf(stderr,
-              "CS %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->count_spawns[offset]);
-      fprintf(stderr,
-              "DM %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->dist_max[offset]);
-      fprintf(stderr,
-              "DT %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->dist_ttl[offset]);
-      fprintf(stderr,
-              "DC %lu %lu %lu\n",
-              s,
-              w,
-              (unsigned long)sinc->dist_cnt[offset]);
-      fprintf(stderr,
-              "DA %lu %lu %f\n",
-              s,
-              w,
-              ((unsigned long)sinc->dist_ttl[offset] * 1.0) /
-                ((unsigned long)sinc->dist_cnt[offset] * 1.0));
-    }
-  }
-
-  qt_free(sinc->count_incrs);
-  qt_free(sinc->count_locals);
-  qt_free(sinc->count_decrs);
-  qt_free(sinc->count_remaining);
-  qt_free(sinc->count_spawns);
-  qt_free(sinc->dist_max);
-  qt_free(sinc->dist_ttl);
-#endif /* defined(SINCS_PROFILE) */
 
   assert(sinc);
   qt_sinc_snzi_t *restrict const snzi = sinc->snzi;

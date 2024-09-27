@@ -18,7 +18,6 @@
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_barrier.h"
-#include "qt_debug.h"
 #include "qt_expect.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 
@@ -42,11 +41,11 @@ struct qloop_wrapper_args {
 };
 
 static inline void qt_loop_balance_inner(size_t const start,
-                                          size_t const stop,
-                                          qt_loop_f const func,
-                                          void *argptr,
-                                          uint_fast8_t const flags,
-                                          synctype_t sync_type);
+                                         size_t const stop,
+                                         qt_loop_f const func,
+                                         void *argptr,
+                                         uint_fast8_t const flags,
+                                         synctype_t sync_type);
 
 static aligned_t qloop_wrapper(void *restrict arg_void) { /*{{{ */
   /* tree-based spawning (credit: AKP) */
@@ -196,7 +195,6 @@ qt_loop_spawner(size_t const start, size_t const stop, void *args_) { /*{{{*/
     case ALIGNED:
       retptr = sync.aligned = qt_internal_aligned_alloc(
         steps * sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
-      ALLOC_SCRIBBLE(retptr, steps * sizeof(aligned_t));
       assert(sync.aligned);
       for (i = 0; i < (stop - start); ++i) { qthread_empty(&sync.aligned[i]); }
       break;
@@ -245,7 +243,6 @@ qt_loop_spawner(size_t const start, size_t const stop, void *args_) { /*{{{*/
       break;
     case ALIGNED:
       for (i = 0; i < steps; i++) { qthread_readFF(NULL, sync.aligned + i); }
-      FREE_SCRIBBLE(sync.aligned, steps * sizeof(aligned_t));
       qt_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
       break;
     case SINC_T:
@@ -321,11 +318,11 @@ void API_FUNC qt_loop_sinc(size_t start,
 #define QT_LOOP_BALANCE_SIMPLE (1 << 0)
 
 static inline void qt_loop_balance_inner(size_t const start,
-                                          size_t const stop,
-                                          qt_loop_f const func,
-                                          void *argptr,
-                                          uint_fast8_t const flags,
-                                          synctype_t sync_type) { /*{{{ */
+                                         size_t const stop,
+                                         qt_loop_f const func,
+                                         void *argptr,
+                                         uint_fast8_t const flags,
+                                         synctype_t sync_type) { /*{{{ */
   qthread_shepherd_id_t i;
   qthread_shepherd_id_t const maxworkers =
     ((stop - start) > qthread_num_workers()) ? qthread_num_workers()
@@ -359,7 +356,6 @@ static inline void qt_loop_balance_inner(size_t const start,
       sync.aligned = qt_internal_aligned_alloc(maxworkers * sizeof(aligned_t),
                                                QTHREAD_ALIGNMENT_ALIGNED_T);
       assert(sync.aligned);
-      ALLOC_SCRIBBLE(sync.aligned, maxworkers * sizeof(aligned_t));
       break;
     case SINC_T:
       sync.sinc = qt_sinc_create(0, NULL, NULL, maxworkers);
@@ -433,7 +429,6 @@ static inline void qt_loop_balance_inner(size_t const start,
       for (i = 0; i < maxworkers; i++) {
         qthread_readFF(NULL, sync.aligned + i);
       }
-      FREE_SCRIBBLE(sync.aligned, maxworkers * sizeof(aligned_t));
       qt_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
       break;
     case SINC_T:
@@ -562,14 +557,14 @@ static aligned_t qloopaccum_wrapper(void *restrict arg_void) { /*{{{ */
 } /*}}} */
 
 static inline void qt_loopaccum_balance_inner(size_t const start,
-                                               size_t const stop,
-                                               size_t const size,
-                                               void *restrict out,
-                                               qt_loopr_f const func,
-                                               void *restrict argptr,
-                                               qt_accum_f const acc,
-                                               uint_fast8_t const flags,
-                                               synctype_t sync_type) { /*{{{ */
+                                              size_t const stop,
+                                              size_t const size,
+                                              void *restrict out,
+                                              qt_loopr_f const func,
+                                              void *restrict argptr,
+                                              qt_accum_f const acc,
+                                              uint_fast8_t const flags,
+                                              synctype_t sync_type) { /*{{{ */
   qthread_shepherd_id_t const maxworkers = qthread_num_workers();
   struct qloopaccum_wrapper_args *const qwa =
     (struct qloopaccum_wrapper_args *)MALLOC(
@@ -1021,8 +1016,6 @@ static aligned_t qqloop_wrapper(void *arg_void) { /*{{{*/
       }
       if (!qthread_shep_ok()) {
         /* my shepherd has been disabled while I was running */
-        qthread_debug(
-          LOOP_DETAILS, "my shepherd (%i) has been disabled!\n", (int)shep);
         safeexit = 0;
         qthread_incr(&(stat->activesheps), -1);
         break;

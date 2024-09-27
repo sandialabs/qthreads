@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include <qthread/qthread.h>
 #include <qthread/tls.h>
 

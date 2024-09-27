@@ -47,15 +47,4 @@ ssize_t qt_pwrite(int filedes, void const *buf, size_t nbyte, off_t offset) {
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_PWRITE
-ssize_t pwrite(int filedes, void const *buf, size_t nbyte, off_t offset) {
-  if (qt_blockable()) {
-    return qt_pwrite(filedes, buf, nbyte, offset);
-  } else {
-    return syscall(SYS_pwrite, filedes, buf, nbyte, offset);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_PWRITE */
-
 /* vim:set expandtab: */

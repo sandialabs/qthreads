@@ -11,7 +11,6 @@
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h" /* for malloc debug headers */
 #include "qt_hazardptrs.h"
 #include "qt_shepherd_innards.h"
 #include "qt_subsystems.h"

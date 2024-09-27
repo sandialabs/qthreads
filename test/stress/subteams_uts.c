@@ -351,9 +351,6 @@ int main(int argc, char *argv[]) {
 #endif /* ifdef PRINT_STATS */
 
   iprintf("Num subteams %lu\n", num_subteams);
-#ifdef TEAM_PROFILE
-  // qt_team_profile();
-#endif
 
   return 0;
 }

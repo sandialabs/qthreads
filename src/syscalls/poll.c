@@ -27,7 +27,7 @@ int qt_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
   job->next = NULL;
   job->thread = me;
   job->op = POLL;
-  job->args[0] = (uintptr_t) & (fds[0]);
+  job->args[0] = (uintptr_t)&(fds[0]);
   memcpy(&job->args[1], &nfds, sizeof(nfds_t));
   memcpy(&job->args[2], &timeout, sizeof(int));
 
@@ -42,16 +42,5 @@ int qt_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
   FREE_SYSCALLJOB(job);
   return ret;
 }
-
-#if HAVE_SYSCALL && HAVE_DECL_SYS_POLL
-int poll(struct pollfd fds[], nfds_t nfds, int timeout) {
-  if (qt_blockable()) {
-    return qt_poll(fds, nfds, timeout);
-  } else {
-    return syscall(SYS_poll, fds, nfds, timeout);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_POLL */
 
 /* vim:set expandtab: */

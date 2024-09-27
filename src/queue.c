@@ -6,27 +6,17 @@
 
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_mpool.h"
 #include "qt_qthread_mgmt.h"   /* for qthread_internal_self() */
 #include "qt_qthread_struct.h" /* to pass data back to worker */
+#include "qt_subsystems.h"     /* for qthread_internal_cleanup() */
 #include "qt_threadstate.h"
 #include "qt_visibility.h"
-#ifndef UNPOOLED
-#include "qt_subsystems.h" /* for qthread_internal_cleanup() */
-#endif
 #include "qthread_innards.h" /* for qlib */
 
 #include "qt_queue.h"
 
 /* Memory Management */
-#ifdef UNPOOLED
-#define ALLOC_TQNODE()                                                         \
-  (qthread_queue_node_t *)MALLOC(sizeof(qthread_queue_node_t))
-#define FREE_TQNODE(n) FREE((n), sizeof(qthread_queue_node_t))
-
-void INTERNAL qthread_queue_subsystem_init(void) {}
-#else
 static qt_mpool node_pool = NULL;
 #define ALLOC_TQNODE() (qthread_queue_node_t *)qt_mpool_alloc(node_pool)
 #define FREE_TQNODE(n) qt_mpool_free(node_pool, (n))
@@ -39,8 +29,6 @@ void INTERNAL qthread_queue_subsystem_init(void) {
   node_pool = qt_mpool_create(sizeof(qthread_queue_node_t));
   qthread_internal_cleanup(qthread_queue_subsystem_shutdown);
 }
-
-#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 qthread_queue_t API_FUNC qthread_queue_create(uint8_t flags, aligned_t length) {
   qthread_queue_t q = qt_calloc(1, sizeof(struct qthread_queue_s));
@@ -106,26 +94,8 @@ static void qthread_queue_internal_launch(qthread_t *t,
   if ((atomic_load_explicit(&t->flags, memory_order_relaxed) &
        QTHREAD_UNSTEALABLE) &&
       (t->rdata->shepherd_ptr != cur_shep)) {
-    qthread_debug(
-      FEB_DETAILS,
-      "qthread(%p:%i) enqueueing in target_shep's ready queue (%p:%i)\n",
-      t,
-      (int)t->thread_id,
-      t->rdata->shepherd_ptr,
-      (int)t->rdata->shepherd_ptr->shepherd_id);
     qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
-  } else
-#ifdef QTHREAD_USE_SPAWNCACHE
-    if (!qt_spawncache_spawn(t, cur_shep->ready))
-#endif
-  {
-    qthread_debug(
-      FEB_DETAILS,
-      "qthread(%p:%i) enqueueing in cur_shep's ready queue (%p:%i)\n",
-      t,
-      (int)t->thread_id,
-      cur_shep,
-      (int)cur_shep->shepherd_id);
+  } else {
     qt_threadqueue_enqueue(cur_shep->ready, t);
   }
 }
@@ -158,7 +128,6 @@ int API_FUNC qthread_queue_release_all(qthread_queue_t q) {
   assert(q);
   qthread_t *t;
   qthread_shepherd_t *shep = qthread_internal_getshep();
-  qthread_debug(FEB_DETAILS, "releasing all members of queue %p\n", q);
   switch (q->type) {
     case NOSYNC:
       while ((t = qthread_queue_internal_nosync_dequeue(&q->q.nosync)) !=

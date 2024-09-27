@@ -40,8 +40,8 @@ jobs:
       image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
-      CC: clang-18
-      CXX: clang++-18
+      CC: clang-19
+      CXX: clang++-19
     steps:
       - checkout
       - run: |
@@ -50,8 +50,8 @@ jobs:
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
-          sudo apt-get install -y clang-18
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main'
+          sudo apt-get install -y clang-19
       - run: |
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
@@ -73,8 +73,8 @@ jobs:
       image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
-      CC: clang-18
-      CXX: clang++-18
+      CC: clang-19
+      CXX: clang++-19
       CFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       CXXFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       LDFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
@@ -88,8 +88,8 @@ jobs:
           sudo apt-get install -y autoconf automake libtool
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
-          sudo apt-get install -y clang-18
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main'
+          sudo apt-get install -y clang-19
       - run: |
           ./autogen.sh
           ./configure --enable-picky --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>

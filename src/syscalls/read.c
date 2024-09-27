@@ -46,15 +46,4 @@ ssize_t qt_read(int filedes, void *buf, size_t nbyte) {
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_READ
-ssize_t read(int filedes, void *buf, size_t nbyte) {
-  if (qt_blockable()) {
-    return qt_read(filedes, buf, nbyte);
-  } else {
-    return syscall(SYS_read, filedes, buf, nbyte);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_READ */
-
 /* vim:set expandtab: */

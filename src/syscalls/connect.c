@@ -45,15 +45,4 @@ int qt_connect(int socket,
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_CONNECT
-int connect(int socket, const struct sockaddr *address, socklen_t address_len) {
-  if (qt_blockable()) {
-    return qt_connect(socket, address, address_len);
-  } else {
-    return syscall(SYS_connect, socket, address, address_len);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_CONNECT */
-
 /* vim:set expandtab: */

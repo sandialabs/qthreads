@@ -9,16 +9,11 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h> /* for memalign() */
 #endif
-#ifdef HAVE_GETPAGESIZE
-#include <unistd.h>
-#else
-static inline int getpagesize() { return 4096; }
-#endif
+#include <unistd.h> /* for getpagesize() */
 
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 
 /* local constants */
 size_t _pagesize = 0;
@@ -33,7 +28,8 @@ void *qt_realloc(void *ptr, size_t size) { return realloc(ptr, size); }
 
 void qt_internal_alignment_init(void) { _pagesize = getpagesize(); }
 
-void *qt_internal_aligned_alloc(size_t alloc_size, uint_fast16_t alignment_small) {
+void *qt_internal_aligned_alloc(size_t alloc_size,
+                                uint_fast16_t alignment_small) {
   size_t alignment = alignment_small;
   // round alloc_size up to the nearest multiple of alignment
   // since that's required by the standard aligned_alloc

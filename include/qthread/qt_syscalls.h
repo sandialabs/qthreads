@@ -30,19 +30,6 @@ int qt_system(char const *command);
 pid_t qt_wait4(pid_t pid, int *stat_loc, int options, struct rusage *rusage);
 ssize_t qt_write(int filedes, void const *buf, size_t nbyte);
 
-#ifdef USE_HEADER_SYSCALLS
-#define accept(s, a, l) qt_accept((s), (a), (l))
-#define connect(s, a, l) qt_connect((s), (a), (l))
-#define poll(f, n, t) qt_poll((f), (n), (t))
-#define pread(f, b, n, o) qt_pread((f), (b), (n), (o))
-#define pwrite(f, b, n, o) qt_pwrite((f), (b), (n), (o))
-#define read(f, b, n) qt_read((f), (b), (n))
-#define select(n, r, w, e, t) qt_select((n), (r), (w), (e), (t))
-#define system(c) qt_system((c))
-#define wait4(p, s, o, r) qt_wait4((p), (s), (o), (r))
-#define write(f, b, n) qt_write((f), (b), (n))
-#endif // ifdef USE_HEADER_SYSCALLS
-
 Q_ENDCXX /* */
 
 #endif // ifndef QT_SYSCALLS_H

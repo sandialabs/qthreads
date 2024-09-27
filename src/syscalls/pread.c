@@ -47,15 +47,4 @@ ssize_t qt_pread(int filedes, void *buf, size_t nbyte, off_t offset) {
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_PREAD
-ssize_t pread(int filedes, void *buf, size_t nbyte, off_t offset) {
-  if (qt_blockable()) {
-    return qt_pread(filedes, buf, nbyte, offset);
-  } else {
-    return syscall(SYS_pread, filedes, buf, nbyte, offset);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_PREAD */
-
 /* vim:set expandtab: */

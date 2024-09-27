@@ -20,7 +20,6 @@
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_barrier.h"
-#include "qt_debug.h"
 #include "qt_initialized.h" /* for qthread_library_initialized */
 #include "qt_visibility.h"
 #include "qthread/qthread.h"
@@ -76,11 +75,6 @@ qt_barrier_t API_FUNC *qt_barrier_create(size_t size,
                                          qt_barrier_btype type) { /*{{{ */
   qt_barrier_t *b = qt_calloc(1, sizeof(qt_barrier_t));
 
-  qthread_debug(BARRIER_CALLS,
-                "size(%i), type(%i), debug(%i): begin\n",
-                size,
-                (int)type,
-                debug);
   assert(b);
   if (b) {
     assert(type == REGION_BARRIER);

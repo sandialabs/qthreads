@@ -10,10 +10,10 @@
 #include "qthread/qthread.h"
 
 /* Internal Headers */
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_barrier.h"
-#include "qt_debug.h"
 #include "qt_visibility.h"
 
 #if 0

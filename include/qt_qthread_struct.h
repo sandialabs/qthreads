@@ -67,9 +67,6 @@ struct qthread_runtime_data_s {
   /* affinity for children created by this task */
   qthread_shepherd_id_t child_affinity;
 #endif
-#ifdef QTHREAD_PERFORMANCE
-  qtperfdata_t *performance_data;
-#endif
 };
 
 /* Try very VERY hard to keep this under 1 cacheline (64 bytes) */
@@ -92,8 +89,8 @@ struct qthread_s {
   _Atomic uint16_t flags; /* may not need all bits */
   _Atomic uint8_t thread_state;
 
-  alignas(8)
-  uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
+  alignas(
+    8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };
 
 #endif // ifndef QT_QTHREAD_STRUCT_H

@@ -15,7 +15,6 @@
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_expect.h"
 #include "qt_int_ceil.h"
 #include "qt_shepherd_innards.h"
@@ -85,7 +84,6 @@ void qt_sinc_init(qt_sinc_t *restrict sinc_,
 
     rdata->values = qt_internal_aligned_alloc(num_lines * cacheline, cacheline);
     assert(rdata->values);
-    ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline);
 
     // Initialize values
     for (size_t s = 0; s < num_sheps; s++) {

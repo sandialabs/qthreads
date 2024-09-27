@@ -8,9 +8,9 @@
 #include <qthread/qpool.h>
 #include <qthread/qthread.h>
 
+#include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_atomics.h"
-#include "qt_debug.h" /* for malloc debug wrappers */
 #include "qt_hazardptrs.h"
 #include "qt_subsystems.h" /* for qthread_internal_cleanup_late() */
 

@@ -43,9 +43,7 @@ int main(int argc, char *argv[]) {
   aligned_t out = 1ull;
   qthread_writeEF(&flag1, &out);
   qthread_readFE(NULL, &flag2);
-  for (size_t i = 0ull; i < BUFFER_SIZE; i++) {
-    assert(buffer[i] == 2);
-  }
+  for (size_t i = 0ull; i < BUFFER_SIZE; i++) { assert(buffer[i] == 2); }
   return 0;
 }
 

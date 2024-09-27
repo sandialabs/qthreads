@@ -15,21 +15,17 @@
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_expect.h"
 #include "qt_prefetch.h"
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 #include "qt_shepherd_innards.h"
+#include "qt_subsystems.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-#ifdef QTHREAD_USE_EUREKAS
-#include "qt_eurekas.h" /* for qt_eureka_check() */
-#endif                  /* QTHREAD_USE_EUREKAS */
-#include "qt_expect.h"
-#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -47,45 +43,11 @@ struct _qt_threadqueue {
                            * attempts that will fail because tasks cannot be
                            * moved - 4/1/11 AKP
                            */
-#ifdef STEAL_PROFILE
-  aligned_t steal_amount_stolen;
-#endif
-
   QTHREAD_TRYLOCK_TYPE qlock;
 } /* qt_threadqueue_t */;
 
 static aligned_t steal_disable = 0;
 static long steal_chunksize = 0;
-
-#ifdef STEAL_PROFILE
-#define STEAL_CALLED(shep) qthread_incr(&((shep)->steal_called), 1)
-#define STEAL_ELECTED(shep) qthread_incr(&((shep)->steal_elected), 1)
-#define STEAL_ATTEMPTED(shep) qthread_incr(&((shep)->steal_attempted), 1)
-#define STEAL_SUCCESSFUL(shep)                                                 \
-  do {                                                                         \
-  } while (0)
-#define STEAL_FAILED(shep) qthread_incr(&((shep)->steal_failed), 1)
-#define STEAL_AMOUNT(q, ct) qthread_incr(&((q)->steal_amount_stolen), ct)
-#else
-#define STEAL_CALLED(shep)                                                     \
-  do {                                                                         \
-  } while (0)
-#define STEAL_ELECTED(shep)                                                    \
-  do {                                                                         \
-  } while (0)
-#define STEAL_ATTEMPTED(shep)                                                  \
-  do {                                                                         \
-  } while (0)
-#define STEAL_SUCCESSFUL(shep)                                                 \
-  do {                                                                         \
-  } while (0)
-#define STEAL_FAILED(shep)                                                     \
-  do {                                                                         \
-  } while (0)
-#define STEAL_AMOUNT(q, ct)                                                    \
-  do {                                                                         \
-  } while (0)
-#endif /* ifdef STEAL_PROFILE */
 
 // Forward declarations
 qt_threadqueue_node_t INTERNAL *
@@ -177,22 +139,6 @@ static inline void sanity_check_queue(qt_threadqueue_t *q) {
 #endif /* ifndef QTHREAD_NO_ASSERTS */
 
 /* Memory Management */
-#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-#define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
-#define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
-#define ALLOC_TQNODE()                                                         \
-  (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
-#define FREE_TQNODE(t) FREE(t, sizeof(qt_threadqueue_node_t))
-
-static void qt_threadqueue_subsystem_shutdown(void) { free_agged_tasks(); }
-
-void INTERNAL qt_threadqueue_subsystem_init(void) {
-  init_agged_tasks();
-  steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
-  qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-}
-
-#else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 #define ALLOC_THREADQUEUE()                                                    \
   (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
@@ -220,11 +166,10 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
   steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
   qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
-#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
+  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   /* only works if a basic load is atomic */
   return q->qlength;
 
@@ -235,8 +180,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
   tmp = q->qlength;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   return tmp;
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
+             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)                      \
         */
 } /*}}}*/
 
@@ -261,20 +206,9 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{*/
   return q;
 } /*}}}*/
 
-#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-#define ALLOC_QTHREAD()                                                        \
-  MALLOC(sizeof(qthread_t) + qlib->qthread_argcopy_size +                      \
-         qlib->qthread_tasklocal_size)
-#define FREE_QTHREAD(t)                                                        \
-  FREE(t,                                                                      \
-       sizeof(qthread_t) + qlib->qthread_argcopy_size +                        \
-         qlib->qthread_tasklocal_size)
-#else /* if defined(UNPOOLED_QTHREAD_T)                                        \
-         ||./src/threadqueues/nemesis_threadqueues.c defined(UNPOOLED) */
 extern qt_mpool generic_qthread_pool;
 #define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
 #define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
-#endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{*/
   if (q->head != q->tail) {
@@ -342,114 +276,6 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
-#ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL
-qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c, /* cache */
-                               qt_threadqueue_t *restrict q,         /* queue */
-                               qthread_t *restrict t) /* thread */
-{                                                     /*{{{*/
-  assert(c != NULL && ((c->head == c->tail && c->qlength < 2) ||
-                       (c->head != NULL && c->tail != NULL && c->qlength > 1)));
-  assert(t != NULL);
-
-  qt_threadqueue_node_t *node;
-
-  qthread_debug(
-    THREADQUEUE_CALLS, "c(%p), q(%p), t(%p:%u)\n", c, q, t, t->thread_id);
-  node = ALLOC_TQNODE();
-  assert(node != NULL);
-
-  node->next = NULL;
-  node->prev = NULL;
-  node->value = t;
-  node->stealable = qt_threadqueue_isstealable(t);
-
-  assert(c->tail == NULL || c->tail->next == NULL);
-  assert(c->head == NULL || c->head->prev == NULL);
-  if (c->on_deck) {
-    qt_threadqueue_node_t *tmp = c->on_deck;
-    // Add to the tail of the `c`
-    tmp->prev = c->tail;
-    c->tail = tmp;
-    if (c->head == NULL) {
-      c->head = tmp;
-    } else {
-      assert(tmp && tmp->prev);
-      tmp->prev->next = tmp;
-    }
-    c->qlength++;
-    if (tmp->stealable) { c->qlength_stealable++; }
-    assert(c->tail->next == NULL);
-    assert(c->head->prev == NULL);
-  }
-  c->on_deck = node;
-
-#if 0
-    /* it is an idea, but so far does not appear to have any benefit (and a tiny tiny amount of harm, ~0.4%)... */
-    if ((q->qlength == 0) && (qlib->nworkers_active > 1) && (c->qlength > (qlib->nworkers_active << 2))) {
-        qt_threadqueue_node_t *first = c->head;
-        qt_threadqueue_node_t *last  = c->tail;
-        if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
-            assert((q->head && q->tail) || (!q->head && !q->tail));
-            assert(q->head != first);
-            assert(q->tail != last);
-            first->prev = q->tail;
-            q->tail     = last;
-            if (q->head == NULL) {
-                q->head = first;
-            } else {
-                first->prev->next = first;
-            }
-            q->qlength           += c->qlength;
-            q->qlength_stealable += c->qlength_stealable;
-            assert(q->tail->next == NULL);
-            assert(q->head->prev == NULL);
-            QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-            c->head    = c->tail = NULL;
-            c->qlength = c->qlength_stealable = 0;
-        }
-    }
-#endif /* if 0 */
-  return 1;
-} /*}}}*/
-
-int INTERNAL qt_threadqueue_private_enqueue_yielded(
-  qt_threadqueue_private_t *restrict q, qthread_t *restrict t) { /*{{{*/
-  assert(q != NULL && ((q->head == q->tail && q->qlength < 2) ||
-                       (q->head != NULL && q->tail != NULL && q->qlength > 1)));
-  assert(t != NULL);
-
-  qt_threadqueue_node_t *node;
-
-  node = ALLOC_TQNODE();
-  assert(node != NULL);
-
-  // node->next      = NULL;
-  node->prev = NULL;
-  node->value = t;
-  node->stealable = qt_threadqueue_isstealable(t);
-
-  assert(q->tail == NULL || q->tail->next == NULL);
-  assert(q->head == NULL || q->head->prev == NULL);
-  // Add to the head of the `q`
-  node->next = q->head;
-  q->head = node;
-  if (q->tail == NULL) {
-    q->tail = node;
-  } else {
-    assert(node && node->next);
-    node->next->prev = node;
-  }
-  q->qlength++;
-  if (node->stealable) { q->qlength_stealable++; }
-
-  assert(q->tail->next == NULL);
-  assert(q->head->prev == NULL);
-
-  return 1;
-} /*}}}*/
-#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
-
 /* yielded threads enqueue at head */
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                              qthread_t *restrict t) { /*{{{*/
@@ -488,24 +314,7 @@ qthread_t INTERNAL *qt_init_agg_task(void) // partly a duplicate from qthread.c
 {
   qthread_t *t = ALLOC_QTHREAD();
 
-#ifdef QTHREAD_NONLAZY_THREADIDS
-  /* give the thread an ID number */
-  t->thread_id =
-    qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
-  if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NULL_TASK_ID)) {
-    /* yes, this is wrapping around, but... thread_id should be prevented from
-     * being NULL */
-    t->thread_id = qthread_internal_incr(
-      &(qlib->max_thread_id), &qlib->max_thread_id_lock, 2);
-  } else if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NON_TASK_ID)) {
-    /* yes, this is wrapping around, but... thread_id should be prevented from
-     * being NON */
-    t->thread_id = qthread_internal_incr(
-      &(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
-  }
-#else  /* ifdef QTHREAD_NONLAZY_THREADIDS */
   t->thread_id = QTHREAD_NON_TASK_ID;
-#endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 
   t->thread_state = QTHREAD_STATE_NEW;
   atomic_store_explicit(&t->flags, 0, memory_order_relaxed);
@@ -713,9 +522,6 @@ void INTERNAL qt_add_first_agg_task(qthread_t *agg_task,
 
 /* dequeue at tail */
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
-#ifdef QTHREAD_LOCAL_PRIORITY
-                                            qt_threadqueue_t *lpq,
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t active) { /*{{{*/
   qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
@@ -733,9 +539,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
   t = qt_init_agg_task();
 #endif
 
-#ifdef QTHREAD_USE_EUREKAS
-  qt_eureka_disable();
-#endif /* QTHREAD_USE_EUREKAS */
   while (1) {
     qt_threadqueue_node_t *node = NULL;
 #ifdef QTHREAD_TASK_AGGREGATION
@@ -743,82 +546,50 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
     ret_agg_task = 0;
 #endif
 
-#ifdef QTHREAD_LOCAL_PRIORITY
-    /* First check local priority queue */
-    if (lpq->head) {
-      QTHREAD_TRYLOCK_LOCK(&lpq->qlock);
-      PARANOIA_ONLY(sanity_check_queue(lpq));
-      node = lpq->tail;
-      if (node != NULL) {
-        assert(lpq->head);
-        assert(lpq->qlength > 0);
-
-        lpq->tail = node->prev;
-        if (lpq->tail == NULL) {
-          lpq->head = NULL;
-        } else {
-          lpq->tail->next = NULL;
-        }
-        assert(lpq->qlength > 0);
-        lpq->qlength--;
-        lpq->qlength_stealable -= node->stealable;
-      }
-      QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
-    } else
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
-
-      // printf("Total number of items: %d+%d\n",
-      // (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
-      if (qc && (qc->on_deck != NULL)) {
-        assert(qc->tail == NULL || qc->tail->next == NULL);
-        assert(qc->head == NULL || qc->head->prev == NULL);
-        node = qc->on_deck;
-        qc->on_deck = NULL;
-        assert(node->next == NULL);
-        assert(node->prev == NULL);
+    // printf("Total number of items: %d+%d\n",
+    // (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
+    if (qc && (qc->on_deck != NULL)) {
+      assert(qc->tail == NULL || qc->tail->next == NULL);
+      assert(qc->head == NULL || qc->head->prev == NULL);
+      node = qc->on_deck;
+      qc->on_deck = NULL;
+      assert(node->next == NULL);
+      assert(node->prev == NULL);
 #ifdef QTHREAD_TASK_AGGREGATION
-        if (QTHREAD_TASK_IS_AGGREGABLE(atomic_load_explicit(
-              &node->value->flags, memory_order_relaxed)) &&
-            ((max_t = (qc->qlength + 1 + q->qlength) /
-                      qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR) > 1)) {
-          max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
-          assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
-          qt_add_first_agg_task(t, &curr_cost, node);
-          node = NULL;
+      if (QTHREAD_TASK_IS_AGGREGABLE(
+            atomic_load_explicit(&node->value->flags, memory_order_relaxed)) &&
+          ((max_t = (qc->qlength + 1 + q->qlength) /
+                    qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR) > 1)) {
+        max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
+        assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
+        qt_add_first_agg_task(t, &curr_cost, node);
+        node = NULL;
 
-          int *count_addr = &(((int *)t->preconds)[0]);
-          int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
-          if ((qc->qlength == 0) &&
-              ((curr_cost < qlib->max_c) && (*count_addr < max_t))) {
-            // cache empty and can still add, get more from q
-            QTHREAD_TRYLOCK_LOCK(&q->qlock);
-            if (q->head) {
-              lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
-            }
-            QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-          } else { // done, spill remaining cache
+        int *count_addr = &(((int *)t->preconds)[0]);
+        int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
+        if ((qc->qlength == 0) &&
+            ((curr_cost < qlib->max_c) && (*count_addr < max_t))) {
+          // cache empty and can still add, get more from q
+          QTHREAD_TRYLOCK_LOCK(&q->qlock);
+          if (q->head) {
+            lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
           }
-          ret_agg_task = 1;
-        } else { // no agg, spill cache
-                 // t = NULL;
+          QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+        } else { // done, spill remaining cache
         }
+        ret_agg_task = 1;
+      } else { // no agg, spill cache
+               // t = NULL;
+      }
 #endif /* ifdef QTHREAD_TASK_AGGREGATION */
 
-        qthread_debug(THREADQUEUE_DETAILS,
-                      "q(%p), qc(%p), active(%u): qc->qlen(%u) Push remaining "
-                      "items onto the real queue\n",
-                      q,
-                      qc,
-                      active,
-                      qc->qlength);
-
-        if (qc->qlength > 0) {
-          qt_threadqueue_node_t *first = qc->head;
-          qt_threadqueue_node_t *last = qc->tail;
-          assert(last->next == NULL);
-          assert(first->prev == NULL);
-          /* Note: I tried doing the this code with a TRY rather than a
-           * LOCK and performance of UTS suffered (slightly). */
+      if (qc->qlength > 0) {
+        qt_threadqueue_node_t *first = qc->head;
+        qt_threadqueue_node_t *last = qc->tail;
+        assert(last->next == NULL);
+        assert(first->prev == NULL);
+        /* Note: I tried doing the this code with a TRY rather than a
+         * LOCK and performance of UTS suffered (slightly). */
 #if 0
                 if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
                     assert((q->head && q->tail) || (!q->head && !q->tail));
@@ -850,64 +621,64 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
                     qc->qlength_stealable -= qc->on_deck->stealable;
                 }
 #else /* if 0 */
-          QTHREAD_TRYLOCK_LOCK(&q->qlock);
-          PARANOIA_ONLY(sanity_check_queue(q));
-          assert(q->head != first);
-          assert(q->tail != last);
-          first->prev = q->tail;
-          q->tail = last;
-          if (q->head == NULL) {
-            q->head = first;
-          } else {
-            first->prev->next = first;
-          }
-          q->qlength += qc->qlength;
-          q->qlength_stealable += qc->qlength_stealable;
-          assert(q->tail->next == NULL);
-          assert(q->head->prev == NULL);
-          QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-          qc->head = qc->tail = NULL;
-          qc->qlength = qc->qlength_stealable = 0;
-#endif /* if 0 */
-        }
-      } else if (q->head) {
         QTHREAD_TRYLOCK_LOCK(&q->qlock);
         PARANOIA_ONLY(sanity_check_queue(q));
-        node = q->tail;
-        if (node != NULL) {
-          assert(q->head);
-          assert(q->qlength > 0);
-
-          q->tail = node->prev;
-          if (q->tail == NULL) {
-            q->head = NULL;
-          } else {
-            q->tail->next = NULL;
-          }
-          assert(q->qlength > 0);
-          q->qlength--;
-          q->qlength_stealable -= node->stealable;
-#ifdef QTHREAD_TASK_AGGREGATION
-          if (QTHREAD_TASK_IS_AGGREGABLE(atomic_load_explicit(
-                &node->value->flags, memory_order_relaxed)) &&
-              ((max_t = (q->qlength) / qthread_readstate(ACTIVE_WORKERS) /
-                        DIV_FACTOR) >
-               1)) { // no point creating an agg task with a single simple task
-            max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
-            assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
-            qt_add_first_agg_task(t, &curr_cost, node);
-            node = NULL;
-            if (q->head) {
-              int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
-            }
-            ret_agg_task = 1;
-          } else { // no agg, free agg task (delay)
-                   // t = NULL;
-          }
-#endif /* ifdef QTHREAD_TASK_AGGREGATION */
+        assert(q->head != first);
+        assert(q->tail != last);
+        first->prev = q->tail;
+        q->tail = last;
+        if (q->head == NULL) {
+          q->head = first;
+        } else {
+          first->prev->next = first;
         }
+        q->qlength += qc->qlength;
+        q->qlength_stealable += qc->qlength_stealable;
+        assert(q->tail->next == NULL);
+        assert(q->head->prev == NULL);
         QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+        qc->head = qc->tail = NULL;
+        qc->qlength = qc->qlength_stealable = 0;
+#endif /* if 0 */
       }
+    } else if (q->head) {
+      QTHREAD_TRYLOCK_LOCK(&q->qlock);
+      PARANOIA_ONLY(sanity_check_queue(q));
+      node = q->tail;
+      if (node != NULL) {
+        assert(q->head);
+        assert(q->qlength > 0);
+
+        q->tail = node->prev;
+        if (q->tail == NULL) {
+          q->head = NULL;
+        } else {
+          q->tail->next = NULL;
+        }
+        assert(q->qlength > 0);
+        q->qlength--;
+        q->qlength_stealable -= node->stealable;
+#ifdef QTHREAD_TASK_AGGREGATION
+        if (QTHREAD_TASK_IS_AGGREGABLE(atomic_load_explicit(
+              &node->value->flags, memory_order_relaxed)) &&
+            ((max_t =
+                (q->qlength) / qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR) >
+             1)) { // no point creating an agg task with a single simple task
+          max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
+          assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
+          qt_add_first_agg_task(t, &curr_cost, node);
+          node = NULL;
+          if (q->head) {
+            int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
+          }
+          ret_agg_task = 1;
+        } else { // no agg, free agg task (delay)
+                 // t = NULL;
+        }
+#endif /* ifdef QTHREAD_TASK_AGGREGATION */
+      }
+      QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+    }
 
 #ifdef QTHREAD_TASK_AGGREGATION
     if (ret_agg_task) { // use t, node is NULL
@@ -1140,7 +911,6 @@ qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
     break;
   }
   QTHREAD_TRYLOCK_UNLOCK(&v->qlock);
-  STEAL_AMOUNT(v, amtStolen);
 
   return (first);
 } /*}}} */
@@ -1154,7 +924,6 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
 
   assert(thief_shepherd);
 
-  STEAL_CALLED(thief_shepherd);
   if (thief_shepherd->stealing) {
     // this means that someone else on this shepherd is already stealing; I will
     // spin on my own queue.
@@ -1173,7 +942,6 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
       return NULL;
     }
   }
-  STEAL_ELECTED(thief_shepherd);
 
   qthread_shepherd_id_t i = 0;
   qthread_shepherd_t *const shepherds = qlib->shepherds;
@@ -1183,13 +951,9 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
 
   qt_threadqueue_t *myqueue = thief_shepherd->ready;
 
-#ifdef QTHREAD_LOCAL_PRIORITY
-  qt_threadqueue_t *mypriorityqueue = thief_shepherd->local_priority_queue;
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
   while (stolen == NULL) {
     qt_threadqueue_t *victim_queue = shepherds[sorted_sheplist[i]].ready;
     if (0 != victim_queue->qlength_stealable) {
-      STEAL_ATTEMPTED(thief_shepherd);
       stolen = qt_threadqueue_dequeue_steal(myqueue, victim_queue);
       if (stolen) {
         qt_threadqueue_node_t *surplus = stolen->next;
@@ -1198,15 +962,9 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
           surplus->prev = NULL;
           qt_threadqueue_enqueue_multiple(myqueue, surplus);
         }
-        STEAL_SUCCESSFUL(thief_shepherd);
         break;
-      } else {
-        STEAL_FAILED(thief_shepherd);
       }
     }
-#ifdef QTHREAD_LOCAL_PRIORITY
-    if ((0 < mypriorityqueue->qlength)) { break; }
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
     if ((0 < myqueue->qlength) ||
         steal_disable) { // work at home quit steal attempt
@@ -1216,9 +974,6 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
     i++;
     i *= (i < qlib->nshepherds - 1);
     if (i == 0) {
-#ifdef QTHREAD_USE_EUREKAS
-      qt_eureka_check(1);
-#endif /* QTHREAD_USE_EUREKAS */
 #ifdef HAVE_PTHREAD_YIELD
       pthread_yield();
 #elif defined(HAVE_SCHED_YIELD)
@@ -1230,27 +985,6 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
   thief_shepherd->stealing = 0;
   return stolen;
 } /*}}}*/
-
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-void INTERNAL qthread_steal_stat(void) { /*{{{*/
-  int i;
-
-  assert(qlib);
-  for (i = 0; i < qlib->nshepherds; i++) {
-    fprintf(stdout,
-            "QTHREADS: shepherd %d - steals called:%ld elected:%ld "
-            "attempted:%ld(failed:%ld successful:%ld) tasks-stolen:%ld\n",
-            qlib->shepherds[i].shepherd_id,
-            qlib->shepherds[i].steal_called,
-            qlib->shepherds[i].steal_elected,
-            qlib->shepherds[i].steal_attempted,
-            qlib->shepherds[i].steal_failed,
-            qlib->shepherds[i].steal_attempted -
-              qlib->shepherds[i].steal_failed,
-            qlib->shepherds[i].ready->steal_amount_stolen);
-  }
-} /*}}}*/
-#endif /* ifdef STEAL_PROFILE */
 
 #ifdef QTHREAD_USE_SPAWNCACHE
 qthread_t INTERNAL *
@@ -1295,18 +1029,12 @@ void INTERNAL qt_threadqueue_private_filter(
 
       case REMOVE_AND_CONTINUE: // remove, move to the next one
       {
-#ifdef QTHREAD_USE_EUREKAS
-        qthread_internal_assassinate(n->value);
-#endif /* QTHREAD_USE_EUREKAS */
         FREE_TQNODE(n);
         c->on_deck = NULL;
         break;
       }
       case REMOVE_AND_STOP: // remove, stop looking
       {
-#ifdef QTHREAD_USE_EUREKAS
-        qthread_internal_assassinate(n->value);
-#endif /* QTHREAD_USE_EUREKAS */
         FREE_TQNODE(n);
         c->on_deck = NULL;
         goto fixup_on_deck;
@@ -1349,9 +1077,6 @@ void INTERNAL qt_threadqueue_private_filter(
           c->qlength_stealable -= node->stealable;
           freeme = node;
           node = node->prev;
-#ifdef QTHREAD_USE_EUREKAS
-          qthread_internal_assassinate(t);
-#endif /* QTHREAD_USE_EUREKAS */
           if (c->head == node) {
             lp = &c->head;
           } else {
@@ -1365,9 +1090,6 @@ void INTERNAL qt_threadqueue_private_filter(
           *rp = node->prev;
           c->qlength--;
           c->qlength_stealable -= node->stealable;
-#ifdef QTHREAD_USE_EUREKAS
-          qthread_internal_assassinate(t);
-#endif /* QTHREAD_USE_EUREKAS */
           FREE_TQNODE(node);
           node = NULL;
           break;
@@ -1440,9 +1162,6 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
           q->qlength_stealable -= node->stealable;
           freeme = node;
           node = node->prev;
-#ifdef QTHREAD_USE_EUREKAS
-          qthread_internal_assassinate(t);
-#endif /* QTHREAD_USE_EUREKAS */
           if (q->head == node) {
             lp = &q->head;
           } else {
@@ -1456,9 +1175,6 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
           *rp = node->prev;
           q->qlength--;
           q->qlength_stealable -= node->stealable;
-#ifdef QTHREAD_USE_EUREKAS
-          qthread_internal_assassinate(t);
-#endif /* QTHREAD_USE_EUREKAS */
           FREE_TQNODE(node);
           node = NULL;
           break;

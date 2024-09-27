@@ -43,10 +43,6 @@ TESTS = \
                 qthread_fp \
                 qthread_fp_double
 
-if QTHREAD_PERFORMANCE
-TESTS += performance
-endif
-
 check_PROGRAMS = $(TESTS)
 
 TESTS_ENVIRONMENT =
@@ -141,6 +137,3 @@ test_teams_SOURCES = test_teams.c
 
 test_subteams_SOURCES = test_subteams.c
 
-if QTHREAD_PERFORMANCE
-performance_SOURCES = performance.c
-endif

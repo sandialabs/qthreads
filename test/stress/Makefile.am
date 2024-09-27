@@ -15,11 +15,8 @@ TESTS = \
 		test_spawn_simple \
 		precond_spawn_simple \
 		lock_acq_rel \
-		feb_as_fence
-
-if HAVE_LIBM
-TESTS += subteams_uts
-endif
+		feb_as_fence \
+                subteams_uts
 
 check_PROGRAMS = $(TESTS)
 
@@ -65,7 +62,5 @@ feb_stream_SOURCES = feb_stream.c
 
 lock_acq_rel_SOURCES = lock_acq_rel.c
 
-if HAVE_LIBM
 subteams_uts_SOURCES = subteams_uts.c
 subteams_uts_LDADD = $(LDADD) -lm $(utils_rnglib)
-endif

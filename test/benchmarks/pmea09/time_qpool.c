@@ -1,6 +1,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include "argparsing.h"
 #include <assert.h>
 #include <pthread.h>
 #include <qthread/qloop.h>
@@ -9,7 +10,6 @@
 #include <qthread/qtimer.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
@@ -163,9 +163,7 @@ int main(int argc, char *argv[]) {
   printf("Time to free %lu mutex pooled blocks in parallel: %f\n",
          iterations,
          qtimer_secs(timer));
-  for (i = 0; i < numshep; i++) {
-    free(numa_pools[i]);
-  }
+  for (i = 0; i < numshep; i++) { free(numa_pools[i]); }
   free(numa_pools);
   free(numa_allocs);
 

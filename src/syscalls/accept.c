@@ -45,17 +45,4 @@ int qt_accept(int socket,
   return ret;
 }
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_ACCEPT
-int accept(int socket,
-           struct sockaddr *restrict address,
-           socklen_t *restrict address_len) {
-  if (qt_blockable()) {
-    return qt_accept(socket, address, address_len);
-  } else {
-    return syscall(SYS_accept, socket, address, address_len);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_ACCEPT */
-
 /* vim:set expandtab: */

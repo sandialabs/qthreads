@@ -29,7 +29,6 @@ pkginclude_HEADERS = \
 	qutil.h \
 	syncvar.hpp \
 	wavefront.h \
-	performance.h \
 	logging.h \
 	tls.h
 

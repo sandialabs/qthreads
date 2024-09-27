@@ -16,7 +16,6 @@ static inline qthread_addrstat_t *qthread_addrstat_new(void) { /*{{{ */
   ret->FEQ = NULL;
   ret->FFQ = NULL;
   ret->FFWQ = NULL;
-  QTHREAD_EMPTY_TIMER_INIT(ret);
   QTHREAD_FASTLOCK_UNLOCK(&ret->lock);
 
   return ret;
@@ -26,9 +25,6 @@ static inline qthread_addrstat_t *qthread_addrstat_new(void) { /*{{{ */
  * necessary for things left over when qthread_finalize is called */
 static void qthread_addrstat_delete(void *m_void) { /*{{{ */
   qthread_addrstat_t *m = (qthread_addrstat_t *)m_void;
-#ifdef QTHREAD_FEB_PROFILING
-  qtimer_destroy(m->empty_timer);
-#endif
   QTHREAD_FASTLOCK_DESTROY(m->lock);
   FREE_ADDRSTAT(m);
 } /*}}} */

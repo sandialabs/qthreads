@@ -15,7 +15,6 @@
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_barrier.h"
-#include "qt_debug.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_macros.h"
 #include "qt_mpool.h"
@@ -37,13 +36,10 @@ QTHREAD_CASLOCK_EXPLICIT_DECL(fbp_caslock)
 
 static qt_barrier_t *global_barrier = NULL;
 
-#ifndef UNPOOLED
 static void cleanup_barrier(void) {
   if (fbp.pool) { qt_mpool_destroy(fbp.pool); }
   fbp.pool = NULL;
 }
-
-#endif
 
 void INTERNAL qt_barrier_internal_init(void) {
   fbp.pool = NULL;
@@ -54,7 +50,6 @@ qt_barrier_t API_FUNC *qt_barrier_create(size_t max_threads,
                                          qt_barrier_btype Q_UNUSED(type)) {
   qt_barrier_t *b;
 
-#ifndef UNPOOLED
   if (fbp.pool == NULL) {
     qt_mpool bp = qt_mpool_create(sizeof(struct qt_barrier_s));
     if (QT_CAS_(fbp.vp, NULL, bp, fbp_caslock) != NULL) {
@@ -65,9 +60,6 @@ qt_barrier_t API_FUNC *qt_barrier_create(size_t max_threads,
     }
   }
   b = qt_mpool_alloc(fbp.pool);
-#else  /* ifndef UNPOOLED */
-  b = MALLOC(sizeof(struct qt_barrier_s));
-#endif /* ifndef UNPOOLED */
   b->blockers = 0;
   b->max_blockers = max_threads;
   b->in_gate = 0;
@@ -113,17 +105,11 @@ void API_FUNC qt_barrier_resize(qt_barrier_t *restrict b, size_t new_size) {
 }
 
 void API_FUNC qt_barrier_destroy(qt_barrier_t *b) {
-#ifndef UNPOOLED
   assert(fbp.pool != NULL);
-#endif
   while (b->blockers > 0) qthread_yield();
   qthread_fill(&b->out_gate);
   qthread_fill(&b->in_gate);
-#ifndef UNPOOLED
   qt_mpool_free(fbp.pool, b);
-#else
-  FREE(b, sizeof(struct qt_barrier_s));
-#endif
 }
 
 void qt_global_barrier(void) {

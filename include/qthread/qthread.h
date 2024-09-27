@@ -18,10 +18,6 @@ using std::memory_order_relaxed;
 #include <stdint.h>
 #include <string.h> /* for memcpy() */
 
-#ifndef QTHREAD_NOALIGNCHECK
-#include <stdio.h> /* for fprintf() */
-#endif
-
 #include "common.h"
 
 /*****************************************************************************
@@ -114,11 +110,11 @@ Q_STARTCXX /* */
 #endif
 
 #if QTHREAD_BITS == 32
-typedef uint32_t aligned_t;
+  typedef uint32_t aligned_t;
 typedef uint16_t haligned_t;
 typedef int32_t saligned_t;
 #elif QTHREAD_BITS == 64
-typedef uint64_t aligned_t;
+  typedef uint64_t aligned_t;
 typedef uint32_t haligned_t;
 typedef int64_t saligned_t;
 #else
@@ -127,21 +123,7 @@ typedef int64_t saligned_t;
 
 #define QTHREAD_ALIGNMENT_ALIGNED_T (sizeof(aligned_t))
 
-#ifndef QTHREAD_NOALIGNCHECK
-#define QALIGN(d, s)                                                           \
-  do {                                                                         \
-    s = (aligned_t *)(((size_t)d) & (~(sizeof(aligned_t) - 1)));               \
-    if (s != d) {                                                              \
-      fprintf(stderr,                                                          \
-              "WARNING: %s(): unaligned address %p ... assuming %p\n",         \
-              __FUNCTION__,                                                    \
-              (void *)d,                                                       \
-              (void *)s);                                                      \
-    }                                                                          \
-  } while (0)
-#else /* QTHREAD_NOALIGNCHECK */
 #define QALIGN(d, s) (s) = (d)
-#endif /* ifndef QTHREAD_NOALIGNCHECK */
 
 typedef struct _syncvar_s {
   union {
@@ -161,22 +143,13 @@ typedef struct _syncvar_s {
   } u;
 } syncvar_t;
 
-#define SYNCVAR_STATIC_INITIALIZER                                             \
-  {                                                                            \
-    { 0 }                                                                      \
-  }
+#define SYNCVAR_STATIC_INITIALIZER {{0}}
 #define SYNCVAR_STATIC_EMPTY_INITIALIZER                                       \
-  {                                                                            \
-    .u.s = {.data = 0, .state = 2, .lock = 0 }                                 \
-  }
+  {.u.s = {.data = 0, .state = 2, .lock = 0}}
 #define SYNCVAR_STATIC_INITIALIZE_TO(value)                                    \
-  {                                                                            \
-    .u.s = {.data = value, .state = 0, .lock = 0 }                             \
-  }
+  {.u.s = {.data = value, .state = 0, .lock = 0}}
 #define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value)                              \
-  {                                                                            \
-    .u.s = {.data = value, .state = 2, .lock = 0 }                             \
-  }
+  {.u.s = {.data = value, .state = 2, .lock = 0}}
 #define SYNCVAR_INITIALIZER ((syncvar_t)SYNCVAR_STATIC_INITIALIZER)
 #define SYNCVAR_EMPTY_INITIALIZER ((syncvar_t)SYNCVAR_STATIC_EMPTY_INITIALIZER)
 #define SYNCVAR_INITIALIZE_TO(value)                                           \
@@ -249,13 +222,9 @@ void qthread_enable_worker(qthread_worker_id_t worker);
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
 #define qthread_yield()                                                        \
-  do {                                                                         \
-    qthread_yield_(0);                                                         \
-  } while (0)
+  do { qthread_yield_(0); } while (0)
 #define qthread_yield_near()                                                   \
-  do {                                                                         \
-    qthread_yield_(1);                                                         \
-  } while (0)
+  do { qthread_yield_(1); } while (0)
 void qthread_yield_(int);
 
 /* this function flushes the spawncache */
@@ -281,13 +250,6 @@ int qthread_fork_to(qthread_f f,
                     void const *arg,
                     aligned_t *ret,
                     qthread_shepherd_id_t shepherd);
-
-#ifdef QTHREAD_LOCAL_PRIORITY
-int qthread_fork_to_local_priority(qthread_f f,
-                                   void const *arg,
-                                   aligned_t *ret,
-                                   qthread_shepherd_id_t shepherd);
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
 int qthread_fork_precond_to(qthread_f f,
                             void const *arg,
@@ -367,9 +329,6 @@ int qthread_migrate_to(qthread_shepherd_id_t const shepherd);
 /* Resets the default shepherd spawn order for tasks that use NO_SHEPHERD */
 void qthread_reset_target_shep(void);
 
-/* This function sets the debug level if debugging has been enabled */
-int qthread_debuglevel(int);
-
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 #define QTHREAD_NULL_TASK_ID UINT_MAX
@@ -441,9 +400,6 @@ typedef enum qt_team_critical_section_e {
 unsigned int qt_team_id(void);
 unsigned int qt_team_parent_id(void);
 void qt_team_critical_section(qt_team_critical_section_t boundary);
-#ifdef QTHREAD_USE_EUREKAS
-void qt_team_eureka(void);
-#endif /* QTHREAD_USE_EUREKAS */
 
 #define qthread_fork_new_team(f, a, r)                                         \
   qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_TEAM)
@@ -660,13 +616,9 @@ int qthread_spinlocks_destroy(qthread_spinlock_t *a);
 #define QTHREAD_SPINLOCK_IS_NOT_RECURSIVE (-2)
 
 #define QTHREAD_MUTEX_INITIALIZER                                              \
-  {                                                                            \
-    {.s = {0, 0}}, { QTHREAD_SPINLOCK_IS_NOT_RECURSIVE, 0 }                    \
-  }
+  {{.s = {0, 0}}, {QTHREAD_SPINLOCK_IS_NOT_RECURSIVE, 0}}
 #define QTHREAD_RECURSIVE_MUTEX_INITIALIZER                                    \
-  {                                                                            \
-    {.s = {0, 0}}, { QTHREAD_SPINLOCK_IS_RECURSIVE, 0 }                        \
-  }
+  {{.s = {0, 0}}, {QTHREAD_SPINLOCK_IS_RECURSIVE, 0}}
 
 /* functions to implement spinlock-based locking/unlocking
  * if qthread_lock_init(adr) is called, subsequent locking over adr
@@ -683,6 +635,7 @@ int qthread_lock_destroy(aligned_t *a);
  * *after* incrementing.
  */
 static inline float qthread_fincr(float *operand, float incr) { /*{{{ */
+
   union {
     float f;
     uint32_t i;
@@ -699,6 +652,7 @@ static inline float qthread_fincr(float *operand, float incr) { /*{{{ */
 } /*}}} */
 
 static inline double qthread_dincr(double *operand, double incr) { /*{{{ */
+
   union {
     uint64_t i;
     double d;
@@ -715,18 +669,17 @@ static inline double qthread_dincr(double *operand, double incr) { /*{{{ */
 } /*}}} */
 
 static inline uint32_t qthread_incr32(uint32_t *operand,
-                                       uint32_t incr) { /*{{{ */
+                                      uint32_t incr) { /*{{{ */
   return __sync_fetch_and_add(operand, incr);
 } /*}}} */
 
 static inline uint64_t qthread_incr64(uint64_t *operand,
-                                       uint64_t incr) { /*{{{ */
+                                      uint64_t incr) { /*{{{ */
   return __sync_fetch_and_add(operand, incr);
 } /*}}} */
 
-static inline int64_t qthread_incr_xx(void *addr,
-                                       int64_t incr,
-                                       size_t length) { /*{{{ */
+static inline int64_t
+qthread_incr_xx(void *addr, int64_t incr, size_t length) { /*{{{ */
   switch (length) {
     case 4: return qthread_incr32((uint32_t *)addr, incr);
 

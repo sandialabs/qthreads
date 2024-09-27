@@ -10,13 +10,6 @@
 #include <unistd.h>
 #endif
 
-#if HAVE_SYSCALL && HAVE_DECL_SYS_WAIT4
-#include <sys/resource.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#endif
-
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
 
@@ -51,16 +44,5 @@ pid_t qt_wait4(pid_t pid, int *stat_loc, int options, struct rusage *rusage) {
   FREE_SYSCALLJOB(job);
   return ret;
 }
-
-#if HAVE_SYSCALL && HAVE_DECL_SYS_WAIT4
-pid_t wait4(pid_t pid, int *stat_loc, int options, struct rusage *rusage) {
-  if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
-    return qt_wait4(pid, stat_loc, options, rusage);
-  } else {
-    return syscall(SYS_wait4, pid, stat_loc, options, rusage);
-  }
-}
-
-#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_WAIT4 */
 
 /* vim:set expandtab: */

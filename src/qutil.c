@@ -15,7 +15,6 @@
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h" /* for assert() toggling */
-#include "qt_debug.h"
 #include "qt_int_log.h"
 #include "qt_visibility.h"
 

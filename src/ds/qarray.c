@@ -19,7 +19,6 @@
 /* Local Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
-#include "qt_debug.h"
 #include "qt_gcd.h" /* for qt_lcm() */
 #include "qt_int_ceil.h"
 #include "qt_shepherd_innards.h" /* for shep_to_node */
@@ -47,8 +46,9 @@ qarray_internal_segment_shep(qarray const *a,
   return (qthread_shepherd_id_t *)ptr;
 } /*}}} */
 
-static inline qthread_shepherd_id_t qarray_internal_segment_shep_read(
-  qarray const *a, void const *segment_head) { /*{{{*/
+static inline qthread_shepherd_id_t
+qarray_internal_segment_shep_read(qarray const *a,
+                                  void const *segment_head) { /*{{{*/
   qthread_shepherd_id_t retval;
   qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(a, segment_head);
 
@@ -250,9 +250,6 @@ static qarray *qarray_create_internal(size_t const count,
     count / ret->segment_size + ((count % ret->segment_size) ? 1 : 0);
 
   /* figure out dist_specific data */
-  qthread_debug(QARRAY_DETAILS,
-                "qarray_create(): figuring out dist_specific data (d=%i)\n",
-                (int)d);
   switch (d) {
     case ALL_SAME:
     case ALL_LOCAL:
@@ -316,8 +313,7 @@ static qarray *qarray_create_internal(size_t const count,
       }
       break;
   }
-  if (ret->base_ptr == NULL) {
-  }
+  if (ret->base_ptr == NULL) {}
 #else  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
   /* For speed, we want page-aligned memory, if we can get it */
   ret->base_ptr =
@@ -332,9 +328,6 @@ static qarray *qarray_create_internal(size_t const count,
     size_t segment, target_shep;
     qthread_shepherd_id_t const max_sheps = qthread_num_shepherds();
 
-    qthread_debug(QARRAY_DETAILS,
-                  "qarray_create(): segment_count = %i\n",
-                  (int)segment_count);
     for (segment = 0; segment < segment_count; segment++) {
       switch (d) {
         case FIXED_HASH: target_shep = segment % qthread_num_shepherds(); break;
@@ -375,10 +368,6 @@ static qarray *qarray_create_internal(size_t const count,
         qarray_internal_segment_shep_write(ret, seghead, target_shep);
       }
       assert(target_shep < max_sheps);
-      qthread_debug(QARRAY_DETAILS,
-                    "qarray_create(): segment %i assigned to shep %i\n",
-                    segment,
-                    target_shep);
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
       {
         /* make sure this shep has a node; if it does, put this segment there */
@@ -393,17 +382,6 @@ static qarray *qarray_create_internal(size_t const count,
       qthread_incr(&chunk_distribution_tracker[target_shep], 1);
     }
   }
-#if defined(HAVE_MADVISE) && HAVE_DECL_MADV_ACCESS_LWP
-  madvise(ret->base_ptr, segment_count * ret->segment_bytes, MADV_ACCESS_LWP);
-#endif
-  for (unsigned int i = 0; i < qthread_num_shepherds(); i++) {
-    qthread_debug(QARRAY_DETAILS,
-                  "qarray_create(): shep %i has %i segments\n",
-                  i,
-                  chunk_distribution_tracker[i]);
-  }
-  qthread_debug(QARRAY_DETAILS,
-                "qarray_create(): done assigning segments, returning\n");
   return ret;
 
   qgoto(badret_exit);
@@ -1221,10 +1199,6 @@ void qarray_set_shepof(qarray *a,
           size_t array_size = a->segment_bytes * num_segments;
           qt_affinity_mem_tonode(a->base_ptr, array_size, target_node);
         }
-#elif defined(HAVE_MADVISE) && HAVE_DECL_MADV_ACCESS_LWP
-        madvise(a->base_ptr,
-                (a->count / a->segment_size) * a->segment_bytes,
-                MADV_ACCESS_LWP);
 #endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
         qthread_incr(&chunk_distribution_tracker[shep], segment_count);
         qthread_incr(&chunk_distribution_tracker[a->dist_specific.dist_shep],
@@ -1247,10 +1221,6 @@ void qarray_set_shepof(qarray *a,
                                  a->segment_bytes,
                                  target_node);
         }
-#elif defined(HAVE_MADVISE) && HAVE_DECL_MADV_ACCESS_LWP
-        madvise(a->base_ptr + (a->segment_bytes * (i / a->segment_size)),
-                a->segment_bytes,
-                MADV_ACCESS_LWP);
 #endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
         qthread_incr(&chunk_distribution_tracker[shep], 1);
         qthread_incr(&chunk_distribution_tracker[cur_shep], -1);
