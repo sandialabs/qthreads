@@ -3,6 +3,12 @@
 
 #include <stdatomic.h>
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#include <sanitizer/tsan_interface.h>
+#endif
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -66,6 +72,11 @@ struct qthread_runtime_data_s {
 #ifdef QTHREAD_OMP_AFFINITY
   /* affinity for children created by this task */
   qthread_shepherd_id_t child_affinity;
+#endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+  void *_Atomic tsan_fiber;
+#endif
 #endif
 };
 

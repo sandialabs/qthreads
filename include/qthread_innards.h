@@ -48,6 +48,11 @@ typedef struct qlib_s {
 #ifdef QTHREAD_USE_VALGRIND
   unsigned int valgrind_masterstack_id;
 #endif
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+  void *tsan_main_fiber;
+#endif
+#endif
 
   /* assigns a unique thread_id mostly for debugging! */
   aligned_t max_thread_id;
