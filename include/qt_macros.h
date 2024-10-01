@@ -1,7 +1,16 @@
 #ifndef QT_MACROS_H
 #define QT_MACROS_H
 
+// Work around OSX currently refusing to support threads.h
+#if 201112L <= __STDC_VERSION__ && __STDC_VERSION__ < 202311L
+#ifndef __STDC_NO_THREADS__
 #include <threads.h>
+#else
+#define thread_local _Thread_local
+#endif
+#elif __STDC_VERSION__ < 201112L
+#error "C11 is required"
+#endif
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
