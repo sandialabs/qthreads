@@ -328,3 +328,22 @@ jobs:
     - name: make check
       run: timeout -k 10s --foreground 6m make check
       timeout-minutes: 7
+
+  clang-format:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    env:
+      CC: 'clang-19'
+      CXX: 'clang++-19'
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        sudo apt-add-repository universe && break || sleep 1
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main' && break || sleep 1
+        sudo apt-get install clang-format-19
+    - name: check formatting
+      run: |
+        sh clang-format.sh
+        git --no-pager diff
+        if [[ $(git --no-pager diff) ]]; then echo "need to rerun clang-format"; exit 1; fi
