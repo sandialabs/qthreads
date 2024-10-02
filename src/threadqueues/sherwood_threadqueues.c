@@ -933,9 +933,7 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
     i++;
     i *= (i < qlib->nshepherds - 1);
     if (i == 0) {
-#ifdef HAVE_PTHREAD_YIELD
-      pthread_yield();
-#elif defined(HAVE_SCHED_YIELD)
+#if defined(HAVE_SCHED_YIELD)
       sched_yield();
 #endif
     }

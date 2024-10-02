@@ -225,7 +225,6 @@ AC_CACHE_SAVE
 ## -------------------- ##
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
                [AC_MSG_ERROR([Qthreads requires a working pthreads implementation.])])
-AC_CHECK_FUNCS([pthread_yield])
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
