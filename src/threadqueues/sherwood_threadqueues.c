@@ -115,29 +115,6 @@ static void free_agged_tasks(void) {
   FREE_EXTRA(agged_tasks_arg);
 }
 
-#ifdef QTHREAD_PARANOIA
-static inline void sanity_check_queue(qt_threadqueue_t *q) {
-  qt_threadqueue_node_t *cursor = q->head;
-  size_t count_stealable = 0, count_total = 0;
-
-  assert((q->head == NULL) || q->qlength);
-  assert(q->qlength_stealable <= q->qlength);
-  assert((q->head && q->tail) || (!q->head && !q->tail));
-
-  while (cursor) {
-    count_total++;
-    count_stealable += cursor->stealable;
-    cursor = cursor->next;
-  }
-  assert(count_total == q->qlength);
-  assert(count_stealable == q->qlength_stealable);
-}
-
-#define PARANOIA_ONLY(x) x
-#else /* ifndef QTHREAD_NO_ASSERTS */
-#define PARANOIA_ONLY(x)
-#endif /* ifndef QTHREAD_NO_ASSERTS */
-
 /* Memory Management */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 #define ALLOC_THREADQUEUE()                                                    \
@@ -176,7 +153,6 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 #else
   ssize_t tmp;
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  PARANOIA_ONLY(sanity_check_queue(q));
   tmp = q->qlength;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
   return tmp;
@@ -214,7 +190,6 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{*/
   if (q->head != q->tail) {
     qthread_t *t;
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
-    PARANOIA_ONLY(sanity_check_queue(q));
     while (q->head != q->tail) {
       qt_threadqueue_node_t *node = q->tail;
       if (node != NULL) {
@@ -262,7 +237,6 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
   assert(t != NULL);
 
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  PARANOIA_ONLY(sanity_check_queue(q));
   node->next = NULL;
   node->prev = q->tail;
   q->tail = node;
@@ -291,7 +265,6 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
   assert(t != NULL);
 
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  PARANOIA_ONLY(sanity_check_queue(q));
   node->prev = NULL;
   node->next = q->head;
   q->head = node;
@@ -622,7 +595,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
                 }
 #else /* if 0 */
         QTHREAD_TRYLOCK_LOCK(&q->qlock);
-        PARANOIA_ONLY(sanity_check_queue(q));
         assert(q->head != first);
         assert(q->tail != last);
         first->prev = q->tail;
@@ -643,7 +615,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
       }
     } else if (q->head) {
       QTHREAD_TRYLOCK_LOCK(&q->qlock);
-      PARANOIA_ONLY(sanity_check_queue(q));
       node = q->tail;
       if (node != NULL) {
         assert(q->head);
@@ -763,7 +734,6 @@ void INTERNAL qt_threadqueue_enqueue_multiple(
   }
 
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  PARANOIA_ONLY(sanity_check_queue(q));
   last->next = NULL;
   first->prev = q->tail;
   q->tail = last;
@@ -799,7 +769,6 @@ qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
   if (desired_stolen == 0) { desired_stolen = 1; }
 
   if (!QTHREAD_TRYLOCK_TRY(&v->qlock)) { return NULL; }
-  PARANOIA_ONLY(sanity_check_queue(v));
   while (v->qlength_stealable > 0 && amtStolen < desired_stolen) {
     node = (qt_threadqueue_node_t *)v->head;
     do {
@@ -957,7 +926,6 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
    */
 
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  PARANOIA_ONLY(sanity_check_queue(q));
   if (q->qlength > 0) {
     qt_threadqueue_node_t **lp = NULL;
     qt_threadqueue_node_t **rp = NULL;
@@ -1029,7 +997,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
   assert(q != NULL);
 
   QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  PARANOIA_ONLY(sanity_check_queue(q));
   if (q->qlength > 0) {
     node = (qt_threadqueue_node_t *)q->tail;
     t = (node) ? (qthread_t *)node->value : NULL;

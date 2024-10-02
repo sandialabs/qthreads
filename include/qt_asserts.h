@@ -80,10 +80,4 @@
   } while (0)
 #endif // ifdef QTHREAD_NO_ASSERTS
 
-#ifdef QTHREAD_PARANOIA
-#define PARANOIA(x) x
-#else
-#define PARANOIA(x)
-#endif
-
 /* vim:set expandtab: */
