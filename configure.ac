@@ -364,7 +364,7 @@ AS_IF([test "x$enable_omp_affinity" = xyes],
       [enable_omp_affinity="no"])
 
 AS_IF([test "x$enable_asserts" != "xyes"],
-      [AC_DEFINE([QTHREAD_NO_ASSERTS], [1], [removes sanity checks from most qthread functions])
+      [AC_DEFINE([NDEBUG], [1], [removes sanity checks from most qthread functions])
        enable_asserts=no],
       [enable_asserts=yes])
 

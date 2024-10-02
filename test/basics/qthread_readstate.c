@@ -3,7 +3,6 @@
 #endif
 
 #include "argparsing.h"
-#include <assert.h>
 #include <qthread/qthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +15,7 @@
             (v opr val) ? "GOOD" : " BAD",                                     \
             v,                                                                 \
             val);                                                              \
-    assert(v opr val);                                                         \
+    test_check(v opr val);                                                     \
   } while (0)
 
 static aligned_t spinner(void *arg) {
@@ -30,7 +29,7 @@ int main(int argc, char *argv[]) {
   CHECK_VERBOSE(); // part of the testing harness; toggles iprintf() output
 
   status = qthread_initialize();
-  assert(status == QTHREAD_SUCCESS);
+  test_check(status == QTHREAD_SUCCESS);
 
   iprintf("%i shepherds...\n", qthread_num_shepherds());
   iprintf("  %i threads total\n", qthread_num_workers());
@@ -57,7 +56,7 @@ int main(int argc, char *argv[]) {
     size_t sheps;
     TEST_OPTION(TOTAL_SHEPHERDS, >=, 1);
     sheps = qthread_readstate(TOTAL_SHEPHERDS);
-    assert(sheps >= 1);
+    test_check(sheps >= 1);
     TEST_OPTION(ACTIVE_SHEPHERDS, >=, 1);
     TEST_OPTION(ACTIVE_SHEPHERDS, <=, sheps);
   }
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
     size_t wkrs;
     TEST_OPTION(TOTAL_WORKERS, >=, 1);
     wkrs = qthread_readstate(TOTAL_WORKERS);
-    assert(wkrs >= 1);
+    test_check(wkrs >= 1);
     TEST_OPTION(ACTIVE_WORKERS, >=, 1);
     TEST_OPTION(ACTIVE_WORKERS, <=, wkrs);
   }

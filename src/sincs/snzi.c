@@ -2,8 +2,6 @@
 #include "config.h"
 #endif
 
-#define QTHREAD_NO_ASSERTS 1
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

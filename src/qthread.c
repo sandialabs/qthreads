@@ -196,7 +196,7 @@ static qt_mpool generic_rdata_pool = NULL;
 
 #include "qt_profiling.h"
 
-#ifndef QTHREAD_NO_ASSERTS
+#ifndef NDEBUG
 int qthread_library_initialized = 0;
 void *shep0arg = NULL;
 #endif
@@ -339,7 +339,7 @@ static void *qthread_master(void *arg) {
 
   assert(me != NULL);
   assert(me->shepherd_id <= qlib->nshepherds);
-#ifndef QTHREAD_NO_ASSERTS
+#ifndef NDEBUG
   if ((shep0arg != NULL) && (my_id == 0)) {
     if (arg != shep0arg) {
       print_error("arg = %p, shep0arg = %p\n", arg, shep0arg);
@@ -620,7 +620,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   qt_internal_alignment_init();
   qt_hash_initialize_subsystem();
 
-#ifndef QTHREAD_NO_ASSERTS
+#ifndef NDEBUG
   qthread_library_initialized = 1;
   MACHINE_FENCE;
 #endif
@@ -830,7 +830,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 #endif
                       &(qlib->shepherds[0].workers[0]),
                       &(qlib->mccoy_thread->rdata->context));
-#ifndef QTHREAD_NO_ASSERTS
+#ifndef NDEBUG
   shep0arg = &(qlib->shepherds[0].workers[0]);
 #endif
   /* this launches shepherd 0 */
@@ -1202,7 +1202,7 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
   qlib = NULL;
   TLS_DELETE(shepherd_structs);
 
-#ifndef QTHREAD_NO_ASSERTS
+#ifndef NDEBUG
   MACHINE_FENCE;
   qthread_library_initialized = 0;
   MACHINE_FENCE;

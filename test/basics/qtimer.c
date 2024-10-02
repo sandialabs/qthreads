@@ -1,5 +1,4 @@
 #include "argparsing.h"
-#include <assert.h>
 #include <math.h> /* for sqrt() */
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
@@ -181,7 +180,7 @@ static void runs(void) { /*{{{*/
     }
   }
   oi = malloc(sizeof(double *) * 3);
-  assert(oi);
+  test_check(oi);
   oi[0] = calloc(sizeof(double), maxrun);
   oi[1] = calloc(sizeof(double), maxrun);
   oi[2] = calloc(sizeof(double), maxrun);
@@ -301,12 +300,12 @@ static void autocorrelation(void) { /*{{{*/
 int main(int argc, char *argv[]) {
   qtimer_t t;
 
-  assert(qthread_initialize() == QTHREAD_SUCCESS);
+  test_check(qthread_initialize() == QTHREAD_SUCCESS);
 
   CHECK_VERBOSE();
 
   t = qtimer_create();
-  assert(t);
+  test_check(t);
   qtimer_start(t);
   qtimer_stop(t);
   if (qtimer_secs(t) == 0) {
@@ -320,7 +319,7 @@ int main(int argc, char *argv[]) {
 
   qtimer_start(t);
   qtimer_stop(t);
-  assert(qtimer_secs(t) >= 0.0);
+  test_check(qtimer_secs(t) >= 0.0);
   if (qtimer_secs(t) == 0.0) {
     iprintf("inlining reduces calltime to zero (apparently)\n");
   } else {

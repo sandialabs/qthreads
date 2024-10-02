@@ -35,7 +35,7 @@ void *qt_dictionary_put_helper(qt_dictionary *dict,
 
 // Handle the case when variable does not exist;
 // Locks become nops when qthread is no longer initialized
-#ifdef QTHREAD_NO_ASSERTS
+#ifdef NDEBUG
 static int qthread_library_initialized = 1;
 #endif
 
@@ -98,7 +98,7 @@ static int qthread_library_initialized = 1;
 
 #define GET_BUCKET(hash) ((DICT_ABS(hash)) & ((1 << BKT_POW) - 1))
 
-#ifndef QTHREAD_NO_ASSERTS
+#ifndef NDEBUG
 extern int qthread_library_initialized;
 #endif
 

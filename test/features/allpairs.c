@@ -2,7 +2,6 @@
 #include "config.h" /* for _GNU_SOURCE */
 #endif
 #include "argparsing.h"
-#include <assert.h>
 #include <qthread/allpairs.h>
 #include <qthread/qthread.h>
 #include <stdio.h>
@@ -40,7 +39,7 @@ static void printout(int *restrict * restrict out)
             } else {
                 printf("%8i ", out[i][j]);
             }
-            assert(out[i][j] == out[j][i]);
+            test_check(out[i][j] == out[j][i]);
         }
         printf("\n");
     }
@@ -53,7 +52,7 @@ mult(void const *inta_void, void const *intb_void, void *restrict out_void) {
   int *const inta = (int *const)inta_void;
   int *const intb = (int *const)intb_void;
   int *restrict out = out_void;
-  assert(*out == -1);
+  test_check(*out == -1);
   *out = (*inta) * (*intb);
 }
 
@@ -79,7 +78,7 @@ int main(int argc, char *argv[]) {
   int **out;
   size_t i;
 
-  assert(qthread_initialize() == QTHREAD_SUCCESS);
+  test_check(qthread_initialize() == QTHREAD_SUCCESS);
   CHECK_VERBOSE();
   NUMARG(ASIZE, "TEST_ASIZE");
   iprintf("ASIZE: %i\n", (int)ASIZE);
@@ -92,11 +91,11 @@ int main(int argc, char *argv[]) {
   qarray_iter_loop(a2, 0, ASIZE, assigni, NULL);
 
   out = (int **)calloc(ASIZE, sizeof(int *));
-  assert(out);
+  test_check(out);
   for (i = 0; i < ASIZE; i++) {
     size_t j;
     out[i] = (int *)calloc(sizeof(int), ASIZE);
-    assert(out[i]);
+    test_check(out[i]);
     for (j = 0; j < ASIZE; j++) { out[i][j] = -1; }
   }
 
