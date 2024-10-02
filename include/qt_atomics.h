@@ -151,6 +151,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     }                                                                          \
     {                                                                          \
       pthread_condattr_t tmp_attr;                                             \
+      pthread_condattr_init(&tmp_attr);                                        \
       qassert(pthread_condattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), \
               0);                                                              \
       qassert(pthread_cond_init(&(c), &tmp_attr), 0);                          \
@@ -182,7 +183,8 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     t.tv_nsec = (n.tv_usec * 1000) + 500000000;                                \
     t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000) ? 1 : 0);                 \
     t.tv_nsec -= ((t.tv_nsec >= 1000000000) ? 1000000000 : 0);                 \
-    qassert(pthread_cond_timedwait(&(c), &(c##_lock), &t), 0);                 \
+    int val = pthread_cond_timedwait(&(c), &(c##_lock), &t);                   \
+    qassert(val == EINVAL || val == EPERM, 0);                                 \
   } while (0)
 #define QTHREAD_COND_WAIT_DUO(c, m)                                            \
   do {                                                                         \
