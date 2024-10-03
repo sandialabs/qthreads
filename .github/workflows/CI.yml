@@ -15,7 +15,7 @@ jobs:
       CC: gcc-${{ matrix.gcc_version }}
       CXX: g++-${{ matrix.gcc_version }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.gcc_version == '13' }}
       run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
     - name: install compiler
@@ -63,7 +63,7 @@ jobs:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++-${{ matrix.clang_version }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.clang_version == '16' || matrix.clang_version == '17' || matrix.clang_version == '18' }}
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
@@ -99,7 +99,7 @@ jobs:
       CC: icx
       CXX: icpx
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
@@ -141,7 +141,7 @@ jobs:
       CFLAGS: "-diag-disable=10441"
       CXXFLAGS: "-diag-disable=10441"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
@@ -180,7 +180,7 @@ jobs:
       CC: clang
       CXX: clang++
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
@@ -216,7 +216,7 @@ jobs:
     env:
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: install deps
       run: |
         brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
@@ -259,7 +259,7 @@ jobs:
       QTHREAD_STACK_SIZE: 2097152
       ASAN_OPTIONS: "check_initialization_order=1"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if:  ${{ ! matrix.use_libcxx }}
       run: |
         sudo apt-add-repository universe && break || sleep 1
@@ -304,7 +304,7 @@ jobs:
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: |
         sudo apt-add-repository universe && break || sleep 1
         sudo apt-get install gcc-14 g++-14
@@ -336,7 +336,7 @@ jobs:
       CC: 'clang-19'
       CXX: 'clang++-19'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: |
         sudo apt-add-repository universe && break || sleep 1
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
