@@ -42,16 +42,16 @@ struct _qt_threadqueue_node {
 typedef struct {
   /* The First Cacheline */
   void *_Atomic head;
-  uint8_t pad1[CACHELINE_WIDTH - sizeof(void*)];
+  uint8_t pad1[CACHELINE_WIDTH - sizeof(void *)];
   /* The Second Cacheline */
   void *_Atomic tail;
-  uint8_t pad2[CACHELINE_WIDTH - sizeof(void*)];
+  uint8_t pad2[CACHELINE_WIDTH - sizeof(void *)];
   /* The Third Cacheline */
   void *shadow_head;
   /* the following is for estimating a queue's "busy" level, and is not
    * guaranteed accurate (that would be a race condition) */
   saligned_t nemesis_advisory_queuelen;
-  uint8_t pad3[CACHELINE_WIDTH - sizeof(void*) - sizeof(saligned_t)];
+  uint8_t pad3[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t)];
 } NEMESIS_queue;
 
 struct _qt_threadqueue {
