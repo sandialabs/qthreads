@@ -344,6 +344,7 @@ jobs:
         sudo apt-get install clang-format-19
     - name: check formatting
       run: |
+        clang-format --version
         sh clang-format.sh
         git --no-pager diff
         if [[ $(git --no-pager diff) ]]; then echo "need to rerun clang-format"; exit 1; fi
