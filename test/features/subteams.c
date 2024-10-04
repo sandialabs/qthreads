@@ -2,7 +2,6 @@
 #include "config.h" /* for _GNU_SOURCE */
 #endif
 
-#include <assert.h>
 #include <stdio.h>
 
 #include "argparsing.h"
@@ -210,7 +209,7 @@ int main(int argc, char *argv[]) {
 
   iprintf("=== Test Subteams ===\n");
 
-  assert(qthread_initialize() == 0);
+  test_check(qthread_initialize() == 0);
 
   timer = qtimer_create();
 

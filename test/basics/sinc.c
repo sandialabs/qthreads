@@ -3,7 +3,6 @@
 #endif
 
 #include "argparsing.h"
-#include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/sinc.h>
 #include <stdio.h>
@@ -65,7 +64,7 @@ int main(int argc, char *argv[]) {
   size_t total = 0;
   size_t depth = 3;
 
-  assert(qthread_initialize() == 0);
+  test_check(qthread_initialize() == 0);
 
   CHECK_VERBOSE();
   NUMARG(depth, "TEST_DEPTH");

@@ -57,10 +57,6 @@ AC_ARG_ENABLE([asserts],
               [AS_HELP_STRING([--enable-asserts],
                               [adds sanity checks to most qthread functions])])
 
-AC_ARG_ENABLE([paranoia],
-              [AS_HELP_STRING([--enable-paranoia],
-                              [adds expensive sanity checks])])
-
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
                             [specify which topology interface to use. Supported
@@ -225,7 +221,6 @@ AC_CACHE_SAVE
 ## -------------------- ##
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
                [AC_MSG_ERROR([Qthreads requires a working pthreads implementation.])])
-AC_CHECK_FUNCS([pthread_yield])
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
@@ -368,12 +363,8 @@ AS_IF([test "x$enable_omp_affinity" = xyes],
       [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
       [enable_omp_affinity="no"])
 
-AS_IF([test "x$enable_paranoia" == "xyes"],
-      [AC_DEFINE([QTHREAD_PARANOIA], [1], [expensive sanity checks])
-       enable_asserts=yes])
-
 AS_IF([test "x$enable_asserts" != "xyes"],
-      [AC_DEFINE([QTHREAD_NO_ASSERTS], [1], [removes sanity checks from most qthread functions])
+      [AC_DEFINE([NDEBUG], [1], [removes sanity checks from most qthread functions])
        enable_asserts=no],
       [enable_asserts=yes])
 

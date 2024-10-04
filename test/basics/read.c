@@ -1,5 +1,4 @@
 #include "argparsing.h"
-#include <assert.h>
 #include <qthread/qthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +15,7 @@ static aligned_t reader(void *arg) {
   ret = read((int)(intptr_t)arg, buf, 5);
   iprintf("read '%s'\n", buf);
   iprintf("ret = %i\n", ret);
-  assert(ret == 5);
+  test_check(ret == 5);
   if (strncmp(buf, cfilename, 5)) {
     buf[5] = 0;
     fprintf(stderr, "Corrupt Read! '%s' != '%s'!\n", buf, cfilename);
@@ -42,20 +41,20 @@ int main(int argc, char *argv[]) {
   iprintf("filename = '%s'\n", filename);
   iprintf("fd = %i\n", fd);
   if (fd < 0) { perror("mkstemp failed"); }
-  assert(fd >= 0);
+  test_check(fd >= 0);
 
   ret = write(fd, cfilename, strlen(cfilename));
-  assert(ret == strlen(cfilename));
+  test_check(ret == strlen(cfilename));
 
   ret = (ssize_t)lseek(fd, 0, SEEK_SET);
-  assert(ret == 0);
+  test_check(ret == 0);
 
   reader((void *)(intptr_t)fd);
 
   ret = (ssize_t)lseek(fd, 0, SEEK_SET);
-  assert(ret == 0);
+  test_check(ret == 0);
 
-  assert(qthread_initialize() == 0);
+  test_check(qthread_initialize() == 0);
 
   CHECK_VERBOSE();
 

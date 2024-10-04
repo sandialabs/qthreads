@@ -2,7 +2,6 @@
 #include "config.h" /* for _GNU_SOURCE */
 #endif
 #include "argparsing.h"
-#include <assert.h>
 #include <qthread/qloop.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +14,7 @@ static void sum(size_t const startat, size_t const stopat, void *arg_) {
 }
 
 int main(int argc, char *argv[]) {
-  assert(qthread_initialize() == QTHREAD_SUCCESS);
+  test_check(qthread_initialize() == QTHREAD_SUCCESS);
   CHECK_VERBOSE();
   NUMARG(numincrs, "NUM_INCRS");
   // future_init(128);
@@ -29,7 +28,7 @@ int main(int argc, char *argv[]) {
             (unsigned long)threads,
             (unsigned long)numincrs);
   }
-  assert(threads == numincrs);
+  test_check(threads == numincrs);
 
   return 0;
 }

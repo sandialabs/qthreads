@@ -221,7 +221,7 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool) {
   {
     uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
     if (count_caches < pool->offset) {
-#if !defined(QTHREAD_NO_ASSERTS)
+#if !defined(NDEBUG)
       qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
       /* I don't fully understand why this is necessary. I *suspect* that
        * on thread 0, the initialization routine isn't happening
@@ -249,7 +249,7 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool) {
       count_caches = pool->offset;
       TLS_SET(pool_cache_count, count_caches);
     } else if (tc == NULL) {
-#if !defined(QTHREAD_NO_ASSERTS)
+#if !defined(NDEBUG)
       qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
       /* I don't fully understand why this is necessary. I *suspect* that
        * on thread 0, the initialization routine isn't happening

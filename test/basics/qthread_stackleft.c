@@ -2,7 +2,6 @@
 #include "config.h"
 #endif
 #include "argparsing.h"
-#include <assert.h>
 #include <qthread/qthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,7 +37,7 @@ static aligned_t alldone;
 static STACKLEFT_NOINLINE size_t thread2(size_t left, size_t depth) {
   size_t foo = qthread_stackleft();
   iprintf("leveli%i: %zu bytes left\n", (int)depth, foo);
-  assert(foo < left);
+  test_check(foo < left);
   if (depth < 5) { thread2(foo, depth + 1); }
   return 1;
 }
@@ -48,17 +47,17 @@ static QT_SKIP_THREAD_SANITIZER aligned_t thread(void *arg) {
   size_t foo = qthread_stackleft();
   iprintf("%zu bytes left\n", foo);
   thread2(foo, 2);
-  assert(qthread_lock(&x) == 0);
+  test_check(qthread_lock(&x) == 0);
   x++;
   if (x == target) { qthread_unlock(&alldone); }
-  assert(qthread_unlock(&x) == 0);
+  test_check(qthread_unlock(&x) == 0);
   return foo + me; /* to force them to be used */
 }
 
 int main(int argc, char *argv[]) {
   long int i;
 
-  assert(qthread_initialize() == 0);
+  test_check(qthread_initialize() == 0);
 
   NUMARG(target, "TEST_TARGET");
   CHECK_VERBOSE();
@@ -68,7 +67,7 @@ int main(int argc, char *argv[]) {
   for (i = 0; i < target; i++) {
     int res = qthread_fork(thread, NULL, NULL);
     if (res != 0) { printf("res = %i\n", res); }
-    assert(res == 0);
+    test_check(res == 0);
   }
 
   qthread_lock(&alldone);
