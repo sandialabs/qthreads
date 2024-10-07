@@ -97,7 +97,7 @@ static aligned_t test_async(void *args_) {
     }
   }
 
-  qthread_incr(&donecount, -1);
+  qthread_incr(&donecount, (aligned_t)-1);
 
   return 0;
 }

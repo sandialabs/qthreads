@@ -233,13 +233,14 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
       /* first, look for an exact match in width and find the proper depth */
       unsigned int maxdepth = hwloc_topology_get_depth(topology);
       unsigned int realdepth;
-      unsigned int fl_depth = -1; // first depth with #objs larger than nbsheps
+      unsigned int fl_depth =
+        (unsigned int)-1; // first depth with #objs larger than nbsheps
       for (realdepth = 0; realdepth < maxdepth && shep_depth == -1;
            ++realdepth) {
         unsigned int num = num_usable_by_depth(realdepth);
         if (num == *nbshepherds) {
           shep_depth = realdepth;
-        } else if ((num > *nbshepherds) && (fl_depth == -1)) {
+        } else if ((num > *nbshepherds) && (fl_depth == (unsigned int)-1)) {
           fl_depth = realdepth;
         }
       }
@@ -247,7 +248,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
       /* should we use the last _smaller_, or the first _larger_ ? */
       /* first option means overlapping but we can use all the cores */
       /* second option means no overlapping, but cores will go unused */
-      if ((shep_depth == -1) && (fl_depth != -1)) {
+      if ((shep_depth == -1) && (fl_depth != (unsigned int)-1)) {
         /* first larger then */
         shep_depth = fl_depth;
       }

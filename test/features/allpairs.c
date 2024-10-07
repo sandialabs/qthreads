@@ -49,8 +49,8 @@ static void printout(int *restrict * restrict out)
 
 static void
 mult(void const *inta_void, void const *intb_void, void *restrict out_void) {
-  int *const inta = (int *const)inta_void;
-  int *const intb = (int *const)intb_void;
+  int *const inta = (int *)inta_void;
+  int *const intb = (int *)intb_void;
   int *restrict out = out_void;
   test_check(*out == -1);
   *out = (*inta) * (*intb);

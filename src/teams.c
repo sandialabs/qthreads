@@ -112,7 +112,8 @@ void INTERNAL qt_internal_teamfinish(qt_team_t *team,
 
       FREE_TEAM(team);
 
-      qthread_internal_incr(&(qlib->team_count), &qlib->team_count_lock, -1);
+      qthread_internal_incr(
+        &(qlib->team_count), &qlib->team_count_lock, (aligned_t)-1);
     } else {
       // 1.2. This task is a subteam leader
       assert(team->sinc);
@@ -178,7 +179,8 @@ void INTERNAL qt_internal_teamfinish(qt_team_t *team,
 
       FREE_TEAM(team);
 
-      qthread_internal_incr(&(qlib->team_count), &qlib->team_count_lock, -1);
+      qthread_internal_incr(
+        &(qlib->team_count), &qlib->team_count_lock, (aligned_t)-1);
     }
 
   } else {

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-unsigned int const ITER = 100;
+#define ITER 100ull
 
 static int dcmp(void const *a, void const *b) {
   if (*(double *)a > *(double *)b) {

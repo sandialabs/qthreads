@@ -159,7 +159,7 @@ qthread_disable_shepherd(qthread_shepherd_id_t const shep) { /*{{{ */
     return QTHREAD_NOT_ALLOWED;
   }
   qthread_internal_incr(
-    &(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), -1);
+    &(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), (aligned_t)-1);
   (void)QT_CAS(qlib->shepherds[shep].active, 1, 0);
   return QTHREAD_SUCCESS;
 } /*}}} */

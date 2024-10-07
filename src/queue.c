@@ -110,7 +110,7 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q) {
       break;
     case NEMESIS_LENGTH:
       t = qthread_queue_internal_NEMESIS_dequeue(&q->q.nemesis);
-      qthread_incr(&q->q.nemesis.length, -1);
+      qthread_incr(&q->q.nemesis.length, (aligned_t)-1);
       break;
     case CAPPED: t = qthread_queue_internal_capped_dequeue(&q->q.capped); break;
     default: QTHREAD_TRAP();
@@ -284,7 +284,7 @@ void INTERNAL qthread_queue_internal_capped_enqueue(qthread_queue_capped_t *q,
   offset = qthread_incr(&q->membercount, 1);
   qassert_retvoid(offset >= q->maxmembers);
   q->members[offset] = t;
-  qthread_incr(&q->busy, -1);
+  qthread_incr(&q->busy, (aligned_t)-1);
 }
 
 qthread_t INTERNAL *

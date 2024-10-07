@@ -422,7 +422,7 @@ void qarray_destroy(qarray *a) { /*{{{ */
         qthread_incr(
           &chunk_distribution_tracker[qarray_internal_segment_shep_read(
             a, segmenthead)],
-          -1);
+          (aligned_t)-1);
       }
       break;
     }
@@ -435,14 +435,14 @@ void qarray_destroy(qarray *a) { /*{{{ */
       for (segment = 0; segment < segment_count; segment++) {
         qthread_incr(&chunk_distribution_tracker[qarray_internal_shepof_segidx(
                        a, segment)],
-                     -1);
+                     (aligned_t)-1);
       }
       break;
     }
     case ALL_SAME:
       qthread_incr(&chunk_distribution_tracker[a->dist_specific.dist_shep],
-                   -1 * (a->count / a->segment_size +
-                         ((a->count % a->segment_size) ? 1 : 0)));
+                   ((aligned_t)-1) * (a->count / a->segment_size +
+                                      ((a->count % a->segment_size) ? 1 : 0)));
       break;
   }
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
@@ -1202,7 +1202,7 @@ void qarray_set_shepof(qarray *a,
 #endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
         qthread_incr(&chunk_distribution_tracker[shep], segment_count);
         qthread_incr(&chunk_distribution_tracker[a->dist_specific.dist_shep],
-                     -1 * segment_count);
+                     ((aligned_t)-1) * segment_count);
         a->dist_specific.dist_shep = shep;
       }
       return;
@@ -1223,7 +1223,7 @@ void qarray_set_shepof(qarray *a,
         }
 #endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
         qthread_incr(&chunk_distribution_tracker[shep], 1);
-        qthread_incr(&chunk_distribution_tracker[cur_shep], -1);
+        qthread_incr(&chunk_distribution_tracker[cur_shep], (aligned_t)-1);
         qarray_internal_segment_shep_write(a, seghead, shep);
       }
     }

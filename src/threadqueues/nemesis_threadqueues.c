@@ -121,7 +121,7 @@ qt_internal_NEMESIS_dequeue(NEMESIS_queue *q) { /*{{{ */
     atomic_store_explicit(&q->head, NULL, memory_order_relaxed);
   }
 
-  qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
+  qt_threadqueue_node_t *const retval = (void *)(q->shadow_head);
 
   if ((retval != NULL) && (retval != (void *)1)) {
     struct _qt_threadqueue_node *next_loc =
@@ -155,7 +155,7 @@ qt_internal_NEMESIS_dequeue_st(NEMESIS_queue *q) { /*{{{ */
     atomic_store_explicit(&q->head, NULL, memory_order_relaxed);
   }
 
-  qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
+  qt_threadqueue_node_t *const retval = (void *)(q->shadow_head);
 
   if ((retval != NULL) && (retval != (void *)1)) {
     void *retval_next_tmp =
@@ -180,7 +180,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{ */
     if (node) {
       qthread_t *retval = node->thread;
       assert(atomic_load_explicit(&node->next, memory_order_relaxed) == NULL);
-      (void)qthread_incr(&(q->advisory_queuelen), -1);
+      (void)qthread_incr(&(q->advisory_queuelen), (aligned_t)-1);
       FREE_TQNODE(node);
       qthread_thread_free(retval);
     } else {
@@ -297,7 +297,7 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
   }
   assert(node);
   assert(atomic_load_explicit(&node->next, memory_order_relaxed) == NULL);
-  (void)qthread_incr(&(q->advisory_queuelen), -1);
+  (void)qthread_incr(&(q->advisory_queuelen), (aligned_t)-1);
   retval = node->thread;
   FREE_TQNODE(node);
   return retval;

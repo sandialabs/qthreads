@@ -292,7 +292,7 @@ void API_FUNC qt_sinc_submit(qt_sinc_t *restrict sinc_,
   }
 
   // Update counter
-  qt_sinc_count_t count = qthread_incr(&sinc->counter, -1);
+  qt_sinc_count_t count = qthread_incr(&sinc->counter, (aligned_t)-1);
   assert(count > 0);
   if (1 == count) { // This is the final submit
     qt_sinc_internal_collate(sinc_);
