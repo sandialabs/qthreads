@@ -1294,7 +1294,7 @@ size_t API_FUNC qthread_stackleft(void) { /*{{{ */
   qthread_t const *f = qthread_internal_self();
 
   if ((f != NULL) && (f->rdata->stack != NULL)) {
-#ifdef __INTEL_COMPILER
+#if defined(__INTEL_COMPILER)
     size_t current = (size_t)&f;
 #else
     size_t current = (size_t)__builtin_frame_address(0);
