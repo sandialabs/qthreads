@@ -2,6 +2,12 @@ name: CI
 
 on: [push, pull_request]
 
+# Cancel the current workflow if a newer commit gets pushed to the
+# branch or PR that triggered it.
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   linux-gcc:
     runs-on: ubuntu-22.04
