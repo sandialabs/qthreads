@@ -391,6 +391,54 @@ int INTERNAL qt_hash_remove_locked(qt_hash h, qt_key_t const key) { /*{{{*/
   return 1;
 } /*}}}*/
 
+int INTERNAL qt_hash_pop(void **val, qt_hash h, qt_key_t const key) { /*{{{*/
+  int ret;
+
+  assert(h);
+  if (h->lock) { QTHREAD_FASTLOCK_LOCK(h->lock); }
+  ret = qt_hash_pop_locked(val, h, key);
+  if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
+  return ret;
+} /*}}}*/
+
+int INTERNAL qt_hash_pop_locked(void **val,
+                                qt_hash h,
+                                qt_key_t const key) { /*{{{*/
+  hash_entry *p;
+  void **value;
+
+  assert(h);
+  if ((key == KEY_DELETED) || (key == KEY_NULL)) {
+    if (h->has_key[(uintptr_t)key] == 0) {
+      *val = NULL;
+      return 0;
+    } else {
+      h->has_key[(uintptr_t)key] = 0;
+      h->value[(uintptr_t)key] = NULL;
+    }
+    *val = NULL;
+    return 1;
+  }
+  value = qt_hash_internal_find(h, key);
+  if (value == NULL) {
+    *val = NULL;
+    return 0;
+  }
+  *val = atomic_load_explicit((void *_Atomic *)value, memory_order_relaxed);
+  p = (hash_entry *)(value - 1); // sneaky way to recover the hash_entry ptr
+  atomic_store_explicit(&p->key, KEY_DELETED, memory_order_relaxed);
+  size_t deletes_loc =
+    atomic_fetch_add_explicit(&h->deletes, 1u, memory_order_relaxed) + 1u;
+  size_t population_loc =
+    atomic_fetch_sub_explicit(&h->population, 1u, memory_order_relaxed) - 1u;
+  if (deletes_loc + population_loc >= h->tidy_up_size) {
+    brehash(h, h->num_entries);
+  } else if (h->population < h->shrink_size) {
+    brehash(h, h->num_entries / 2);
+  }
+  return 1;
+} /*}}}*/
+
 void INTERNAL *qt_hash_get(qt_hash h, qt_key_t const key) { /*{{{*/
   void *ret;
 
