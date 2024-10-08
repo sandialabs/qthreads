@@ -24,6 +24,7 @@ TESTS = \
 		qthread_stackleft \
 		qtimer \
 		qalloc \
+		queue \
 		arbitrary_blocking_operation \
 		sinc_null \
 		sinc_workers \
@@ -107,7 +108,7 @@ qthread_timer_wait_SOURCES = qthread_timer_wait.c
 
 qtimer_SOURCES = qtimer.c
 
-#queue_SOURCES = queue.c
+queue_SOURCES = queue.c
 
 qthread_fork_precond_SOURCES = qthread_fork_precond.c
 

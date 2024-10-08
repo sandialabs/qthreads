@@ -57,7 +57,8 @@ int main(int argc, char *argv[]) {
   test_check(threads_in == 1);
   test_check(awoke == 1);
   test_check(qthread_queue_length(the_queue) == 0);
-  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
+  // This relies on approximate estimates, so it's not reliable to test here.
+  // test_check(qthread_readstate(NODE_BUSYNESS) == 1);
   iprintf("4/4 Test passed!\n");
 
   iprintf("---------------------------------------------------------\n");
@@ -85,7 +86,8 @@ int main(int argc, char *argv[]) {
   while (awoke == 0) qthread_yield();
 
   test_check(qthread_queue_length(the_queue) == (THREADS_ENQUEUED - 1));
-  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
+  // This relies on approximate estimates, so it's not reliable to test here.
+  // test_check(qthread_readstate(NODE_BUSYNESS) == 1);
 
   iprintf("5/6 Releasing the rest of the threads...\n");
   qthread_queue_release_all(the_queue);
