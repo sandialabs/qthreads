@@ -11,9 +11,14 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
+// The structure of this test is fairly trivial so we have to use
+// various compiler-specific stuff to prevent TCO from kicking in
+// and preventing us from testing that the stack behaves as expected.
 #ifdef __clang__
 #define STACKLEFT_NOINLINE __attribute__((optnone))
-#elif __GNUC__
+#elif defined(__NVCOMPILER)
+#define STACKLEFT_NOINLINE __attribute__((noinline))
+#elif defined(__GNUC__)
 #define STACKLEFT_NOINLINE __attribute__((optimize(0)))
 #else
 #define STACKLEFT_NOINLINE
@@ -36,6 +41,12 @@ static aligned_t alldone;
 
 static STACKLEFT_NOINLINE size_t thread2(size_t left, size_t depth) {
   size_t foo = qthread_stackleft();
+
+#if defined(__NVCOMPILER)
+  // nvc doesn't currently support enough attributes/pragmas to prevent TCO
+  // here. This still works though.
+  asm volatile("" : : "g"(&depth) : "memory");
+#endif
   iprintf("leveli%i: %zu bytes left\n", (int)depth, foo);
   test_check(foo < left);
   if (depth < 5) { thread2(foo, depth + 1); }

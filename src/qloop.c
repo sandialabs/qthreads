@@ -1017,7 +1017,7 @@ static aligned_t qqloop_wrapper(void *arg_void) { /*{{{*/
       if (!qthread_shep_ok()) {
         /* my shepherd has been disabled while I was running */
         safeexit = 0;
-        qthread_incr(&(stat->activesheps), -1);
+        qthread_incr(&(stat->activesheps), (aligned_t)-1);
         break;
       }
     } while (get_iters(iq, stat, &range));
@@ -1131,7 +1131,7 @@ void API_FUNC qt_loop_queue_addworker(
   if (loop->stat.donecount == 0) {
     qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + shep, NULL, shep);
   } else {
-    qthread_incr(&(loop->stat.activesheps), -1);
+    qthread_incr(&(loop->stat.activesheps), (aligned_t)-1);
   }
 } /*}}}*/
 

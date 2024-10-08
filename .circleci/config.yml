@@ -137,6 +137,45 @@ jobs:
               timeout --foreground -k 10s 4m make check
           no_output_timeout: 60s
 
+  nvc:
+    parameters:
+      worker_type:
+        type: string
+      scheduler:
+        type: string
+      topology:
+        type: string
+    machine:
+      image: ubuntu-2204:2024.04.4
+    resource_class: << parameters.worker_type >>
+    environment:
+      CC: nvc
+      CXX: nvc++
+    steps:
+      - checkout
+      - run: |
+          curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
+          export MACHINE_TYPE=`uname -m`
+          if [ ${MACHINE_TYPE} == 'x86_64' ]; then echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list; fi
+          if [ ${MACHINE_TYPE} == 'aarch64' ]; then echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/arm64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list; fi
+          sudo apt-get update -y
+          sudo apt-get install -y nvhpc-24-9
+          sudo apt-get install -y autoconf automake libtool
+          sudo apt-get install -y hwloc libhwloc-dev
+      - run: |
+          export MACHINE_TYPE=`uname -m`
+          if [ ${MACHINE_TYPE} == 'x86_64' ]; then export PATH="$PATH:/opt/nvidia/hpc_sdk/Linux_x86_64/24.9/compilers/bin"; fi
+          if [ ${MACHINE_TYPE} == 'aarch64' ]; then export PATH="$PATH:/opt/nvidia/hpc_sdk/Linux_aarch64/24.9/compilers/bin"; fi
+          nvc --version
+          ./autogen.sh
+          ./configure --enable-picky --disable-fastcontext --with-scheduler=<< parameters.scheduler >> -with-topology=<< parameters.topology >>
+          make -j2
+          make tests -j2
+      - run:
+          command: |
+              timeout --foreground -k 10s 4m make check
+          no_output_timeout: 60s
+
   musl:
     parameters:
       worker_type:
@@ -183,6 +222,12 @@ workflows:
       - arm_acfl:
           matrix:
             parameters:
+              scheduler: [nemesis, sherwood, distrib]
+              topology: ['no', binders, hwloc]
+      - nvc:
+          matrix:
+            parameters:
+              worker_type: [medium, arm.medium]
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
       - musl:

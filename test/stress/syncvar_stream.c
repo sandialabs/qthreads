@@ -33,8 +33,10 @@ static aligned_t producer(void *arg) {
     qthread_syncvar_writeEF_const(&buff[buffInd], i);
     iprintf("producer wrote value #%u\n", i);
   }
-  qthread_syncvar_writeEF_const(&buff[numItems % bufferSize], INT64TOINT60(-1));
-  iprintf("producer wrote terminus value #%" PRIu64 "\n", INT64TOINT60(-1));
+  qthread_syncvar_writeEF_const(&buff[numItems % bufferSize],
+                                INT64TOINT60((aligned_t)-1));
+  iprintf("producer wrote terminus value #%" PRIu64 "\n",
+          INT64TOINT60((aligned_t)-1));
 
   return 0;
 }

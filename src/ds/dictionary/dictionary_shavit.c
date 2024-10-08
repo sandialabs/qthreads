@@ -386,7 +386,7 @@ static inline int qt_hash_remove(qt_hash h, qt_key_t const key) {
                          h->op_cleanup)) {
     return 0;
   }
-  qthread_incr(&h->count, -1);
+  qthread_incr(&h->count, (aligned_t)-1);
   return 1;
 }
 

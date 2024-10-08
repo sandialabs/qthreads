@@ -694,7 +694,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   /* initialize the shepherds as having no affinity */
   for (i = 0; i < nshepherds; i++) {
-    qlib->shepherds[i].node = -1;
+    qlib->shepherds[i].node = UINT32_MAX;
     qlib->shepherds[i].shep_dists = NULL;
     qlib->shepherds[i].sorted_sheplist = NULL;
     qlib->shepherds[i].workers =
@@ -1287,14 +1287,14 @@ API_FUNC void *qthread_tos(void) {
 API_FUNC void *qthread_bos(void) {
   qthread_t const *f = qthread_internal_self();
 
-  return f->rdata->stack + qlib->qthread_stack_size;
+  return (void *)((char *)f->rdata->stack + qlib->qthread_stack_size);
 }
 
 size_t API_FUNC qthread_stackleft(void) { /*{{{ */
   qthread_t const *f = qthread_internal_self();
 
   if ((f != NULL) && (f->rdata->stack != NULL)) {
-#ifdef __INTEL_COMPILER
+#if defined(__INTEL_COMPILER)
     size_t current = (size_t)&f;
 #else
     size_t current = (size_t)__builtin_frame_address(0);
