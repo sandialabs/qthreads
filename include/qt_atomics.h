@@ -175,6 +175,18 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     qassert(pthread_cond_destroy(&(c)), 0);                                    \
     qassert(pthread_mutex_destroy(&(c##_lock)), 0);                            \
   } while (0)
+#ifdef NDEBUG
+#define QTHREAD_COND_WAIT(c)                                                   \
+  do {                                                                         \
+    struct timespec t;                                                         \
+    struct timeval n;                                                          \
+    gettimeofday(&n, NULL);                                                    \
+    t.tv_nsec = (n.tv_usec * 1000) + 500000000;                                \
+    t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000) ? 1 : 0);                 \
+    t.tv_nsec -= ((t.tv_nsec >= 1000000000) ? 1000000000 : 0);                 \
+    pthread_cond_timedwait(&(c), &(c##_lock), &t);                             \
+  } while (0)
+#else
 #define QTHREAD_COND_WAIT(c)                                                   \
   do {                                                                         \
     struct timespec t;                                                         \
@@ -186,6 +198,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     int val = pthread_cond_timedwait(&(c), &(c##_lock), &t);                   \
     assert(!(val == EINVAL || val == EPERM));                                  \
   } while (0)
+#endif
 #define QTHREAD_COND_WAIT_DUO(c, m)                                            \
   do {                                                                         \
     struct timespec t;                                                         \
