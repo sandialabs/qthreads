@@ -184,7 +184,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000) ? 1 : 0);                 \
     t.tv_nsec -= ((t.tv_nsec >= 1000000000) ? 1000000000 : 0);                 \
     int val = pthread_cond_timedwait(&(c), &(c##_lock), &t);                   \
-    qassert(val == EINVAL || val == EPERM, 0);                                 \
+    assert(!(val == EINVAL || val == EPERM));                                  \
   } while (0)
 #define QTHREAD_COND_WAIT_DUO(c, m)                                            \
   do {                                                                         \
