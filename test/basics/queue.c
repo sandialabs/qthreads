@@ -28,36 +28,36 @@ int main(int argc, char *argv[]) {
   NUMARG(THREADS_ENQUEUED, "THREADS_ENQUEUED");
 
   status = qthread_initialize();
-  assert(status == QTHREAD_SUCCESS);
+  test_check(status == QTHREAD_SUCCESS);
 
   iprintf("%i shepherds...\n", qthread_num_shepherds());
   iprintf("  %i threads total\n", qthread_num_workers());
 
   iprintf("Creating the queue...\n");
   the_queue = qthread_queue_create(QTHREAD_QUEUE_MULTI_JOIN_LENGTH, 0);
-  assert(the_queue);
+  test_check(the_queue);
 
   iprintf("---------------------------------------------------------\n");
   iprintf("\tSINGLE THREAD TEST\n\n");
 
   iprintf("1/4 Spawning thread to be queued...\n");
   status = qthread_fork(tobequeued, NULL, &return_value);
-  assert(status == QTHREAD_SUCCESS);
+  test_check(status == QTHREAD_SUCCESS);
 
   iprintf("2/4 Waiting for thread to queue itself...\n");
   while (qthread_queue_length(the_queue) != 1) qthread_yield();
-  assert(qthread_readstate(NODE_BUSYNESS) == 1);
+  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
 
   iprintf("3/4 Releasing the queue...\n");
   qthread_queue_release_all(the_queue);
 
   ret = qthread_readFF(NULL, &return_value);
-  assert(ret == QTHREAD_SUCCESS);
+  test_check(ret == QTHREAD_SUCCESS);
 
-  assert(threads_in == 1);
-  assert(awoke == 1);
-  assert(qthread_queue_length(the_queue) == 0);
-  assert(qthread_readstate(NODE_BUSYNESS) == 1);
+  test_check(threads_in == 1);
+  test_check(awoke == 1);
+  test_check(qthread_queue_length(the_queue) == 0);
+  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
   iprintf("4/4 Test passed!\n");
 
   iprintf("---------------------------------------------------------\n");
@@ -69,14 +69,14 @@ int main(int argc, char *argv[]) {
   iprintf("1/6 Spawning %u threads to be queued...\n", THREADS_ENQUEUED);
   for (int i = 0; i < THREADS_ENQUEUED; i++) {
     status = qthread_fork(tobequeued, NULL, retvals + i);
-    assert(status == QTHREAD_SUCCESS);
+    test_check(status == QTHREAD_SUCCESS);
   }
 
   iprintf("2/6 Waiting for %u threads to queue themselves...\n",
           THREADS_ENQUEUED);
   while (qthread_queue_length(the_queue) != THREADS_ENQUEUED) qthread_yield();
-  assert(threads_in == THREADS_ENQUEUED);
-  assert(qthread_readstate(NODE_BUSYNESS) == 1);
+  test_check(threads_in == THREADS_ENQUEUED);
+  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
 
   iprintf("3/6 Releasing a single thread...\n");
   qthread_queue_release_one(the_queue);
@@ -84,19 +84,19 @@ int main(int argc, char *argv[]) {
   iprintf("4/6 Waiting for that thread to exit\n");
   while (awoke == 0) qthread_yield();
 
-  assert(qthread_queue_length(the_queue) == (THREADS_ENQUEUED - 1));
-  assert(qthread_readstate(NODE_BUSYNESS) == 1);
+  test_check(qthread_queue_length(the_queue) == (THREADS_ENQUEUED - 1));
+  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
 
   iprintf("5/6 Releasing the rest of the threads...\n");
   qthread_queue_release_all(the_queue);
 
   for (int i = 0; i < THREADS_ENQUEUED; i++) {
     ret = qthread_readFF(NULL, retvals + i);
-    assert(ret == QTHREAD_SUCCESS);
+    test_check(ret == QTHREAD_SUCCESS);
   }
 
-  assert(qthread_queue_length(the_queue) == 0);
-  assert(qthread_readstate(NODE_BUSYNESS) == 1);
+  test_check(qthread_queue_length(the_queue) == 0);
+  test_check(qthread_readstate(NODE_BUSYNESS) == 1);
 
   iprintf("6/6 Test passed!\n");
   free(retvals);
