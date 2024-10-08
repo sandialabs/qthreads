@@ -21,13 +21,6 @@ AC_DEFUN([QTHREAD_CHECK_HWLOC], [
               [AS_HELP_STRING([--disable-hwloc-has-distance],
                           [Disable hwloc distance support])])
 
-  AC_ARG_WITH([hwloc-get-topology-function],
-              [AS_HELP_STRING([--with-hwloc-get-topology-function=[[name]]],
-                        [specify function to get hwloc topology (otherwise uses hwloc_topology_init and hwloc_topology_load)])])
-
-  AS_IF([test "x$with_hwloc_get_topology_function" != x],
-    AC_DEFINE_UNQUOTED([HWLOC_GET_TOPOLOGY_FUNCTION],[$with_hwloc_get_topology_function],
-      [Define to specify function that returns hwloc topology]))
   hwloc_saved_CPPFLAGS="$CPPFLAGS"
   hwloc_saved_LDFLAGS="$LDFLAGS"
   AS_IF([test "x$with_hwloc" != x],
