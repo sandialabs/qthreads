@@ -1202,6 +1202,8 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
   qlib = NULL;
   TLS_DELETE(shepherd_structs);
 
+  qt_topology_deinit();
+
 #ifndef NDEBUG
   MACHINE_FENCE;
   qthread_library_initialized = 0;

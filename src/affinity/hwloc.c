@@ -261,6 +261,8 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
   }
 } /*}}} */
 
+void INTERNAL qt_affinity_deinit(void) {}
+
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
 void INTERNAL qt_affinity_mem_tonode(void *addr,
                                      size_t bytes,

@@ -42,6 +42,8 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t *nshepherds,
                                qthread_worker_id_t *nworkerspershep,
                                size_t *hw_par);
 
+void INTERNAL qt_topology_deinit(void);
+
 /**
  * qt_affinity_init() - initialize affinity layer
  * @nbshepherds:    User hint for number of shepherds to use.
@@ -54,6 +56,9 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t *nshepherds,
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t *nbworkers,
                                size_t *hw_par);
+
+void INTERNAL qt_affinity_deinit(void);
+
 /**
  * qt_affinity_set() - bind a worker to a set of resources
  * @me:             The worker to bind.
