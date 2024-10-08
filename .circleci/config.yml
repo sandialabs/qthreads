@@ -146,7 +146,7 @@ jobs:
       topology:
         type: string
     machine:
-      image: ubuntu-2204:2024.04.4
+      image: ubuntu-2404:edge
     resource_class: << parameters.worker_type >>
     environment:
       CC: nvc
