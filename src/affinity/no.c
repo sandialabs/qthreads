@@ -15,6 +15,8 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
   if (*nbworkers == 0) { *nbworkers = 1; }
 } /*}}} */
 
+void INTERNAL qt_affinity_deinit(void) {}
+
 void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw)) {
 }
 

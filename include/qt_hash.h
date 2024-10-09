@@ -77,6 +77,9 @@ int INTERNAL qt_hash_remove(qt_hash h, qt_key_t const key);
  */
 int INTERNAL qt_hash_remove_locked(qt_hash h, qt_key_t const key);
 
+int INTERNAL qt_hash_pop(void **val, qt_hash h, qt_key_t const key);
+int INTERNAL qt_hash_pop_locked(void **val, qt_hash h, qt_key_t const key);
+
 /*!
  * @fn qt_hash_get(qt_hash        h,
  *                 const qt_key_t key)

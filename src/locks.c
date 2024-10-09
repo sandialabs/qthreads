@@ -49,9 +49,11 @@ static int lock_hashmap_put(aligned_t const *key, qthread_spinlock_t *val) {
 
 static int lock_hashmap_remove(aligned_t const *key) {
   if (!qthread_spinlock_buckets) return QTHREAD_OPFAIL;
-
-  if (qt_hash_remove(qthread_spinlock_buckets[LOCKBIN(key)], key))
+  void *val = NULL;
+  if (qt_hash_pop(&val, qthread_spinlock_buckets[LOCKBIN(key)], key)) {
+    if (val) qt_free(val);
     return QTHREAD_SUCCESS;
+  }
 
   return QTHREAD_OPFAIL;
 }
