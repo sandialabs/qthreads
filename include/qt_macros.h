@@ -22,6 +22,12 @@
 #define Q_UNUSED(x) x
 #endif
 
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#define QTHREAD_MSAN
+#endif
+#endif
+
 #define TLS_DECL(type, name) thread_local type name
 #define TLS_DECL_INIT(type, name) thread_local type name = 0
 #define TLS_GET(name) name
