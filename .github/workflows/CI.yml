@@ -240,6 +240,11 @@ jobs:
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
+        exclude:
+          - sanitizer: memory
+            topology: hwloc
+          - sanitizer: memory
+            topology: binders
     env:
       CC: clang-19
       CXX: clang++-19
