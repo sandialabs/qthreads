@@ -27,7 +27,11 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   tos = (unsigned long *)ucp->uc_stack.ss_sp +
         ucp->uc_stack.ss_size / sizeof(unsigned long);
   sp = tos - 16;
+#if defined __BIG_ENDIAN__ || defined _BIG_ENDIAN
+  ucp->mc.pc = *(long*)func;
+#else
   ucp->mc.pc = (long)func;
+#endif
   ucp->mc.sp = (long)sp;
   va_start(arg, argc);
   ucp->mc.r3 = va_arg(arg, long);
