@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "qpool_alloc() failed!\n");
     exit(-1);
   }
-  iprintf("allocated: %p (%lu)\n", (void *)rets, (unsigned long)*rets);
+  iprintf("allocated: %p\n", (void *)rets);
   *rets = 1;
   if (*rets != 1) {
     fprintf(stderr, "assigning a value to the allocated memory failed!\n");

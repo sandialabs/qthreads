@@ -88,6 +88,7 @@ static qt_threadqueue_t *alloc_threadqueue(void) {
   t->t = qt_malloc(sizeof(qt_threadqueue_internal) * t->num_queues);
   t->w_inds =
     qt_calloc(qlib->nshepherds * qlib->nworkerspershep, sizeof(w_ind));
+  atomic_store_explicit(&t->numwaiters, 0ull, memory_order_relaxed);
   return t;
 }
 
