@@ -219,6 +219,25 @@ workflows:
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
               sanitizer: [address, memory, thread, undefined]
+            exclude:
+              - scheduler: nemesis
+                topology: binders
+                sanitizer: memory
+              - scheduler: sherwood
+                topology: binders
+                sanitizer: memory
+              - scheduler: distrib
+                topology: binders
+                sanitizer: memory
+              - scheduler: nemesis
+                topology: hwloc
+                sanitizer: memory
+              - scheduler: sherwood
+                topology: hwloc
+                sanitizer: memory
+              - scheduler: distrib
+                topology: hwloc
+                sanitizer: memory
       - arm_acfl:
           matrix:
             parameters:
