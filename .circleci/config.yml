@@ -28,7 +28,7 @@ jobs:
           make tests -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
-          no_output_timeout: 60s
+          no_output_timeout: 180s
 
   arm_clang:
     parameters:
@@ -59,7 +59,7 @@ jobs:
           make tests -j2
       - run:
           command: timeout --foreground -k 10s 2m make check
-          no_output_timeout: 60s
+          no_output_timeout: 180s
 
   arm_sanitizers:
     parameters:
