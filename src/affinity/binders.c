@@ -184,7 +184,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
   }
 }
 
-void INTERNAL qt_affinity_deinit() {
+void INTERNAL qt_affinity_deinit(void) {
   if (sheps.binds) {
     for (int i = 0; i < sheps.num; i++) { hwloc_bitmap_free(sheps.binds[i]); }
     qt_free(sheps.binds);
