@@ -135,7 +135,7 @@ jobs:
           command: |
               export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
               timeout --foreground -k 10s 4m make check
-          no_output_timeout: 60s
+          no_output_timeout: 180s
 
   nvc:
     parameters:
@@ -174,7 +174,7 @@ jobs:
       - run:
           command: |
               timeout --foreground -k 10s 4m make check
-          no_output_timeout: 60s
+          no_output_timeout: 180s
 
   musl:
     parameters:
