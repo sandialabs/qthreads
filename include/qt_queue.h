@@ -20,7 +20,7 @@ typedef struct qthread_queue_NEMESIS_s {
   void *tail;
   uint8_t pad2[CACHELINE_WIDTH - sizeof(void *)];
   /* The Second Cacheline */
-  aligned_t length;
+  _Atomic aligned_t length;
   void *shadow_head;
   uint8_t pad3[CACHELINE_WIDTH - sizeof(void *) - sizeof(aligned_t)];
 } qthread_queue_NEMESIS_t;

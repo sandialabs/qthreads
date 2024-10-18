@@ -54,7 +54,8 @@ qthread_queue_t API_FUNC qthread_queue_create(uint8_t flags, aligned_t length) {
 aligned_t API_FUNC qthread_queue_length(qthread_queue_t q) {
   assert(q);
   switch (q->type) {
-    case NEMESIS_LENGTH: return q->q.nemesis.length;
+    case NEMESIS_LENGTH:
+      return atomic_load_explicit(&q->q.nemesis.length, memory_order_relaxed);
     case CAPPED: return q->q.capped.membercount;
     default: return 0;
   }
@@ -78,7 +79,8 @@ void INTERNAL qthread_queue_internal_enqueue(qthread_queue_t q, qthread_t *t) {
       break;
     case NEMESIS_LENGTH:
       qthread_queue_internal_NEMESIS_enqueue(&q->q.nemesis, t);
-      qthread_incr(&q->q.nemesis.length, 1);
+      atomic_fetch_add_explicit(
+        &q->q.nemesis.length, 1ull, memory_order_relaxed);
       break;
     case CAPPED: qthread_queue_internal_capped_enqueue(&q->q.capped, t); break;
     case MTS: QTHREAD_TRAP();
@@ -110,7 +112,8 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q) {
       break;
     case NEMESIS_LENGTH:
       t = qthread_queue_internal_NEMESIS_dequeue(&q->q.nemesis);
-      qthread_incr(&q->q.nemesis.length, (aligned_t)-1);
+      atomic_fetch_add_explicit(
+        &q->q.nemesis.length, (aligned_t)-1, memory_order_relaxed);
       break;
     case CAPPED: t = qthread_queue_internal_capped_dequeue(&q->q.capped); break;
     default: QTHREAD_TRAP();
@@ -142,13 +145,15 @@ int API_FUNC qthread_queue_release_all(qthread_queue_t q) {
       }
       break;
     case NEMESIS_LENGTH: {
-      aligned_t const count = q->q.nemesis.length;
+      aligned_t const count =
+        atomic_load_explicit(&q->q.nemesis.length, memory_order_relaxed);
       for (aligned_t c = 0; c < count; c++) {
         t = qthread_queue_internal_NEMESIS_dequeue(&q->q.nemesis);
         assert(t);
         if (t) { qthread_queue_internal_launch(t, shep); }
       }
-      qthread_incr(&q->q.nemesis.length, -count);
+      atomic_fetch_add_explicit(
+        &q->q.nemesis.length, -count, memory_order_relaxed);
       break;
     }
     case CAPPED: {
