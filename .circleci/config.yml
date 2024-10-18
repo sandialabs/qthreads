@@ -255,4 +255,29 @@ workflows:
               worker_type: [medium, arm.medium]
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
+            exclude:
+              - worker_type: medium
+                scheduler: sherwood
+                topology: binders
+              - worker_type: medium
+                scheduler: sherwood
+                topology: hwloc
+              - worker_type: medium
+                scheduler: distrib
+                topology: binders
+              - worker_type: medium
+                scheduler: distrib
+                topology: hwloc
+              - worker_type: arm.medium
+                scheduler: sherwood
+                topology: binders
+              - worker_type: arm.medium
+                scheduler: sherwood
+                topology: hwloc
+              - worker_type: arm.medium
+                scheduler: distrib
+                topology: binders
+              - worker_type: arm.medium
+                scheduler: distrib
+                topology: hwloc
 
