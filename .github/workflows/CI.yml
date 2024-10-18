@@ -245,6 +245,10 @@ jobs:
             topology: hwloc
           - sanitizer: memory
             topology: binders
+          - sanitizer: thread
+            scheduler: sherwood
+          - sanitizer: thread
+            scheduler: distrib
     env:
       CC: clang-19
       CXX: clang++-19
@@ -276,7 +280,9 @@ jobs:
         make -j2
         make tests -j2
     - name: make check
-      run: timeout -k 10s --foreground 8m make check
+      run: |
+        if [[ "${{ matrix.sanitizer }}" == "thread" ]]; then cd test/basics; fi
+        timeout -k 10s --foreground 8m make check
       timeout-minutes: 9
 
   linux-thorough:

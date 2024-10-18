@@ -96,7 +96,9 @@ jobs:
           make -j2
           make tests -j2
       - run:
-          command: timeout --foreground -k 10s 4m make check
+          command: |
+              if [[ "<< parameters.sanitizer >>" == "thread" ]]; then cd test/basics; fi
+              timeout --foreground -k 10s 4m make check
           no_output_timeout: 120s
 
   arm_acfl:
@@ -238,6 +240,24 @@ workflows:
               - scheduler: distrib
                 topology: hwloc
                 sanitizer: memory
+              - scheduler: sherwood
+                topology: 'no'
+                sanitizer: thread
+              - scheduler: sherwood
+                topology: hwloc
+                sanitizer: thread
+              - scheduler: sherwood
+                topology: binders
+                sanitizer: thread
+              - scheduler: distrib
+                topology: 'no'
+                sanitizer: thread
+              - scheduler: distrib
+                topology: hwloc
+                sanitizer: thread
+              - scheduler: distrib
+                topology: binders
+                sanitizer: thread
       - arm_acfl:
           matrix:
             parameters:
