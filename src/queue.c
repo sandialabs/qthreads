@@ -204,13 +204,16 @@ void INTERNAL qthread_queue_internal_nosync_enqueue(qthread_queue_nosync_t *q,
   assert(t);
 
   node->thread = t;
-  node->next = NULL;
-  if (q->tail == NULL) {
-    q->head = node;
+  atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
+  if (atomic_load_explicit(&q->tail, memory_order_relaxed) == NULL) {
+    atomic_store_explicit(&q->head, node, memory_order_relaxed);
   } else {
-    q->tail->next = node;
+    atomic_store_explicit(
+      &atomic_load_explicit(&q->tail, memory_order_relaxed)->next,
+      node,
+      memory_order_relaxed);
   }
-  q->tail = node;
+  atomic_store_explicit(&q->tail, node, memory_order_relaxed);
 }
 
 qthread_t INTERNAL *
@@ -220,9 +223,12 @@ qthread_queue_internal_nosync_dequeue(qthread_queue_nosync_t *q) {
 
   assert(q);
 
-  node = q->head;
+  node = atomic_load_explicit(&q->head, memory_order_relaxed);
   if (node) {
-    q->head = node->next;
+    atomic_store_explicit(
+      &q->head,
+      atomic_load_explicit(&node->next, memory_order_relaxed),
+      memory_order_relaxed);
     t = node->thread;
     FREE_TQNODE(node);
   }
@@ -236,37 +242,41 @@ void INTERNAL qthread_queue_internal_NEMESIS_enqueue(qthread_queue_NEMESIS_t *q,
   node = ALLOC_TQNODE();
   assert(node != NULL);
   node->thread = t;
-  node->next = NULL;
+  atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
 
   prev = qt_internal_atomic_swap_ptr((void **)&(q->tail), node);
   if (prev == NULL) {
-    q->head = node;
+    atomic_store_explicit(&q->head, node, memory_order_relaxed);
   } else {
-    prev->next = node;
+    atomic_store_explicit(&prev->next, node, memory_order_relaxed);
   }
 }
 
 qthread_t INTERNAL *
 qthread_queue_internal_NEMESIS_dequeue(qthread_queue_NEMESIS_t *q) {
   if (!q->shadow_head) {
-    if (!q->head) { return NULL; }
-    q->shadow_head = q->head;
-    q->head = NULL;
+    if (!atomic_load_explicit(&q->head, memory_order_relaxed)) { return NULL; }
+    q->shadow_head = atomic_load_explicit(&q->head, memory_order_relaxed);
+    atomic_store_explicit(&q->head, NULL, memory_order_relaxed);
   }
 
   qthread_queue_node_t *const dequeued = q->shadow_head;
   if (dequeued != NULL) {
-    if (dequeued->next != NULL) {
-      q->shadow_head = dequeued->next;
-      dequeued->next = NULL;
+    if (atomic_load_explicit(&dequeued->next, memory_order_relaxed) != NULL) {
+      q->shadow_head =
+        atomic_load_explicit(&dequeued->next, memory_order_relaxed);
+      atomic_store_explicit(&dequeued->next, NULL, memory_order_relaxed);
     } else {
       qthread_queue_node_t *old;
       q->shadow_head = NULL;
-      old = qthread_cas_ptr(&(q->tail), dequeued, NULL);
+      old = qthread_cas_ptr((void **)&(q->tail), dequeued, NULL);
       if (old != dequeued) {
-        while (dequeued->next == NULL) SPINLOCK_BODY();
-        q->shadow_head = dequeued->next;
-        dequeued->next = NULL;
+        while (atomic_load_explicit(&dequeued->next, memory_order_relaxed) ==
+               NULL)
+          SPINLOCK_BODY();
+        q->shadow_head =
+          atomic_load_explicit(&dequeued->next, memory_order_relaxed);
+        atomic_store_explicit(&dequeued->next, NULL, memory_order_relaxed);
       }
     }
     qthread_t *retval = dequeued->thread;
