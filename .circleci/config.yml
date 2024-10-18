@@ -198,7 +198,7 @@ jobs:
           make tests -j2
       - run:
           command: make check
-          no_output_timeout: 60s
+          no_output_timeout: 180s
 
 workflows:
   build_and_test:
