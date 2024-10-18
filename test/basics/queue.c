@@ -1,17 +1,20 @@
-#include "argparsing.h"
 #include <assert.h>
-#include <qthread/qthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-aligned_t threads_in = 0;
+#include "qthread/qthread.h"
+
+#include "argparsing.h"
+
+_Atomic aligned_t threads_in = 0;
 aligned_t awoke = 0;
 int THREADS_ENQUEUED = 100;
 
 qthread_queue_t the_queue;
 
 static aligned_t tobequeued(void *arg) {
-  qthread_incr(&threads_in, 1);
+  atomic_fetch_add_explicit(&threads_in, 1, memory_order_relaxed);
   // iprintf("\tOne thread about to join the queue...\n");
   qthread_queue_join(the_queue);
   // iprintf("\tAwoke from the queue! %p\n", qthread_retloc());
@@ -54,7 +57,7 @@ int main(int argc, char *argv[]) {
   ret = qthread_readFF(NULL, &return_value);
   test_check(ret == QTHREAD_SUCCESS);
 
-  test_check(threads_in == 1);
+  test_check(atomic_load_explicit(&threads_in, memory_order_relaxed) == 1);
   test_check(awoke == 1);
   test_check(qthread_queue_length(the_queue) == 0);
   // This relies on approximate estimates, so it's not reliable to test here.
@@ -64,7 +67,7 @@ int main(int argc, char *argv[]) {
   iprintf("---------------------------------------------------------\n");
   iprintf("\tMULTI THREAD TEST\n\n");
 
-  threads_in = 0;
+  atomic_store_explicit(&threads_in, 0, memory_order_relaxed);
   awoke = 0;
   aligned_t *retvals = malloc(sizeof(aligned_t) * THREADS_ENQUEUED);
   iprintf("1/6 Spawning %u threads to be queued...\n", THREADS_ENQUEUED);
@@ -76,7 +79,8 @@ int main(int argc, char *argv[]) {
   iprintf("2/6 Waiting for %u threads to queue themselves...\n",
           THREADS_ENQUEUED);
   while (qthread_queue_length(the_queue) != THREADS_ENQUEUED) qthread_yield();
-  test_check(threads_in == THREADS_ENQUEUED);
+  test_check(atomic_load_explicit(&threads_in, memory_order_relaxed) ==
+             THREADS_ENQUEUED);
   test_check(qthread_readstate(NODE_BUSYNESS) == 1);
 
   iprintf("3/6 Releasing a single thread...\n");
