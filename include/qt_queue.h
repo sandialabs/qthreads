@@ -16,12 +16,13 @@ typedef struct qthread_queue_node_s {
 typedef struct qthread_queue_NEMESIS_s {
   /* The First Cacheline */
   void *head;
+  uint8_t pad1[CACHELINE_WIDTH - sizeof(void *)];
   void *tail;
-  uint8_t pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
+  uint8_t pad2[CACHELINE_WIDTH - sizeof(void *)];
   /* The Second Cacheline */
   aligned_t length;
   void *shadow_head;
-  uint8_t pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(aligned_t)];
+  uint8_t pad3[CACHELINE_WIDTH - sizeof(void *) - sizeof(aligned_t)];
 } qthread_queue_NEMESIS_t;
 
 typedef struct qthread_queue_nosync_s {
