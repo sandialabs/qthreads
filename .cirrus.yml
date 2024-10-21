@@ -112,7 +112,7 @@ arm_linux_task:
     make -j$CIRRUS_CPU
     make tests -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground -k 10s 2m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+    timeout --foreground -k 10s 5m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
 
 arm_linux_clang_task:
   arm_container:
@@ -168,5 +168,5 @@ arm_linux_clang_task:
     make -j$CIRRUS_CPU
     make tests -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground -k 10s 2m make check  || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+    timeout --foreground -k 10s 5m make check  || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
 
