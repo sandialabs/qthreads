@@ -249,6 +249,10 @@ jobs:
             scheduler: sherwood
           - sanitizer: thread
             scheduler: distrib
+          - sanitizer: thread
+            topology: hwloc
+          - sanitizer: thread
+            topology: binders
     env:
       CC: clang-19
       CXX: clang++-19
