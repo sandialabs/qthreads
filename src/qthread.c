@@ -334,7 +334,7 @@ static void *qthread_master(void *arg) {
   qt_threadqueue_t *threadqueue;
   qt_threadqueue_private_t *localqueue = NULL;
   qthread_t *t;
-  qthread_t **current;
+  qthread_t *_Atomic *current;
   int done = 0;
 
   assert(me != NULL);
@@ -444,8 +444,9 @@ static void *qthread_master(void *arg) {
 #endif
         qthread_exec(t, &my_context);
 
-        t = *current;    // necessary for direct-swap sanity
-        *current = NULL; // neessary for "queue sanity"
+        t = *current; // necessary for direct-swap sanity
+        atomic_store_explicit(
+          current, NULL, memory_order_relaxed); // neessary for "queue sanity"
 
         /* now clean up, based on the thread's state */
         switch (atomic_load_explicit(&t->thread_state, memory_order_relaxed)) {
@@ -1340,7 +1341,8 @@ qthread_readstate(const enum introspective_state type) { /*{{{ */
         sum += qt_threadqueue_advisory_queuelen(sheps[s].ready);
         qthread_worker_t const *wkrs = sheps[s].workers;
         for (qthread_worker_id_t w = 0; w < qlib->nworkerspershep; w++) {
-          sum += (wkrs[w].current != NULL);
+          sum += (atomic_load_explicit(&wkrs[w].current,
+                                       memory_order_relaxed) != NULL);
         }
       }
       return sum;
@@ -1351,7 +1353,8 @@ qthread_readstate(const enum introspective_state type) { /*{{{ */
       for (qthread_shepherd_id_t s = 0; s < qlib->nshepherds; s++) {
         qthread_worker_t const *wkrs = sheps[s].workers;
         for (qthread_worker_id_t w = 0; w < qlib->nworkerspershep; w++) {
-          count += (wkrs[w].current != NULL);
+          count += (atomic_load_explicit(&wkrs[w].current,
+                                         memory_order_relaxed) != NULL);
         }
       }
       return count;
