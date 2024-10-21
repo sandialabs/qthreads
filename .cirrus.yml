@@ -45,7 +45,7 @@ osx_m1_task:
     # commented example for how to get a backtrace from CI usign lldb on OSX:
     #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
     #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
-    gtimeout --foreground 3m make check
+    gtimeout --foreground 3m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
 
 freebsd_task:
   freebsd_instance:
@@ -68,7 +68,7 @@ freebsd_task:
     make -j$CIRRUS_CPU
     make tests -j$CIRRUS_CPU
   test_script: |
-    gtimeout --foreground -k 10s 2m make check
+    gtimeout --foreground -k 10s 2m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
 
 arm_linux_task:
   arm_container:
@@ -112,7 +112,7 @@ arm_linux_task:
     make -j$CIRRUS_CPU
     make tests -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground -k 10s 2m make check
+    timeout --foreground -k 10s 2m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
 
 arm_linux_clang_task:
   arm_container:
@@ -168,5 +168,5 @@ arm_linux_clang_task:
     make -j$CIRRUS_CPU
     make tests -j$CIRRUS_CPU
   test_script: |
-    timeout --foreground -k 10s 2m make check
+    timeout --foreground -k 10s 2m make check  || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
 

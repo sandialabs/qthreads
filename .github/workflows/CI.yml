@@ -35,7 +35,7 @@ jobs:
         make -j2
         make tests -j2
     - name: make check
-      run: timeout -k 10s --foreground 3m make check
+      run: timeout -k 10s --foreground 3m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 4
 
   linux-clang:
@@ -77,7 +77,7 @@ jobs:
         make -j2
         make tests -j2
     - name: make check
-      run: timeout -k 10s --foreground 6m make check
+      run: timeout -k 10s --foreground 6m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 7
 
   linux-icx:
@@ -116,7 +116,7 @@ jobs:
     - name: make check
       run: |
         source /opt/intel/oneapi/setvars.sh
-        timeout -k 10s --foreground 6m make check
+        timeout -k 10s --foreground 6m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 7
 
   linux-icc:
@@ -157,7 +157,7 @@ jobs:
     - name: make check
       run: |
         source /opt/intel/oneapi/setvars.sh
-        timeout -k 10s --foreground 6m make check
+        timeout -k 10s --foreground 6m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 7
 
   linux-aocc:
@@ -192,7 +192,7 @@ jobs:
         make tests -j2
     - name: make check
       run: |
-        timeout -k 10s --foreground 6m make check
+        timeout -k 10s --foreground 6m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 7
 
   mac:
@@ -228,7 +228,7 @@ jobs:
         # commented example for how to get a backtrace from CI usign lldb on OSX:
         #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
         #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
-        gtimeout -k 10s --foreground 8m make check
+        gtimeout -k 10s --foreground 8m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 9
 
   sanitizers:
@@ -281,8 +281,9 @@ jobs:
         make tests -j2
     - name: make check
       run: |
+        export QTHREADS_DIR="$(pwd)"
         if [[ "${{ matrix.sanitizer }}" == "thread" ]]; then cd test/basics; fi
-        timeout -k 10s --foreground 8m make check
+        timeout -k 10s --foreground 8m make check || ( cd $QTHREADS_DIR && cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 9
 
   linux-thorough:
@@ -325,7 +326,7 @@ jobs:
         make -j2
         make tests -j2
     - name: make check
-      run: timeout -k 10s --foreground 6m make check
+      run: timeout -k 10s --foreground 6m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
       timeout-minutes: 7
 
   clang-format:

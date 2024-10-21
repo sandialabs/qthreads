@@ -27,7 +27,7 @@ jobs:
           make -j2
           make tests -j2
       - run:
-          command: timeout --foreground -k 10s 2m make check
+          command: timeout --foreground -k 10s 2m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
           no_output_timeout: 180s
 
   arm_clang:
@@ -58,7 +58,7 @@ jobs:
           make -j2
           make tests -j2
       - run:
-          command: timeout --foreground -k 10s 2m make check
+          command: timeout --foreground -k 10s 2m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
           no_output_timeout: 180s
 
   arm_sanitizers:
@@ -97,8 +97,9 @@ jobs:
           make tests -j2
       - run:
           command: |
+              export QTHREADS_DIR="$(pwd)"
               if [[ "<< parameters.sanitizer >>" == "thread" ]]; then cd test/basics; fi
-              timeout --foreground -k 10s 4m make check
+              timeout --foreground -k 10s 4m make check || ( cd $QTHREADS_DIR && cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
           no_output_timeout: 120s
 
   arm_acfl:
@@ -136,7 +137,7 @@ jobs:
       - run:
           command: |
               export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
-              timeout --foreground -k 10s 4m make check
+              timeout --foreground -k 10s 4m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
           no_output_timeout: 180s
 
   nvc:
@@ -175,7 +176,7 @@ jobs:
           make tests -j2
       - run:
           command: |
-              timeout --foreground -k 10s 4m make check
+              timeout --foreground -k 10s 4m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
           no_output_timeout: 180s
 
   musl:
@@ -199,7 +200,7 @@ jobs:
           make -j2
           make tests -j2
       - run:
-          command: make check
+          command: make check  || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
           no_output_timeout: 180s
 
 workflows:
