@@ -58,7 +58,7 @@ struct _qt_threadqueue {
   alignas(CACHELINE_WIDTH) NEMESIS_queue q;
   /* the following is for estimating a queue's "busy" level, and is not
    * guaranteed accurate (that would be a race condition) */
-  saligned_t advisory_queuelen;
+  _Atomic saligned_t advisory_queuelen;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
   uint32_t frustration;
   QTHREAD_COND_DECL(trigger);
@@ -180,7 +180,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{ */
     if (node) {
       qthread_t *retval = node->thread;
       assert(atomic_load_explicit(&node->next, memory_order_relaxed) == NULL);
-      (void)qthread_incr(&(q->advisory_queuelen), (aligned_t)-1);
+      atomic_fetch_add_explicit(
+        &q->advisory_queuelen, (aligned_t)-1, memory_order_relaxed);
       FREE_TQNODE(node);
       qthread_thread_free(retval);
     } else {
@@ -231,7 +232,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
   } else {
     atomic_store_explicit(&prev->next, node, memory_order_relaxed);
   }
-  (void)qthread_incr(&(q->advisory_queuelen), 1);
+  atomic_fetch_add_explicit(&q->advisory_queuelen, 1, memory_order_relaxed);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
   /* awake waiter */
   /* Yes, this needs to be here, to prevent reading frustration being hoisted
@@ -256,7 +257,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 ssize_t INTERNAL
 qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{ */
   assert(q);
-  return q->advisory_queuelen;
+  return atomic_load_explicit(&q->advisory_queuelen, memory_order_relaxed);
 } /*}}} */
 
 qthread_t INTERNAL *
@@ -297,7 +298,8 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
   }
   assert(node);
   assert(atomic_load_explicit(&node->next, memory_order_relaxed) == NULL);
-  (void)qthread_incr(&(q->advisory_queuelen), (aligned_t)-1);
+  atomic_fetch_add_explicit(
+    &q->advisory_queuelen, (aligned_t)-1, memory_order_relaxed);
   retval = node->thread;
   FREE_TQNODE(node);
   return retval;
