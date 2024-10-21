@@ -36,7 +36,7 @@ struct qthread_worker_s {
   qthread_shepherd_t *shepherd;
   struct qthread_s **nostealbuffer;
   struct qthread_s **stealbuffer;
-  qthread_t *current;
+  qthread_t *_Atomic current;
   qthread_worker_id_t unique_id;
   qthread_worker_id_t worker_id;
   qthread_worker_id_t packed_worker_id;
