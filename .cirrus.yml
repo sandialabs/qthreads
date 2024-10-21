@@ -88,20 +88,8 @@ arm_linux_task:
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: no
     env:
-      QTHREADS_SCHEDULER: sherwood
-      QTHREADS_TOPOLOGY: hwloc
-    env:
-      QTHREADS_SCHEDULER: sherwood
-      QTHREADS_TOPOLOGY: binders
-    env:
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: no
-    env:
-      QTHREADS_SCHEDULER: distrib
-      QTHREADS_TOPOLOGY: hwloc
-    env:
-      QTHREADS_SCHEDULER: distrib
-      QTHREADS_TOPOLOGY: binders
   install_deps_script: |
     apt-get update -y
     apt-get install -y autoconf automake libtool
@@ -132,23 +120,18 @@ arm_linux_clang_task:
     env:
       CC: clang-19
       CXX: clang++-19
+      QTHREADS_SCHEDULER: nemesis
+      QTHREADS_TOPOLOGY: binders
+    env:
+      CC: clang-19
+      CXX: clang++-19
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: no
     env:
       CC: clang-19
       CXX: clang++-19
-      QTHREADS_SCHEDULER: sherwood
-      QTHREADS_TOPOLOGY: hwloc
-    env:
-      CC: clang-19
-      CXX: clang++-19
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: no
-    env:
-      CC: clang-19
-      CXX: clang++-19
-      QTHREADS_SCHEDULER: distrib
-      QTHREADS_TOPOLOGY: hwloc
   install_deps_script: |
     apt-get update -y
     apt-get install -y software-properties-common
