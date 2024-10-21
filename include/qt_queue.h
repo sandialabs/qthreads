@@ -10,7 +10,7 @@
 
 typedef struct qthread_queue_node_s {
   struct qthread_queue_node_s *_Atomic next;
-  qthread_t *thread;
+  qthread_t *_Atomic thread;
 } qthread_queue_node_t;
 
 typedef struct qthread_queue_NEMESIS_s {
