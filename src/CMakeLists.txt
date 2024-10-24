@@ -1,0 +1,52 @@
+set(QTHREADS_SCHEDULER nemesis CACHE STRING "Which scheduler to use for qthreads. Valid options are nemesis, sherwood, and distrib.")
+set(QTHREADS_TOPOLOGY no CACHE STRING "Which topology detection/management system to use for qthreads. Valid options are no, hwloc, and binders.")
+set(QTHREADS_BARRIER feb CACHE STRING "Which barrier implementation to use for qthreads. Valid options are feb, sinc, array, and log.")
+set(QTHREADS_SINC donecount CACHE STRING "Which sinc implementation to use for qthreads. Valid options are donecount, donecoutn_cas, snzi, and original.")
+set(QTHREADS_ALLOC base CACHE STRING "Wich allocation implementation to use for qthreads. Valid options are base, and chapel.")
+set(QTHREADS_CACHELINE_SIZE_ESTIMATE 64 CACHE STRING "Estimate of the cacheline size of the target machine (used for optimizing data structure layouts).")
+set(QTHREADS_DEFAULT_STACK_SIZE 32768 CACHE STRING "Default qthread stack size.")
+set(QTHREADS_HASHMAP hashmap CACHE STRING "Which hashmap implementation to use. Valid values are \"hashmap\" and \"lf_hashmap\".")
+
+set(QTHREADS_SOURCES
+  cacheline.c
+  envariables.c
+  feb.c
+  hazardptrs.c
+  io.c
+  locks.c
+  qalloc.c
+  qloop.c
+  queue.c
+  barrier/${QTHREADS_BARRIER}.c
+  qutil.c
+  syncvar.c
+  qthread.c
+  mpool.c
+  shepherds.c
+  workers.c
+  threadqueues/${QTHREADS_SCHEDULER}_threadqueues.c
+  sincs/${QTHREADS_SINC}.c
+  alloc/${QTHREADS_ALLOC}.c
+  affinity/common.c
+  affinity/${QTHREADS_TOPOLOGY}.c
+  touch.c
+  tls.c
+  teams.c
+  fastcontext/asm.S
+  fastcontext/context.c
+  ${QTHREADS_HASHMAP}.c
+)
+
+# TODO: switch/checks necessary to include the correct
+# fastcontext version when we need the fallback.
+
+add_library(qthread SHARED ${QTHREADS_SOURCES})
+target_include_directories(qthread
+  PUBLIC "../include/qthread"
+  PRIVATE "../include"
+)
+# TODO: move these into a configure header instead of piping them through the flags.
+target_compile_definitions(qthread
+  PRIVATE CACHELINE_WIDTH=${QTHREADS_CACHELINE_SIZE_ESTIMATE}
+  PRIVATE QTHREAD_DEFAULT_STACK_SIZE=${QTHREADS_DEFAULT_STACK_SIZE}
+)
