@@ -472,8 +472,8 @@ typedef union qt_spin_trylock_s {
   aligned_t u;
 
   struct {
-    haligned_t ticket;
-    haligned_t users;
+    QT_Atomic(haligned_t) ticket;
+    QT_Atomic(haligned_t) users;
   } s;
 } qt_spin_trylock_t;
 

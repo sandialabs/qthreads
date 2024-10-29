@@ -90,15 +90,15 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
   { (x)->u = 0; }
 #define QTHREAD_TRYLOCK_LOCK(x)                                                \
   {                                                                            \
-    uint32_t val = qthread_incr(&(x)->s.users, 1);                             \
+    uint32_t val =                                                             \
+      atomic_fetch_add_explicit(&(x)->s.users, 1, memory_order_relaxed);       \
     while (val != atomic_load_explicit((_Atomic uint32_t *)&(x)->s.ticket,     \
                                        memory_order_acquire))                  \
       SPINLOCK_BODY();                                                         \
   }
 #define QTHREAD_TRYLOCK_UNLOCK(x)                                              \
   do {                                                                         \
-    atomic_thread_fence(memory_order_release);                                 \
-    qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */               \
+    atomic_fetch_add_explicit(&(x)->s.ticket, 1, memory_order_release);        \
   } while (0)
 #define QTHREAD_TRYLOCK_DESTROY(x)
 #define QTHREAD_TRYLOCK_DESTROY_PTR(x)
