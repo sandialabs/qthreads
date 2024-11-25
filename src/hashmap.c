@@ -184,17 +184,19 @@ void INTERNAL qt_hash_destroy_deallocate(qt_hash h,
     ++visited;
     f(h->value[1]);
   }
-  if (visited < atomic_load_explicit(&h->population, memory_order_relaxed)) {
+  size_t population_loc =
+    atomic_load_explicit(&h->population, memory_order_relaxed);
+  if (visited < population_loc) {
     size_t i;
     for (i = 0; i < h->num_entries; ++i) {
-      if (atomic_load_explicit(&h->entries[i].key, memory_order_relaxed) >
-          KEY_DELETED) {
+      qt_key_t key_loc =
+        atomic_load_explicit(&h->entries[i].key, memory_order_relaxed);
+      void *val_loc =
+        atomic_load_explicit(&h->entries[i].value, memory_order_relaxed);
+      if (key_loc > KEY_DELETED) {
         ++visited;
-        f(atomic_load_explicit(&h->entries[i].value, memory_order_relaxed));
-        if (visited ==
-            atomic_load_explicit(&h->population, memory_order_relaxed)) {
-          break;
-        }
+        f(val_loc);
+        if (visited == population_loc) break;
       }
     }
   }
@@ -213,7 +215,7 @@ int INTERNAL qt_hash_put(qt_hash h, qt_key_t key, void *value) { /*{{{*/
   return ret;
 } /*}}}*/
 
-static void brehash(qt_hash h, size_t len) { /*{{{*/
+static void brehash(qt_hash h, size_t len, size_t population) { /*{{{*/
   qt_hash d = qt_calloc(1, sizeof(struct qt_hash_s));
   size_t i, copied;
 
@@ -222,21 +224,16 @@ static void brehash(qt_hash h, size_t len) { /*{{{*/
   memcpy(d->has_key, h->has_key, sizeof(short) * 2);
   memcpy(d->value, h->value, sizeof(void *) * 2);
   copied = h->has_key[0] + h->has_key[1];
-  if (copied < atomic_load_explicit(&h->population, memory_order_relaxed)) {
+  if (copied < population) {
     for (i = 0; i < h->num_entries; ++i) {
-      if (atomic_load_explicit(&h->entries[i].key, memory_order_relaxed) >
-          KEY_DELETED) {
-        qassertnot(
-          qt_hash_put_locked(
-            d,
-            atomic_load_explicit(&h->entries[i].key, memory_order_relaxed),
-            atomic_load_explicit(&h->entries[i].value, memory_order_relaxed)),
-          PUT_COLLISION);
+      qt_key_t key_loc =
+        atomic_load_explicit(&h->entries[i].key, memory_order_relaxed);
+      void *val_loc =
+        atomic_load_explicit(&h->entries[i].value, memory_order_relaxed);
+      if (key_loc > KEY_DELETED) {
+        qassertnot(qt_hash_put_locked(d, key_loc, val_loc), PUT_COLLISION);
         ++copied;
-        if (copied ==
-            atomic_load_explicit(&h->population, memory_order_relaxed)) {
-          break;
-        }
+        if (copied == population) break;
       }
     }
   }
@@ -326,28 +323,29 @@ restart: {
 }
   assert(f != -1); // we MUST have found a place for it (otherwise the hash
                    // should have been resized bigger)
-  assert(atomic_load_explicit(&z[f].key, memory_order_relaxed) == KEY_NULL ||
-         atomic_load_explicit(&z[f].key, memory_order_relaxed) ==
-           KEY_DELETED); // sanity: the spot is empty
-
-  if (atomic_load_explicit(&z[f].key, memory_order_relaxed) == KEY_NULL) {
-    if (atomic_load_explicit(&h->population, memory_order_relaxed) >=
-        h->grow_size) {
-      brehash(h, h->num_entries * 2);
+  qt_key_t zfkey = atomic_load_explicit(&z[f].key, memory_order_relaxed);
+  if (zfkey == KEY_NULL) {
+    size_t population_loc =
+      atomic_load_explicit(&h->population, memory_order_relaxed);
+    if (population_loc >= h->grow_size) {
+      brehash(h, h->num_entries * 2, population_loc);
       goto restart;
-    } else if (atomic_load_explicit(&h->population, memory_order_relaxed) +
+    } else if (population_loc +
                  atomic_load_explicit(&h->deletes, memory_order_relaxed) >
                h->tidy_up_size) {
-      brehash(h, h->num_entries);
+      brehash(h, h->num_entries, population_loc);
       goto restart;
     }
-  } else if (atomic_load_explicit(&z[f].key, memory_order_relaxed) ==
-             KEY_DELETED) {
-    --h->deletes;
+  } else if (zfkey == KEY_DELETED) {
+    atomic_store_explicit(&z[f].key, key, memory_order_relaxed);
+    atomic_store_explicit(&z[f].value, value, memory_order_relaxed);
+    atomic_fetch_add_explicit(&h->population, 1u, memory_order_relaxed);
+    atomic_fetch_sub_explicit(&h->deletes, 1u, memory_order_relaxed);
+    return 1;
   }
   atomic_store_explicit(&z[f].key, key, memory_order_relaxed);
   atomic_store_explicit(&z[f].value, value, memory_order_relaxed);
-  ++h->population;
+  atomic_fetch_add_explicit(&h->population, 1u, memory_order_relaxed);
   return 1;
 } /*}}}*/
 
@@ -384,9 +382,9 @@ int INTERNAL qt_hash_remove_locked(qt_hash h, qt_key_t const key) { /*{{{*/
   size_t population_loc =
     atomic_fetch_sub_explicit(&h->population, 1u, memory_order_relaxed) - 1u;
   if (deletes_loc + population_loc >= h->tidy_up_size) {
-    brehash(h, h->num_entries);
-  } else if (h->population < h->shrink_size) {
-    brehash(h, h->num_entries / 2);
+    brehash(h, h->num_entries, population_loc);
+  } else if (population_loc < h->shrink_size) {
+    brehash(h, h->num_entries / 2, population_loc);
   }
   return 1;
 } /*}}}*/
@@ -432,9 +430,9 @@ int INTERNAL qt_hash_pop_locked(void **val,
   size_t population_loc =
     atomic_fetch_sub_explicit(&h->population, 1u, memory_order_relaxed) - 1u;
   if (deletes_loc + population_loc >= h->tidy_up_size) {
-    brehash(h, h->num_entries);
-  } else if (h->population < h->shrink_size) {
-    brehash(h, h->num_entries / 2);
+    brehash(h, h->num_entries, population_loc);
+  } else if (population_loc < h->shrink_size) {
+    brehash(h, h->num_entries / 2, population_loc);
   }
   return 1;
 } /*}}}*/
@@ -476,16 +474,19 @@ void INTERNAL qt_hash_callback(qt_hash h,
     ++visited;
     f(KEY_DELETED, h->value[1], arg);
   }
-  if (visited < h->population) {
+  size_t population_loc =
+    atomic_load_explicit(&h->population, memory_order_relaxed);
+  if (visited < population_loc) {
     size_t i;
     for (i = 0; i < h->num_entries; ++i) {
-      if (atomic_load_explicit(&h->entries[i].key, memory_order_relaxed) >
-          KEY_DELETED) {
+      qt_key_t key_loc =
+        atomic_load_explicit(&h->entries[i].key, memory_order_relaxed);
+      void *val_loc =
+        atomic_load_explicit(&h->entries[i].value, memory_order_relaxed);
+      if (key_loc > KEY_DELETED) {
         ++visited;
-        f(atomic_load_explicit(&h->entries[i].key, memory_order_relaxed),
-          atomic_load_explicit(&h->entries[i].value, memory_order_relaxed),
-          arg);
-        if (visited == h->population) { break; }
+        f(key_loc, val_loc, arg);
+        if (visited == population_loc) break;
       }
     }
   }
@@ -497,7 +498,8 @@ size_t INTERNAL qt_hash_count(qt_hash h) { /*{{{*/
 
   assert(h);
   if (h->lock) { QTHREAD_FASTLOCK_LOCK(h->lock); }
-  ct = h->population + h->has_key[0] + h->has_key[1];
+  ct = atomic_load_explicit(&h->population, memory_order_relaxed) +
+       h->has_key[0] + h->has_key[1];
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   return ct;
 } /*}}}*/
