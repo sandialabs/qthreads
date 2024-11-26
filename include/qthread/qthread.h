@@ -87,7 +87,7 @@ using std::memory_order_relaxed;
 
 #include "macros.h"
 
-#define MACHINE_FENCE atomic_thread_fence(memory_order_acq_rel);
+#define MACHINE_FENCE atomic_thread_fence(memory_order_seq_cst);
 
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
@@ -472,8 +472,8 @@ typedef union qt_spin_trylock_s {
   aligned_t u;
 
   struct {
-    haligned_t ticket;
-    haligned_t users;
+    QT_Atomic(haligned_t) ticket;
+    QT_Atomic(haligned_t) users;
   } s;
 } qt_spin_trylock_t;
 
