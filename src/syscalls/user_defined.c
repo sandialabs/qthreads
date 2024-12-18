@@ -9,9 +9,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h> /* for SYS_accept and others */
-#endif
 
 /* Internal Headers */
 #include "qt_asserts.h"

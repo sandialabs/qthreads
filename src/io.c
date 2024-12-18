@@ -8,11 +8,9 @@
 #include <stdio.h>    /* for fprintf() */
 #include <stdlib.h>   /* for abort() */
 #include <sys/time.h> /* for gettimeofday() */
-#ifdef HAVE_SYS_SYSCALL_H
 /* - syscall(2) */
 #include <sys/syscall.h>
 #include <unistd.h>
-#endif
 /* - accept(2) */
 #include <sys/socket.h>
 /* - connect(2) */
