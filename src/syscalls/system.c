@@ -5,9 +5,7 @@
 #include <stdint.h>
 
 /* System Headers */
-#ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h> /* for SYS_accept and others */
-#endif
 
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
