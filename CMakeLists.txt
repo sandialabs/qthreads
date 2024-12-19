@@ -7,6 +7,8 @@ project(qthreads
   DESCRIPTION "A user-level threading library"
   LANGUAGES C ASM)
 
+include(GNUInstallDirs)
+
 add_subdirectory(src)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
