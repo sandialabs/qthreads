@@ -6,6 +6,8 @@ set(QTHREADS_ALLOC base CACHE STRING "Wich allocation implementation to use for 
 set(QTHREADS_CACHELINE_SIZE_ESTIMATE 64 CACHE STRING "Estimate of the cacheline size of the target machine (used for optimizing data structure layouts).")
 set(QTHREADS_DEFAULT_STACK_SIZE 32768 CACHE STRING "Default qthread stack size.")
 set(QTHREADS_HASHMAP hashmap CACHE STRING "Which hashmap implementation to use. Valid values are \"hashmap\" and \"lf_hashmap\".")
+set(QTHREADS_DICT_TYPE shavit CACHE STRING "Which dictionary implementation to use. Valid values are \"shavit\", \"trie\", and \"simple\".")
+set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to use. Valid values are \"clock_gettime\", \"mach\", \"gettimeofday\", and \"gethrtime\".")
 
 set(QTHREADS_SOURCES
   cacheline.c
@@ -35,6 +37,14 @@ set(QTHREADS_SOURCES
   fastcontext/asm.S
   fastcontext/context.c
   ${QTHREADS_HASHMAP}.c
+  ds/qarray.c
+  ds/qdqueue.c
+  ds/qlfqueue.c
+  ds/qpool.c
+  ds/qswsrqueue.c
+  ds/dictionary/hash.c
+  ds/dictionary/dictionary_${QTHREADS_DICT_TYPE}.c
+  qtimer/${QTHREADS_TIMER_TYPE}.c
 )
 
 # TODO: switch/checks necessary to include the correct
@@ -44,6 +54,7 @@ add_library(qthread SHARED ${QTHREADS_SOURCES})
 target_include_directories(qthread
   PRIVATE "../include"
 )
+target_link_libraries(qthread PUBLIC Threads::Threads)
 target_include_directories(qthread
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
