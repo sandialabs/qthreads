@@ -42,8 +42,12 @@ set(QTHREADS_SOURCES
 
 add_library(qthread SHARED ${QTHREADS_SOURCES})
 target_include_directories(qthread
-  PUBLIC "../include/qthread"
   PRIVATE "../include"
+)
+target_include_directories(qthread
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/qthread>
 )
 # TODO: move these into a configure header instead of piping them through the flags.
 target_compile_definitions(qthread
@@ -64,9 +68,10 @@ target_sources(qthread
 
 install(
   TARGETS qthread
-  EXPORT qthreads_targets
+  EXPORT qthread
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT shlib
   FILE_SET qthreads_public_headers
 )
+install(EXPORT qthread DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/qthread")
