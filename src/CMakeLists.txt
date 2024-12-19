@@ -50,3 +50,23 @@ target_compile_definitions(qthread
   PRIVATE CACHELINE_WIDTH=${QTHREADS_CACHELINE_SIZE_ESTIMATE}
   PRIVATE QTHREAD_DEFAULT_STACK_SIZE=${QTHREADS_DEFAULT_STACK_SIZE}
 )
+
+#file(GLOB QTHREADS_INTERNAL_HEADERS "../include/*.h")
+file(GLOB QTHREADS_PUBLIC_HEADERS "../include/qthread/*.h*")
+
+target_sources(qthread
+  PUBLIC
+    FILE_SET qthreads_public_headers
+    TYPE HEADERS
+    BASE_DIRS "../include"
+    FILES ${QTHREADS_PUBLIC_HEADERS}
+)
+
+install(
+  TARGETS qthread
+  EXPORT qthreads_targets
+  LIBRARY
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    COMPONENT shlib
+  FILE_SET qthreads_public_headers
+)
