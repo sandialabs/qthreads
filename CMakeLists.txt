@@ -5,9 +5,12 @@ set(CMAKE_C_STANDARD 11)
 project(qthreads
   VERSION 1.22
   DESCRIPTION "A user-level threading library"
-  LANGUAGES C ASM)
+  LANGUAGES C ASM CXX)
 
 include(GNUInstallDirs)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 add_subdirectory(src)
 
