@@ -1,0 +1,12 @@
+include_directories("." "utils/rng")
+function(qthreads_test name)
+  add_executable(${name} "${name}.c")
+  target_link_libraries(${name} qthread)
+  add_test(NAME ${name} COMMAND ${name} ${ARGN})
+  set_property(TEST ${name} PROPERTY ENVIRONMENT "QT_NUM_SHEPHERDS=2;QT_NUM_WORKERS_PER_SHEPHERD=1")
+  set_property(TEST ${name} PROPERTY C_STANDARD "C11")
+endfunction()
+
+add_subdirectory(basics)
+add_subdirectory(features)
+add_subdirectory(stress)
