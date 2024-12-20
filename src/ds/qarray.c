@@ -392,24 +392,25 @@ static qarray *qarray_create_internal(size_t const count,
   return NULL;
 } /*}}} */
 
-qarray *qarray_create(size_t const count, size_t const obj_size) { /*{{{ */
+qarray *API_FUNC qarray_create(size_t const count,
+                               size_t const obj_size) { /*{{{ */
   return qarray_create_internal(count, obj_size, FIXED_HASH, 0, 0);
 } /*}}} */
 
-qarray *qarray_create_tight(size_t const count,
-                            size_t const obj_size) { /*{{{ */
+qarray *API_FUNC qarray_create_tight(size_t const count,
+                                     size_t const obj_size) { /*{{{ */
   return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 0);
 } /*}}} */
 
-qarray *qarray_create_configured(size_t const count,
-                                 size_t const obj_size,
-                                 distribution_t const d,
-                                 char const tight,
-                                 int const seg_pages) { /*{{{ */
+qarray *API_FUNC qarray_create_configured(size_t const count,
+                                          size_t const obj_size,
+                                          distribution_t const d,
+                                          char const tight,
+                                          int const seg_pages) { /*{{{ */
   return qarray_create_internal(count, obj_size, d, tight, seg_pages);
 } /*}}} */
 
-void qarray_destroy(qarray *a) { /*{{{ */
+void API_FUNC qarray_destroy(qarray *a) { /*{{{ */
   qassert_retvoid((a != NULL));
   qassert_retvoid((a->base_ptr != NULL));
   switch (a->dist_type) {
@@ -825,10 +826,10 @@ qarray_loop_strider_exit:
   return 0;
 } /*}}} */
 
-void qarray_iter(qarray *a,
-                 size_t const startat,
-                 size_t const stopat,
-                 qthread_f func) { /*{{{ */
+void API_FUNC qarray_iter(qarray *a,
+                          size_t const startat,
+                          size_t const stopat,
+                          qthread_f func) { /*{{{ */
   aligned_t donecount = 0;
   struct qarray_func_wrapper_args qfwa = {
     {NULL}, a, NULL, &donecount, startat, stopat};
@@ -879,11 +880,11 @@ void qarray_iter(qarray *a,
   }
 } /*}}} */
 
-void qarray_iter_loop(qarray *a,
-                      size_t const startat,
-                      size_t const stopat,
-                      qa_loop_f func,
-                      void *arg) { /*{{{ */
+void API_FUNC qarray_iter_loop(qarray *a,
+                               size_t const startat,
+                               size_t const stopat,
+                               qa_loop_f func,
+                               void *arg) { /*{{{ */
   aligned_t donecount = 0;
   struct qarray_func_wrapper_args qfwa = {
     {func}, a, arg, &donecount, startat, stopat};
@@ -1027,14 +1028,14 @@ void qarray_iter_constloop(qarray const *a,
   }
 } /*}}} */
 
-void qarray_iter_loopaccum(qarray *a,
-                           size_t const startat,
-                           size_t const stopat,
-                           qa_loopr_f func,
-                           void *arg,
-                           void *ret,
-                           size_t const retsize,
-                           qt_accum_f acc) { /*{{{ */
+void API_FUNC qarray_iter_loopaccum(qarray *a,
+                                    size_t const startat,
+                                    size_t const stopat,
+                                    qa_loopr_f func,
+                                    void *arg,
+                                    void *ret,
+                                    size_t const retsize,
+                                    qt_accum_f acc) { /*{{{ */
   qassert_retvoid((a != NULL));
   qassert_retvoid((func != NULL));
   qassert_retvoid((startat <= stopat));

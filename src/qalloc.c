@@ -188,11 +188,11 @@ static inline void *qalloc_getfile(off_t const filesize,
   return ret;
 } /*}}} */
 
-void *qalloc_makestatmap(off_t const filesize,
-                         void *addr,
-                         char const *filename,
-                         size_t itemsize,
-                         size_t const streams) { /*{{{ */
+void *API_FUNC qalloc_makestatmap(off_t const filesize,
+                                  void *addr,
+                                  char const *filename,
+                                  size_t itemsize,
+                                  size_t const streams) { /*{{{ */
   void *set, *ret;
 
   ret = qalloc_getfile(filesize, addr, filename, &set);
@@ -272,10 +272,10 @@ void *qalloc_makestatmap(off_t const filesize,
   return NULL;
 } /*}}} */
 
-void *qalloc_makedynmap(off_t const filesize,
-                        void *addr,
-                        char const *filename,
-                        size_t const streams) { /*{{{ */
+void *API_FUNC qalloc_makedynmap(off_t const filesize,
+                                 void *addr,
+                                 char const *filename,
+                                 size_t const streams) { /*{{{ */
   void *set, *ret;
 
   ret = qalloc_getfile(filesize, addr, filename, &set);
@@ -376,7 +376,7 @@ void *qalloc_loadmap(char const *filename) { /*{{{ */
   }
 } /*}}} */
 
-void qalloc_cleanup(void) { /*{{{ */
+void API_FUNC qalloc_cleanup(void) { /*{{{ */
   qalloc_checkpoint();
   while (mmaps) {
     struct mapinfo_s *m;
@@ -406,7 +406,7 @@ void qalloc_cleanup(void) { /*{{{ */
  * imbalance (i.e. one thread is making all of the qalloc_malloc() calls).
  * Could probably do more aggressive memory stealing from the next stream if
  * that becomes a problem */
-void *qalloc_statmalloc(struct mapinfo_s *m) { /*{{{ */
+void *API_FUNC qalloc_statmalloc(struct mapinfo_s *m) { /*{{{ */
   pthread_t me = pthread_self();
   size_t stream = (size_t)me % m->streamcount;
   size_t firststream = stream;
@@ -653,7 +653,7 @@ static inline bigblock_header_t *qalloc_find_bigblock_header_entry(
   return bbh;
 } /*}}} */
 
-void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size) { /*{{{ */
+void *API_FUNC qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size) { /*{{{ */
   pthread_t me = pthread_self();
   size_t stream = (size_t)me % m->streamcount;
   size_t original_stream;
@@ -764,7 +764,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size) { /*{{{ */
   return ret;
 } /*}}} */
 
-void *qalloc_malloc(void *mapinfo, size_t size) { /*{{{ */
+void *API_FUNC qalloc_malloc(void *mapinfo, size_t size) { /*{{{ */
   if (((struct mapinfo_s *)mapinfo)->dynflag == 0) {
     return qalloc_statmalloc((struct mapinfo_s *)mapinfo);
   } else {
@@ -850,7 +850,7 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m) { /*{{{ */
   /* XXX: consider freeing unused smallblocks or bigblock header blocks */
 } /*}}} */
 
-void qalloc_free(void *block, void *mapinfo) { /*{{{ */
+void API_FUNC qalloc_free(void *block, void *mapinfo) { /*{{{ */
   if (((struct mapinfo_s *)mapinfo)->dynflag == 0) {
     qalloc_statfree(block, (struct mapinfo_s *)mapinfo);
   } else {
@@ -858,7 +858,7 @@ void qalloc_free(void *block, void *mapinfo) { /*{{{ */
   }
 } /*}}} */
 
-void qalloc_checkpoint(void) { /*{{{ */
+void API_FUNC qalloc_checkpoint(void) { /*{{{ */
   struct mapinfo_s *m = mmaps;
   struct dynmapinfo_s *dm = dynmmaps;
 

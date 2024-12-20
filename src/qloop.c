@@ -1026,12 +1026,13 @@ static aligned_t qqloop_wrapper(void *arg_void) { /*{{{*/
   return 0;
 } /*}}}*/
 
-qqloop_handle_t *qt_loop_queue_create(qt_loop_queue_type const type,
-                                      size_t const start,
-                                      size_t const stop,
-                                      size_t const incr,
-                                      qt_loop_f const func,
-                                      void *restrict const argptr) { /*{{{*/
+qqloop_handle_t *API_FUNC
+qt_loop_queue_create(qt_loop_queue_type const type,
+                     size_t const start,
+                     size_t const stop,
+                     size_t const incr,
+                     qt_loop_f const func,
+                     void *restrict const argptr) { /*{{{*/
   qassert_ret(func, NULL);
   {
     qqloop_handle_t *restrict const h = MALLOC(sizeof(qqloop_handle_t));

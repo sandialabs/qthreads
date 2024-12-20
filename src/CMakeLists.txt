@@ -67,6 +67,7 @@ add_library(qthread SHARED ${QTHREADS_SOURCES})
 target_include_directories(qthread
   PRIVATE "../include"
 )
+set_target_properties(qthread PROPERTIES C_VISIBILITY_PRESET hidden)
 target_link_libraries(qthread PUBLIC Threads::Threads)
 target_include_directories(qthread
   PUBLIC

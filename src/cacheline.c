@@ -2,6 +2,8 @@
 #include <stdio.h>
 #endif
 
+#include "qt_visibility.h"
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -341,7 +343,7 @@ static void figure_out_cacheline_size(void) { /*{{{ */
 } /*}}} */
 
 /* returns the cache line size */
-int qthread_cacheline(void) { /*{{{ */
+int API_FUNC qthread_cacheline(void) { /*{{{ */
   if (cacheline_bytes == 0) {
     figure_out_cacheline_size();
     if (cacheline_bytes == 0) { /* to cache errors in cacheline detection */
