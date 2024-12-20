@@ -45,6 +45,19 @@ set(QTHREADS_SOURCES
   ds/dictionary/hash.c
   ds/dictionary/dictionary_${QTHREADS_DICT_TYPE}.c
   qtimer/${QTHREADS_TIMER_TYPE}.c
+  syscalls/accept.c
+  syscalls/connect.c
+  syscalls/poll.c
+  syscalls/pread.c
+  syscalls/pwrite.c
+  syscalls/read.c
+  syscalls/select.c
+  syscalls/system.c
+  syscalls/user_defined.c
+  syscalls/wait4.c
+  syscalls/write.c
+  patterns/allpairs.c
+  patterns/wavefront.c
 )
 
 # TODO: switch/checks necessary to include the correct
