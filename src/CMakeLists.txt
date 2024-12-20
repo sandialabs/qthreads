@@ -56,6 +56,8 @@ set(QTHREADS_SOURCES
   syscalls/user_defined.c
   syscalls/wait4.c
   syscalls/write.c
+  patterns/allpairs.c
+  patterns/wavefront.c
 )
 
 # TODO: switch/checks necessary to include the correct
