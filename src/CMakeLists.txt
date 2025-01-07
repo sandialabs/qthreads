@@ -69,6 +69,11 @@ target_include_directories(qthread
 )
 set_target_properties(qthread PROPERTIES C_VISIBILITY_PRESET hidden)
 target_link_libraries(qthread PUBLIC Threads::Threads)
+if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "binders")
+  # TODO: pull this out into a simple module file so we can just do find_package instead.
+  find_library(HWLOC_LIBRARY NAMES hwloc PATH_SUFFIXES lib lib64)
+  target_link_libraries(qthread PUBLIC "${HWLOC_LIBRARY}")
+endif()
 target_include_directories(qthread
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
