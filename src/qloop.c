@@ -273,45 +273,37 @@ static void qt_loop_inner(size_t const start,
   qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, flags, sync_type);
 } /*}}}*/
 
-void API_FUNC qt_loop(size_t start,
-                      size_t stop,
-                      qt_loop_f func,
-                      void *argptr) { /*{{{ */
+API_FUNC void
+qt_loop(size_t start, size_t stop, qt_loop_f func, void *argptr) { /*{{{ */
   qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 } /*}}} */
 
-void API_FUNC qt_loop_simple(size_t start,
+API_FUNC void qt_loop_simple(size_t start,
                              size_t stop,
                              qt_loop_f func,
                              void *argptr) { /*{{{*/
   qt_loop_inner(start, stop, func, argptr, 2, SINC_T);
 } /*}}}*/
 
-void API_FUNC qt_loop_sv(size_t start,
-                         size_t stop,
-                         qt_loop_f func,
-                         void *argptr) { /*{{{ */
+API_FUNC void
+qt_loop_sv(size_t start, size_t stop, qt_loop_f func, void *argptr) { /*{{{ */
   qt_loop_inner(start, stop, func, argptr, 0, SYNCVAR_T);
 } /*}}} */
 
-void API_FUNC qt_loop_dc(size_t start,
-                         size_t stop,
-                         qt_loop_f func,
-                         void *argptr) { /*{{{ */
+API_FUNC void
+qt_loop_dc(size_t start, size_t stop, qt_loop_f func, void *argptr) { /*{{{ */
   qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 } /*}}} */
 
-void API_FUNC qt_loop_aligned(size_t start,
+API_FUNC void qt_loop_aligned(size_t start,
                               size_t stop,
                               qt_loop_f func,
                               void *argptr) { /*{{{ */
   qt_loop_inner(start, stop, func, argptr, 0, ALIGNED);
 } /*}}} */
 
-void API_FUNC qt_loop_sinc(size_t start,
-                           size_t stop,
-                           qt_loop_f func,
-                           void *argptr) { /*{{{ */
+API_FUNC void
+qt_loop_sinc(size_t start, size_t stop, qt_loop_f func, void *argptr) { /*{{{ */
   qt_loop_inner(start, stop, func, argptr, 0, SINC_T);
 } /*}}} */
 
@@ -446,14 +438,14 @@ static inline void qt_loop_balance_inner(size_t const start,
   FREE(qwa, sizeof(struct qloop_wrapper_args) * maxworkers);
 } /*}}} */
 
-void API_FUNC qt_loop_balance(size_t const start,
+API_FUNC void qt_loop_balance(size_t const start,
                               size_t const stop,
                               qt_loop_f const func,
                               void *argptr) { /*{{{ */
   qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
 } /*}}} */
 
-void API_FUNC qt_loop_balance_simple(size_t const start,
+API_FUNC void qt_loop_balance_simple(size_t const start,
                                      size_t const stop,
                                      qt_loop_f const func,
                                      void *argptr) { /*{{{*/
@@ -461,28 +453,28 @@ void API_FUNC qt_loop_balance_simple(size_t const start,
     start, stop, func, argptr, QT_LOOP_BALANCE_SIMPLE, DONECOUNT);
 } /*}}}*/
 
-void API_FUNC qt_loop_balance_sv(size_t const start,
+API_FUNC void qt_loop_balance_sv(size_t const start,
                                  size_t const stop,
                                  qt_loop_f const func,
                                  void *argptr) { /*{{{ */
   qt_loop_balance_inner(start, stop, func, argptr, 0, SYNCVAR_T);
 } /*}}} */
 
-void API_FUNC qt_loop_balance_dc(size_t const start,
+API_FUNC void qt_loop_balance_dc(size_t const start,
                                  size_t const stop,
                                  qt_loop_f const func,
                                  void *argptr) { /*{{{ */
   qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
 } /*}}} */
 
-void API_FUNC qt_loop_balance_aligned(size_t const start,
+API_FUNC void qt_loop_balance_aligned(size_t const start,
                                       size_t const stop,
                                       qt_loop_f const func,
                                       void *argptr) { /*{{{ */
   qt_loop_balance_inner(start, stop, func, argptr, 0, ALIGNED);
 } /*}}} */
 
-void API_FUNC qt_loop_balance_sinc(size_t const start,
+API_FUNC void qt_loop_balance_sinc(size_t const start,
                                    size_t const stop,
                                    qt_loop_f const func,
                                    void *argptr) { /*{{{ */
@@ -686,7 +678,7 @@ static inline void qt_loopaccum_balance_inner(size_t const start,
   FREE(qwa, sizeof(struct qloopaccum_wrapper_args) * maxworkers);
 } /*}}} */
 
-void API_FUNC qt_loopaccum_balance(size_t const start,
+API_FUNC void qt_loopaccum_balance(size_t const start,
                                    size_t const stop,
                                    size_t const size,
                                    void *restrict out,
@@ -697,7 +689,7 @@ void API_FUNC qt_loopaccum_balance(size_t const start,
     start, stop, size, out, func, argptr, acc, 0, SYNCVAR_T);
 } /*}}} */
 
-void API_FUNC qt_loopaccum_balance_sinc(size_t const start,
+API_FUNC void qt_loopaccum_balance_sinc(size_t const start,
                                         size_t const stop,
                                         size_t const size,
                                         void *restrict out,
@@ -708,7 +700,7 @@ void API_FUNC qt_loopaccum_balance_sinc(size_t const start,
     start, stop, size, out, func, argptr, acc, 0, SINC_T);
 } /*}}} */
 
-void API_FUNC qt_loopaccum_balance_sv(size_t const start,
+API_FUNC void qt_loopaccum_balance_sv(size_t const start,
                                       size_t const stop,
                                       size_t const size,
                                       void *restrict out,
@@ -719,7 +711,7 @@ void API_FUNC qt_loopaccum_balance_sv(size_t const start,
     start, stop, size, out, func, argptr, acc, 0, SYNCVAR_T);
 } /*}}} */
 
-void API_FUNC qt_loopaccum_balance_dc(size_t const start,
+API_FUNC void qt_loopaccum_balance_dc(size_t const start,
                                       size_t const stop,
                                       size_t const size,
                                       void *restrict out,
@@ -1026,7 +1018,7 @@ static aligned_t qqloop_wrapper(void *arg_void) { /*{{{*/
   return 0;
 } /*}}}*/
 
-qqloop_handle_t *API_FUNC
+API_FUNC qqloop_handle_t *
 qt_loop_queue_create(qt_loop_queue_type const type,
                      size_t const start,
                      size_t const stop,
@@ -1065,12 +1057,12 @@ qt_loop_queue_create(qt_loop_queue_type const type,
   }
 } /*}}}*/
 
-void API_FUNC qt_loop_queue_setchunk(qqloop_handle_t *l, size_t chunk) { /*{{{*/
+API_FUNC void qt_loop_queue_setchunk(qqloop_handle_t *l, size_t chunk) { /*{{{*/
   assert(l->stat.get == qqloop_get_iterations_chunked);
   l->stat.chunksize = chunk;
 } /*}}}*/
 
-void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop) { /*{{{*/
+API_FUNC void qt_loop_queue_run(qqloop_handle_t *loop) { /*{{{*/
   qassert_retvoid(loop);
   assert(qthread_library_initialized);
   {
@@ -1096,7 +1088,7 @@ void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop) { /*{{{*/
   }
 } /*}}}*/
 
-void API_FUNC qt_loop_queue_run_there(qqloop_handle_t *loop,
+API_FUNC void qt_loop_queue_run_there(qqloop_handle_t *loop,
                                       qthread_shepherd_id_t shep) { /*{{{*/
   assert(qthread_library_initialized);
   qassert_retvoid(loop);
@@ -1124,8 +1116,9 @@ void API_FUNC qt_loop_queue_run_there(qqloop_handle_t *loop,
 
 /* The easiest way to get shepherds/workers to REJOIN when/if shepherds are
  * re-enabled is to make the user do it. */
-void API_FUNC qt_loop_queue_addworker(
-  qqloop_handle_t *loop, qthread_shepherd_id_t const shep) { /*{{{*/
+API_FUNC void
+qt_loop_queue_addworker(qqloop_handle_t *loop,
+                        qthread_shepherd_id_t const shep) { /*{{{*/
   assert(qthread_library_initialized);
   qthread_incr(&(loop->stat.activesheps), 1);
   MACHINE_FENCE;
@@ -1165,7 +1158,7 @@ void API_FUNC qt_loop_queue_addworker(
   static void qt##initials##_acc(void *restrict a, const void *restrict b) {   \
     *(type *)a = _op_(*(type *)a, *(type *)b);                                 \
   }                                                                            \
-  type API_FUNC qt_##shorttype##_##category(                                   \
+  API_FUNC type qt_##shorttype##_##category(                                   \
     type *array, size_t length, int checkfeb) {                                \
     type ret;                                                                  \
     assert(qthread_library_initialized);                                       \
@@ -1455,7 +1448,7 @@ static aligned_t qt_qsort_inner(const struct qt_qsort_iargs *a) { /*{{{ */
   return 0;
 } /*}}} */
 
-void API_FUNC qt_qsort(double *array, size_t const length) { /*{{{ */
+API_FUNC void qt_qsort(double *array, size_t const length) { /*{{{ */
   struct qt_qsort_iargs arg;
 
   arg.array = array;

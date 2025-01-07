@@ -264,7 +264,7 @@ qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
 } /*}}} */
 
 /* Create a new qdqueue */
-qdqueue_t *API_FUNC qdqueue_create(void) { /*{{{ */
+API_FUNC qdqueue_t *qdqueue_create(void) { /*{{{ */
   qdqueue_t *ret;
   qthread_shepherd_id_t curshep;
   int **sheparray;
@@ -328,7 +328,7 @@ qdqueue_t *API_FUNC qdqueue_create(void) { /*{{{ */
 } /*}}} */
 
 /* destroy that queue */
-int API_FUNC qdqueue_destroy(qdqueue_t *q) { /*{{{ */
+API_FUNC int qdqueue_destroy(qdqueue_t *q) { /*{{{ */
   qthread_shepherd_id_t i;
 
   qassert_ret((q != NULL), QTHREAD_BADARGS);
@@ -351,7 +351,7 @@ int API_FUNC qdqueue_destroy(qdqueue_t *q) { /*{{{ */
 } /*}}} */
 
 /* enqueue something in the queue */
-int API_FUNC qdqueue_enqueue(qdqueue_t *q, void *elem) { /*{{{ */
+API_FUNC int qdqueue_enqueue(qdqueue_t *q, void *elem) { /*{{{ */
   int stat;
   struct qdsubqueue_s *myq;
 
@@ -422,7 +422,7 @@ int qdqueue_enqueue_there(qdqueue_t *q,
 } /*}}} */
 
 /* dequeue something from the queue (returns NULL for an empty queue) */
-void *API_FUNC qdqueue_dequeue(qdqueue_t *q) { /*{{{ */
+API_FUNC void *qdqueue_dequeue(qdqueue_t *q) { /*{{{ */
   struct qdsubqueue_s *myq;
   void *ret;
 
@@ -488,7 +488,7 @@ void *API_FUNC qdqueue_dequeue(qdqueue_t *q) { /*{{{ */
 } /*}}} */
 
 /* returns 1 if the queue is empty, 0 otherwise */
-int API_FUNC qdqueue_empty(qdqueue_t *q) { /*{{{ */
+API_FUNC int qdqueue_empty(qdqueue_t *q) { /*{{{ */
   struct qdsubqueue_s *myq;
 
   qassert_ret(q, 0);

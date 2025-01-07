@@ -588,11 +588,10 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) { /*{{{ */
  * @error ENOMEM Not enough memory could be allocated.
  */
 
-int API_FUNC qthread_initialize_agg(int (*agg_cost)(int count,
-                                                    qthread_f *f,
-                                                    void **arg),
-                                    qthread_agg_f agg_f,
-                                    int max_c) {
+int API_FUNC
+qthread_initialize_agg(int (*agg_cost)(int count, qthread_f *f, void **arg),
+                       qthread_agg_f agg_f,
+                       int max_c) {
   int r = qthread_initialize();
   if (agg_cost != NULL) qlib->agg_cost = agg_cost;
   if (agg_f != NULL) qlib->agg_f = agg_f;
@@ -1537,10 +1536,8 @@ extern void *qthread_fence2;
   __asm__ __volatile__(#name ":")
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
-void API_FUNC qthread_call_method(qthread_f f,
-                                  void *arg,
-                                  void *ret,
-                                  uint16_t flags) {
+void API_FUNC
+qthread_call_method(qthread_f f, void *arg, void *ret, uint16_t flags) {
   if (ret) {
     if (flags & QTHREAD_RET_IS_SINC) {
       if (flags & QTHREAD_RET_IS_VOID_SINC) {
@@ -2018,15 +2015,13 @@ int API_FUNC qthread_spawn(qthread_f f,
   return QTHREAD_SUCCESS;
 } /*}}}*/
 
-int API_FUNC qthread_fork(qthread_f f,
-                          void const *arg,
-                          aligned_t *ret) { /*{{{*/
+int API_FUNC
+qthread_fork(qthread_f f, void const *arg, aligned_t *ret) { /*{{{*/
   return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
 } /*}}}*/
 
-int API_FUNC qthread_fork_net(qthread_f f,
-                              void const *arg,
-                              aligned_t *ret) { /*{{{*/
+int API_FUNC
+qthread_fork_net(qthread_f f, void const *arg, aligned_t *ret) { /*{{{*/
   return qthread_spawn(
     f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NETWORK);
 } /*}}}*/
@@ -2200,9 +2195,8 @@ int API_FUNC qthread_fork_syncvar_copyargs_simple(qthread_f f,
                        QTHREAD_SPAWN_SIMPLE | QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}} */
 
-int API_FUNC qthread_fork_syncvar(qthread_f f,
-                                  void const *arg,
-                                  syncvar_t *ret) { /*{{{ */
+int API_FUNC
+qthread_fork_syncvar(qthread_f f, void const *arg, syncvar_t *ret) { /*{{{ */
   return qthread_spawn(
     f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}} */

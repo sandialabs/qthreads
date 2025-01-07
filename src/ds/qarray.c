@@ -392,17 +392,17 @@ static qarray *qarray_create_internal(size_t const count,
   return NULL;
 } /*}}} */
 
-qarray *API_FUNC qarray_create(size_t const count,
+API_FUNC qarray *qarray_create(size_t const count,
                                size_t const obj_size) { /*{{{ */
   return qarray_create_internal(count, obj_size, FIXED_HASH, 0, 0);
 } /*}}} */
 
-qarray *API_FUNC qarray_create_tight(size_t const count,
+API_FUNC qarray *qarray_create_tight(size_t const count,
                                      size_t const obj_size) { /*{{{ */
   return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 0);
 } /*}}} */
 
-qarray *API_FUNC qarray_create_configured(size_t const count,
+API_FUNC qarray *qarray_create_configured(size_t const count,
                                           size_t const obj_size,
                                           distribution_t const d,
                                           char const tight,
@@ -410,7 +410,7 @@ qarray *API_FUNC qarray_create_configured(size_t const count,
   return qarray_create_internal(count, obj_size, d, tight, seg_pages);
 } /*}}} */
 
-void API_FUNC qarray_destroy(qarray *a) { /*{{{ */
+API_FUNC void qarray_destroy(qarray *a) { /*{{{ */
   qassert_retvoid((a != NULL));
   qassert_retvoid((a->base_ptr != NULL));
   switch (a->dist_type) {
@@ -826,7 +826,7 @@ qarray_loop_strider_exit:
   return 0;
 } /*}}} */
 
-void API_FUNC qarray_iter(qarray *a,
+API_FUNC void qarray_iter(qarray *a,
                           size_t const startat,
                           size_t const stopat,
                           qthread_f func) { /*{{{ */
@@ -880,7 +880,7 @@ void API_FUNC qarray_iter(qarray *a,
   }
 } /*}}} */
 
-void API_FUNC qarray_iter_loop(qarray *a,
+API_FUNC void qarray_iter_loop(qarray *a,
                                size_t const startat,
                                size_t const stopat,
                                qa_loop_f func,
@@ -1028,7 +1028,7 @@ void qarray_iter_constloop(qarray const *a,
   }
 } /*}}} */
 
-void API_FUNC qarray_iter_loopaccum(qarray *a,
+API_FUNC void qarray_iter_loopaccum(qarray *a,
                                     size_t const startat,
                                     size_t const stopat,
                                     qa_loopr_f func,
