@@ -19,7 +19,7 @@
 
 extern TLS_DECL(qthread_t *, IO_task_struct);
 
-void qt_begin_blocking_action(void) {
+void API_FUNC qt_begin_blocking_action(void) {
   qthread_t *me;
 
   if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
@@ -40,7 +40,7 @@ void qt_begin_blocking_action(void) {
   }
 }
 
-void qt_end_blocking_action(void) {
+void API_FUNC qt_end_blocking_action(void) {
   qthread_t *me = TLS_GET(IO_task_struct);
 
   if ((qlib != NULL) && (me != NULL)) {

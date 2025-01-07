@@ -20,7 +20,7 @@ struct qtimer_s {
   uint64_t start, stop;
 };
 
-void qtimer_start(qtimer_t q) {
+void API_FUNC qtimer_start(qtimer_t q) {
   if (inited == 0) {
     if (qthread_cas(&inited, 0, 1) == 0) {
       mach_timebase_info_data_t info;
@@ -39,11 +39,11 @@ void qtimer_start(qtimer_t q) {
   q->start = mach_absolute_time();
 }
 
-unsigned long qtimer_fastrand(void) {
+unsigned long API_FUNC qtimer_fastrand(void) {
   return (unsigned long)(mach_absolute_time());
 }
 
-void qtimer_stop(qtimer_t q) { q->stop = mach_absolute_time(); }
+void API_FUNC qtimer_stop(qtimer_t q) { q->stop = mach_absolute_time(); }
 
 double qtimer_wtime(void) { return conversion * mach_absolute_time(); }
 
@@ -56,14 +56,16 @@ double qtimer_res(void) {
 #endif
 }
 
-double qtimer_secs(qtimer_t q) {
+double API_FUNC qtimer_secs(qtimer_t q) {
   uint64_t difference = q->stop - q->start;
 
   return conversion * (double)difference;
 }
 
-qtimer_t qtimer_create(void) { return qt_calloc(1, sizeof(struct qtimer_s)); }
+qtimer_t API_FUNC qtimer_create(void) {
+  return qt_calloc(1, sizeof(struct qtimer_s));
+}
 
-void qtimer_destroy(qtimer_t q) { FREE(q, sizeof(struct qtimer_s)); }
+void API_FUNC qtimer_destroy(qtimer_t q) { FREE(q, sizeof(struct qtimer_s)); }
 
 /* vim:set expandtab: */

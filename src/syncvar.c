@@ -233,7 +233,7 @@ void INTERNAL qt_syncvar_subsystem_init(uint_fast8_t need_sync) {
   qthread_internal_cleanup_late(qt_syncvar_subsystem_shutdown);
 }
 
-int qthread_syncvar_status(syncvar_t *const v) { /*{{{ */
+int API_FUNC qthread_syncvar_status(syncvar_t *const v) { /*{{{ */
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   unsigned int realret;
 

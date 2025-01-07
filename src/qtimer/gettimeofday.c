@@ -14,9 +14,9 @@ struct qtimer_s {
   struct timeval start, stop;
 };
 
-void qtimer_start(qtimer_t q) { gettimeofday(&(q->start), NULL); }
+void API_FUNC qtimer_start(qtimer_t q) { gettimeofday(&(q->start), NULL); }
 
-unsigned long qtimer_fastrand(void) {
+unsigned long API_FUNC qtimer_fastrand(void) {
   struct timeval s;
 
   gettimeofday(&(s), NULL);
@@ -39,15 +39,17 @@ double qtimer_res(void) {
 #endif
 }
 
-void qtimer_stop(qtimer_t q) { gettimeofday(&(q->stop), NULL); }
+void API_FUNC qtimer_stop(qtimer_t q) { gettimeofday(&(q->stop), NULL); }
 
-double qtimer_secs(qtimer_t q) {
+double API_FUNC qtimer_secs(qtimer_t q) {
   return (q->stop.tv_sec + q->stop.tv_usec * 1e-6) -
          (q->start.tv_sec + q->start.tv_usec * 1e-6);
 }
 
-qtimer_t qtimer_create() { return qt_calloc(1, sizeof(struct qtimer_s)); }
+qtimer_t API_FUNC qtimer_create() {
+  return qt_calloc(1, sizeof(struct qtimer_s));
+}
 
-void qtimer_destroy(qtimer_t q) { FREE(q, sizeof(struct qtimer_s)); }
+void API_FUNC qtimer_destroy(qtimer_t q) { FREE(q, sizeof(struct qtimer_s)); }
 
 /* vim:set expandtab: */

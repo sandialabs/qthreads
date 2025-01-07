@@ -315,18 +315,20 @@ static void qt_allpairs_internal(qarray const *array1,
 #endif
 }
 
-void qt_allpairs_output(qarray const *array1,
-                        qarray const *array2,
-                        dist_out_f distfunc,
-                        void *restrict *restrict output,
-                        size_t outsize) {
+void API_FUNC qt_allpairs_output(qarray const *array1,
+                                 qarray const *array2,
+                                 dist_out_f distfunc,
+                                 void *restrict *restrict output,
+                                 size_t outsize) {
   union distfuncunion df;
 
   df.od = distfunc;
   qt_allpairs_internal(array1, array2, df, 1, output, outsize);
 }
 
-void qt_allpairs(qarray const *array1, qarray const *array2, dist_f distfunc) {
+void API_FUNC qt_allpairs(qarray const *array1,
+                          qarray const *array2,
+                          dist_f distfunc) {
   const union distfuncunion df = {distfunc};
 
   qt_allpairs_internal(array1, array2, df, 0, NULL, 0);
