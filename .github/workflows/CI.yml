@@ -30,12 +30,16 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 12m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
       timeout-minutes: 13
 
   linux-clang:
@@ -72,12 +76,16 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 12m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
       timeout-minutes: 13
 
   linux-icx:
@@ -109,14 +117,17 @@ jobs:
     - name: build qthreads
       run: |
         source /opt/intel/oneapi/setvars.sh
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
+        pushd build
         source /opt/intel/oneapi/setvars.sh
-        timeout -k 10s --foreground 12m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
       timeout-minutes: 13
 
   linux-icc:
@@ -150,14 +161,17 @@ jobs:
     - name: build qthreads
       run: |
         source /opt/intel/oneapi/setvars.sh
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
+        pushd build
         source /opt/intel/oneapi/setvars.sh
-        timeout -k 10s --foreground 12m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
       timeout-minutes: 13
 
   linux-aocc:
@@ -186,13 +200,16 @@ jobs:
         clang -v
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
-        timeout -k 10s --foreground 12m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
       timeout-minutes: 13
 
   mac:
@@ -209,7 +226,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: install deps
       run: |
-        brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+        brew install coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
     - if: ${{ matrix.topology != 'no' }}
       run: |
         brew install hwloc
@@ -219,16 +236,19 @@ jobs:
         export CFLAGS="-I$(brew --prefix)/include $CFLAGS"
         export CXXFLAGS="-I$(brew --prefix)/include $CXXFLAGS"
         export LDFLAGS="-L$(brew --prefix)/lib $LDFLAGS"
-        ./autogen.sh
-        ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j3
-        make tests -j3
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j3 VERBOSE=1
+        popd
+    - name: run tests
       run: |
         # commented example for how to get a backtrace from CI usign lldb on OSX:
         #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
         #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
-        gtimeout -k 10s --foreground 12m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 gtimeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
       timeout-minutes: 13
 
   sanitizers:
@@ -279,15 +299,17 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
-        export QTHREADS_DIR="$(pwd)"
+        pushd build
         if [[ "${{ matrix.sanitizer }}" == "thread" ]]; then cd test/basics; fi
-        timeout -k 10s --foreground 18m make check || ( cd $QTHREADS_DIR && cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
+        popd
       timeout-minutes: 19
 
   linux-thorough:
@@ -325,12 +347,16 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 18m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
+        popd
       timeout-minutes: 19
 
   clang-format:
