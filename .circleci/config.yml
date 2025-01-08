@@ -132,16 +132,19 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y cmake
           sudo apt-get install -y hwloc libhwloc-dev
-          wget -O acfl.tar https://developer.arm.com/-/media/Files/downloads/hpc/arm-compiler-for-linux/24-04/arm-compiler-for-linux_24.04_Ubuntu-22.04_aarch64.tar
+          wget -O acfl.tar https://developer.arm.com/-/cdn-downloads/permalink/Arm-Compiler-for-Linux/Version_24.10.1/arm-compiler-for-linux_24.10.1_Ubuntu-22.04_aarch64.tar
           tar -vxf acfl.tar
-          ./arm-compiler-for-linux_24.04_Ubuntu-22.04/arm-compiler-for-linux_24.04_Ubuntu-22.04.sh -a -f -s acfl
+          ls
+          ls arm-compiler-for-linux_24.10.1_Ubuntu-22.04
+          ./arm-compiler-for-linux_24.10.1_Ubuntu-22.04/arm-compiler-for-linux_24.10.1_Ubuntu-22.04.sh -a -f -s acfl
           rm acfl.tar
-          sudo apt install -y ./acfl/gcc-13.2.0_Ubuntu-22.04.deb ./acfl/arm-linux-compiler-24.04_Ubuntu-22.04.deb
+          ls acfl
+          sudo apt install -y ./acfl/gcc-14.2.0_Ubuntu-22.04.deb ./acfl/arm-linux-compiler-24.10.1_Ubuntu-22.04.deb
           rm -rf acfl
-          export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
+          export PATH=$PATH:/opt/arm/arm-linux-compiler-24.10.1_Ubuntu-22.04/bin
           armclang -v
       - run: |
-          export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
+          export PATH=$PATH:/opt/arm/arm-linux-compiler-24.10.1_Ubuntu-22.04/bin
           mkdir build
           pushd build
           cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=<< parameters.scheduler >> -DQTHREADS_TOPOLOGY=<< parameters.topology >> ..
@@ -149,7 +152,7 @@ jobs:
           popd
       - run:
           command: |
-              export PATH=$PATH:/opt/arm/arm-linux-compiler-24.04_Ubuntu-22.04/bin
+              export PATH=$PATH:/opt/arm/arm-linux-compiler-24.10.1_Ubuntu-22.04/bin
               pushd build
               CTEST_OUTPUT_ON_FAILURE=1 timeout --foreground -k 10s 4m make test VERBOSE=1
               popd
