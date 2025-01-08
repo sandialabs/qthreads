@@ -213,7 +213,7 @@ jobs:
       timeout-minutes: 13
 
   mac:
-    runs-on: macos-latest
+    runs-on: macos-15
     continue-on-error: true
     strategy:
       matrix:
