@@ -31,21 +31,24 @@ osx_m1_task:
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: binders
   install_deps_script: |
-    brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+    brew install cmake coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
     if [ "$QTHREADS_TOPOLOGY" != "no" ]; then brew install hwloc; fi
   build_script: |
     export CFLAGS="-g -I$(brew --prefix)/include $CFLAGS"
     export CXXFLAGS="-g -I$(brew --prefix)/include $CXXFLAGS"
     export LDFLAGS="-g -L$(brew --prefix)/lib $LDFLAGS"
-    ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
-    make -j$CIRRUS_CPU
-    make tests -j$CIRRUS_CPU
+    mkdir build
+    pushd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=$QTHREADS_SCHEDULER -DQTHREADS_TOPOLOGY=$QTHREADS_TOPOLOGY ..
+    make -j$CIRRUS_CPU VERBOSE=1
+    popd
   test_script: |
     # commented example for how to get a backtrace from CI usign lldb on OSX:
     #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
     #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
-    gtimeout --foreground 3m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+    pushd build
+    CTEST_OUTPUT_ON_FAILURE=1 gtimeout --foreground 3m make test VERBOSE=1
+    popd
 
 freebsd_task:
   freebsd_instance:
@@ -92,15 +95,18 @@ arm_linux_task:
       QTHREADS_TOPOLOGY: no
   install_deps_script: |
     apt-get update -y
-    apt-get install -y autoconf automake libtool
+    apt-get install -y cmake
     apt-get install -y hwloc libhwloc-dev
   build_script: |
-    ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
-    make -j$CIRRUS_CPU
-    make tests -j$CIRRUS_CPU
+    mkdir build
+    pushd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=$QTHREADS_SCHEDULER -DQTHREADS_TOPOLOGY=$QTHREADS_TOPOLOGY ..
+    make -j$CIRRUS_CPU VERBOSE=1
+    popd
   test_script: |
-    timeout --foreground -k 10s 5m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+    pushd build
+    CTEST_OUTPUT_ON_FAILURE=1 timeout --foreground -k 10s 5m make test VERBOSE=1
+    popd
 
 arm_linux_clang_task:
   arm_container:
@@ -143,13 +149,16 @@ arm_linux_clang_task:
     apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-19 main'
     apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-19 main' # Something's buggy upstream but running this twice fixes it.
     apt-get install -y clang-19
-    apt-get install -y autoconf automake libtool
+    apt-get install -y cmake
     apt-get install -y hwloc libhwloc-dev
   build_script: |
-    ./autogen.sh
-    ./configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=$QTHREADS_TOPOLOGY
-    make -j$CIRRUS_CPU
-    make tests -j$CIRRUS_CPU
+    mkdir build
+    pushd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=$QTHREADS_SCHEDULER -DQTHREADS_TOPOLOGY=$QTHREADS_TOPOLOGY ..
+    make -j$CIRRUS_CPU VERBOSE=1
+    popd
   test_script: |
-    timeout --foreground -k 10s 5m make check  || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+    pushd build
+    CTEST_OUTPUT_ON_FAILURE=1 timeout --foreground -k 10s 5m make test VERBOSE=1
+    popd
 
