@@ -220,6 +220,7 @@ jobs:
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_asserts: [true, false]
+        compiler: [gcc, clang]
     runs-on: ${{ matrix.image }}
     env:
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
@@ -234,6 +235,7 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
+        if [[ "${{ matrix.compiler }}" == "gcc" ]]; then export CC=gcc && export CXX=g++ ; fi
         export CFLAGS="-I$(brew --prefix)/include $CFLAGS"
         export CXXFLAGS="-I$(brew --prefix)/include $CXXFLAGS"
         export LDFLAGS="-L$(brew --prefix)/lib $LDFLAGS"
