@@ -1,22 +1,15 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #define _GNU_SOURCE
 
+#include <errno.h>
 #include <fcntl.h> /* for open() */
 #include <pthread.h>
 #include <stdio.h>     /* for perror() */
 #include <stdlib.h>    /* for exit() */
+#include <string.h>    /* for memset() */
 #include <sys/mman.h>  /* for mmap() */
 #include <sys/stat.h>  /* for open() */
 #include <sys/types.h> /* for mmap() */
 #include <unistd.h>    /* for fstat() */
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h> /* for funky print statements */
-#endif
-#include <errno.h>
-#include <string.h> /* for memset() */
 
 #include "qt_alloc.h"
 #include "qt_asserts.h"
@@ -106,7 +99,7 @@ struct mapinfo_s {
 static struct mapinfo_s *mmaps = NULL;
 static struct dynmapinfo_s *dynmmaps = NULL;
 
-#if defined(HAVE_FSTAT64) && defined(HAVE_LSEEK64)
+#ifdef __GLIBC__
 #define fstat fstat64
 #define lseek lseek64
 typedef struct stat64 statstruct_t;

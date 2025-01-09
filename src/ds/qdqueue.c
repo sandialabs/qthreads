@@ -1,12 +1,4 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <limits.h>
-
-#ifdef HAVE_SYS_LGRP_USER_H
-#include <sys/lgrp_user.h>
-#endif
 
 #include <qthread/qdqueue.h>
 #include <qthread/qlfqueue.h>
@@ -218,11 +210,7 @@ qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
   qthread_shepherd_id_t *temp;
   size_t j, numN = 0;
 
-#ifdef HAVE_SYS_LGRP_USER_H
-#define NONME_DIST 5
-#else
 #define NONME_DIST 10
-#endif
 
   /* find the smallest non-me distance */
   int mindist = INT_MAX;

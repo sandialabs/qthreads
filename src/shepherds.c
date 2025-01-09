@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* System Headers */
 #include <stdlib.h> /* for random(), according to P2001 */
 #include <sys/types.h>

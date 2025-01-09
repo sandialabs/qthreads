@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /******************************************************/
 /* The API                                            */
 /******************************************************/
@@ -11,23 +7,17 @@
 /* System Headers                                     */
 /******************************************************/
 #include <limits.h> /* for INT_MAX */
+#include <pthread.h>
+#include <sched.h>
 #include <stdarg.h> /* for va_list, va_start() and va_end() */
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* for malloc() and abort() */
 #include <string.h> /* for memset() */
-#include <unistd.h> /* for getpagesize() */
-#if !HAVE_MEMCPY
-#define memcpy(d, s, n) bcopy((s), (d), (n))
-#define memmove(d, s, n) bcopy((s), (d), (n))
-#endif
-#include <pthread.h>
 #include <sys/resource.h>
 #include <sys/time.h>
-#ifdef HAVE_SCHED_H
-#include <sched.h>
-#endif
+#include <unistd.h> /* for getpagesize() */
 #ifdef QTHREAD_USE_VALGRIND
 #include <valgrind/memcheck.h>
 #endif

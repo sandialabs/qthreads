@@ -1,10 +1,6 @@
 #ifndef TASKIMPL_H
 #define TASKIMPL_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "qthread/common.h"
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)

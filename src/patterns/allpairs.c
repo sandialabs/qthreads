@@ -3,9 +3,6 @@
 
 #include <unistd.h> /* for getpagesize() */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <qthread/allpairs.h>
 #include <qthread/qdqueue.h>
 #include <qthread/qthread.h>

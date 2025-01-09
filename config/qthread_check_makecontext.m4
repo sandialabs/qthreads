@@ -81,9 +81,6 @@ AC_CACHE_CHECK([for hand-implemented makecontext],
    esac])
 
 AS_IF([test "$qthread_cv_makecontext" = "yes"],
-  [AC_CHECK_FUNCS([memmove], [], 
-    [AC_MSG_ERROR([A functional memmove is required for the included makecontext.])])
-   AC_CHECK_HEADERS([sys/ucontext.h stdarg.h sched.h signal.h sys/utsname.h])
-   $1],
+  [$1],
   [$2])
 ])

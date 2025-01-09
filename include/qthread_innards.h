@@ -1,16 +1,12 @@
 #ifndef QTHREAD_INNARDS_H
 #define QTHREAD_INNARDS_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* System Headers */
 #include <math.h>
 
 #include <pthread.h>
 
-#ifdef QTHREAD_HAVE_HWLOC
+#ifdef USE_HWLOC
 #include <hwloc.h>
 #if (HWLOC_API_VERSION < 0x00010000)
 #error HWLOC version unrecognized

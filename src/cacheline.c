@@ -4,9 +4,6 @@
 
 #include "qt_visibility.h"
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <qthread/cacheline.h>
 #include <qthread/common.h>
 

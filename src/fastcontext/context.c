@@ -2,10 +2,6 @@
  */
 /* Portions of this file are Copyright (c) 2006-2011 Sandia National
  * Laboratories */
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>

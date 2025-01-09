@@ -78,6 +78,10 @@ if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "
   # TODO: pull this out into a simple module file so we can just do find_package instead.
   find_library(HWLOC_LIBRARY NAMES hwloc PATH_SUFFIXES lib lib64)
   target_link_libraries(qthread PUBLIC "${HWLOC_LIBRARY}")
+  target_compile_definitions(qthread PRIVATE USE_HWLOC)
+  if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc")
+    target_compile_definitions(qthread PRIVATE USE_HWLOC_MEM_AFFINITY)
+  endif()
 endif()
 target_include_directories(qthread
   PUBLIC

@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* API */
 #include <qthread/qswsrqueue.h>
 #include <qthread/qthread.h>

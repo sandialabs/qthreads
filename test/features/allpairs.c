@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h" /* for _GNU_SOURCE */
-#endif
 #include "argparsing.h"
 #include <qthread/allpairs.h>
 #include <qthread/qthread.h>

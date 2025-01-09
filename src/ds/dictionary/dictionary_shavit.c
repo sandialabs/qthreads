@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* System Headers */
 #include <stdio.h>  /* for printf() */
 #include <stdlib.h> /* for malloc/free/etc */

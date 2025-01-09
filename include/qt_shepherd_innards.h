@@ -56,9 +56,6 @@ struct qthread_shepherd_s {
   _Atomic uintptr_t active;
   /* affinity information */
   unsigned int node; /* whereami */
-#ifdef QTHREAD_HAVE_LGRP
-  unsigned int lgrp;
-#endif
   unsigned int *shep_dists;
   qthread_shepherd_id_t *sorted_sheplist;
   unsigned int stealing; /* True when a worker is in the steal (attempt) process

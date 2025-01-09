@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* System Headers */
 #include <stdlib.h> /* for calloc() */
 #include <sys/mman.h>
@@ -17,6 +13,7 @@
 #include "qthread/qarray.h"
 
 /* Local Headers */
+#include "qt_affinity.h"
 #include "qt_alloc.h"
 #include "qt_asserts.h"
 #include "qt_gcd.h" /* for qt_lcm() */
@@ -287,7 +284,7 @@ static qarray *qarray_create_internal(size_t const count,
       break;
     default: ret->dist_specific.dist_shep = NO_SHEPHERD;
   }
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
+#ifdef USE_HWLOC_MEM_AFFINITY
   switch (d) {
     case ALL_LOCAL:
     case ALL_RAND:
@@ -314,11 +311,11 @@ static qarray *qarray_create_internal(size_t const count,
       break;
   }
   if (ret->base_ptr == NULL) {}
-#else  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
+#else  /* ifdef USE_HWLOC_MEM_AFFINITY */
   /* For speed, we want page-aligned memory, if we can get it */
   ret->base_ptr =
     qt_internal_aligned_alloc(segment_count * ret->segment_bytes, pagesize);
-#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
+#endif /* ifdef USE_HWLOC_MEM_AFFINITY */
   qassert_goto((ret->base_ptr != NULL), badret_exit);
 
   /********************************************
@@ -368,7 +365,7 @@ static qarray *qarray_create_internal(size_t const count,
         qarray_internal_segment_shep_write(ret, seghead, target_shep);
       }
       assert(target_shep < max_sheps);
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
+#ifdef USE_HWLOC_MEM_AFFINITY
       {
         /* make sure this shep has a node; if it does, put this segment there */
         unsigned int target_node = qthread_internal_shep_to_node(target_shep);
@@ -378,7 +375,7 @@ static qarray *qarray_create_internal(size_t const count,
           qt_affinity_mem_tonode(seghead, ret->segment_bytes, target_node);
         }
       }
-#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
+#endif /* ifdef USE_HWLOC_MEM_AFFINITY */
       qthread_incr(&chunk_distribution_tracker[target_shep], 1);
     }
   }
@@ -446,7 +443,7 @@ API_FUNC void qarray_destroy(qarray *a) { /*{{{ */
                                       ((a->count % a->segment_size) ? 1 : 0)));
       break;
   }
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
+#ifdef USE_HWLOC_MEM_AFFINITY
   qt_affinity_free(a->base_ptr,
                    a->segment_bytes * (a->count / a->segment_size +
                                        ((a->count % a->segment_size) ? 1 : 0)));
@@ -1193,14 +1190,14 @@ void qarray_set_shepof(qarray *a,
       if (a->dist_specific.dist_shep != shep) {
         size_t segment_count = (a->count / a->segment_size);
         segment_count += (a->count % a->segment_size) ? 1 : 0;
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
+#ifdef USE_HWLOC_MEM_AFFINITY
         unsigned int target_node = qthread_internal_shep_to_node(shep);
         if (target_node != QTHREAD_NO_NODE) {
           size_t num_segments = a->count / a->segment_size;
           size_t array_size = a->segment_bytes * num_segments;
           qt_affinity_mem_tonode(a->base_ptr, array_size, target_node);
         }
-#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
+#endif /* ifdef USE_HWLOC_MEM_AFFINITY */
         qthread_incr(&chunk_distribution_tracker[shep], segment_count);
         qthread_incr(&chunk_distribution_tracker[a->dist_specific.dist_shep],
                      ((aligned_t)-1) * segment_count);
@@ -1215,14 +1212,14 @@ void qarray_set_shepof(qarray *a,
         qarray_internal_segment_shep_read(a, seghead);
       assert(cur_shep < qthread_num_shepherds());
       if (cur_shep != shep) {
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
+#ifdef USE_HWLOC_MEM_AFFINITY
         unsigned int target_node = qthread_internal_shep_to_node(shep);
         if (target_node != QTHREAD_NO_NODE) {
           qt_affinity_mem_tonode(a->base_ptr + (a->segment_bytes * segment),
                                  a->segment_bytes,
                                  target_node);
         }
-#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
+#endif /* ifdef USE_HWLOC_MEM_AFFINITY */
         qthread_incr(&chunk_distribution_tracker[shep], 1);
         qthread_incr(&chunk_distribution_tracker[cur_shep], (aligned_t)-1);
         qarray_internal_segment_shep_write(a, seghead, shep);

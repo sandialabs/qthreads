@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 // a logrithmic self-cleaning barrier -- requires the size to be known
 // Follows a strategy that the MTA used - so might work better if it used the
 // full/empty implementation, but orginal developement predated it's inclusion

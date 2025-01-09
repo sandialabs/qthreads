@@ -1,10 +1,7 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
 
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <qthread/qtimer.h>
 
@@ -30,14 +27,7 @@ double qtimer_wtime(void) {
   return s.tv_sec + (s.tv_usec * 1e-6);
 }
 
-double qtimer_res(void) {
-#if defined(HAVE_SYSCONF) && defined(HAVE_SC_CLK_TCK)
-  return 1.0 / sysconf(_SC_CLK_TCK);
-  ;
-#else
-  return 1e-9;
-#endif
-}
+double qtimer_res(void) { return 1.0 / sysconf(_SC_CLK_TCK); }
 
 void API_FUNC qtimer_stop(qtimer_t q) { gettimeofday(&(q->stop), NULL); }
 

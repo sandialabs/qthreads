@@ -61,7 +61,7 @@ int main()
       ])
     AS_IF([test "x$qt_allgoodsofar" = xyes],
         # we can use hwloc and do action-if-found
-        [AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
+        [AC_DEFINE([USE_HWLOC],[1],[if I can use the hwloc topology interface])
        $1],
       # restore CPPFLAGS and LDFLAGS if hwloc is unavailable
       [CPPFLAGS="$hwloc_saved_CPPFLAGS"
@@ -70,7 +70,7 @@ int main()
        $2])],
     # don't do configuration checks, assume hwloc works
     [AC_MSG_NOTICE([skipping hwloc link checks])
-    AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
+    AC_DEFINE([USE_HWLOC],[1],[if I can use the hwloc topology interface])
     # default to having distance if not specified
     AS_IF([test "x$qt_allgoodsofar" = xyes && test "x$enable_hwloc_has_distance" = x],
         [AC_MSG_NOTICE([enabling hwloc distance support])

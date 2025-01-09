@@ -9,10 +9,6 @@
 #endif
 #endif
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "qthread/barrier.h"
 
 #include "qt_blocking_structs.h"

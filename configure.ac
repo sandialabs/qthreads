@@ -229,16 +229,6 @@ AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
 AC_CACHE_SAVE
 
-## ----------------------- ##
-## Checks for header files ##
-## ----------------------- ##
-AC_HEADER_STDC
-AC_HEADER_SYS_WAIT
-AC_HEADER_TIME
-AC_CHECK_HEADERS([fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h])
-
-AC_CACHE_SAVE
-
 ## -------------------- ##
 ## Check for structures ##
 ## -------------------- ##
@@ -279,13 +269,6 @@ AS_IF([test "x$enable_precache_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_PRECACHE_GUARD_PAGES], [1], [Precache guard pages in pooled stacks])],
       [enable_precache_guard_pages="no"])
 
-
-AC_CACHE_SAVE
-
-## --------------------------- ##
-## Check for library functions ##
-## --------------------------- ##
-AC_CHECK_FUNCS([memalign memcpy fstat64 lseek64 sched_yield sysconf getcontext])
 
 AC_CACHE_SAVE
 
@@ -371,13 +354,6 @@ AS_IF([test "x$enable_asserts" != "xyes"],
 AS_IF([test "x$with_stack_alignment" = "x"],
       [with_stack_alignment=16])
 
-AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#include <unistd.h>
-
-int main() {
-  return sysconf(_SC_CLK_TCK);
-}]])],
-  [AC_DEFINE([HAVE_SC_CLK_TCK], [1], [Define if _SC_CLK_TCK is available.])])
 dnl Which timer do we want to use
 qthread_timer_type=gettimeofday
 AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
@@ -445,7 +421,6 @@ AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
 AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
 AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
 
-AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  man/Makefile

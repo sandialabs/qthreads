@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "qt_affinity.h"
 #include "qt_alloc.h"
 #include "qt_asserts.h"

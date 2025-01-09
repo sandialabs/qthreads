@@ -1,5 +1,5 @@
-#ifndef HAVE_QT_ALIGNED_ALLOC_H
-#define HAVE_QT_ALIGNED_ALLOC_H
+#ifndef QT_ALLOC_H
+#define QT_ALLOC_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -28,5 +28,5 @@ void INTERNAL qt_internal_alignment_init(void);
 #endif
 extern size_t _pagesize;
 #define pagesize ((size_t)_pagesize)
-#endif // ifndef HAVE_QT_ALIGNED_ALLOC_H
+#endif // ifndef QT_ALLOC_H
 /* vim:set expandtab: */
