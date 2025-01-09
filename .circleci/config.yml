@@ -208,6 +208,8 @@ jobs:
         type: string
       topology:
         type: string
+      compiler:
+        type: string
     docker:
       - image: alpine:latest
     resource_class: << parameters.worker_type >>
@@ -215,7 +217,9 @@ jobs:
       - checkout
       - run: |
           apk add --no-cache --no-progress bash make musl-dev hwloc-dev cmake gcc g++
+          if [ "<< parameters.compiler >>" == "clang" ]; then apk add clang; fi
       - run: |
+          if [ "<< parameters.compiler >>" == "clang" ]; then export CC=clang && export CXX=clang++; fi
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=<< parameters.scheduler >> -DQTHREADS_TOPOLOGY=<< parameters.topology >> ..
@@ -301,29 +305,70 @@ workflows:
               worker_type: [medium, arm.medium]
               scheduler: [nemesis, sherwood, distrib]
               topology: ['no', binders, hwloc]
+              compiler: [clang, gcc]
             exclude:
               - worker_type: medium
                 scheduler: sherwood
                 topology: binders
+                compiler: gcc
               - worker_type: medium
                 scheduler: sherwood
                 topology: hwloc
+                compiler: gcc
               - worker_type: medium
                 scheduler: distrib
                 topology: binders
+                compiler: gcc
               - worker_type: medium
                 scheduler: distrib
                 topology: hwloc
+                compiler: gcc
               - worker_type: arm.medium
                 scheduler: sherwood
                 topology: binders
+                compiler: gcc
               - worker_type: arm.medium
                 scheduler: sherwood
                 topology: hwloc
+                compiler: gcc
               - worker_type: arm.medium
                 scheduler: distrib
                 topology: binders
+                compiler: gcc
               - worker_type: arm.medium
                 scheduler: distrib
                 topology: hwloc
+                compiler: gcc
+              - worker_type: medium
+                scheduler: sherwood
+                topology: binders
+                compiler: clang
+              - worker_type: medium
+                scheduler: sherwood
+                topology: hwloc
+                compiler: clang
+              - worker_type: medium
+                scheduler: distrib
+                topology: binders
+                compiler: clang
+              - worker_type: medium
+                scheduler: distrib
+                topology: hwloc
+                compiler: clang
+              - worker_type: arm.medium
+                scheduler: sherwood
+                topology: binders
+                compiler: clang
+              - worker_type: arm.medium
+                scheduler: sherwood
+                topology: hwloc
+                compiler: clang
+              - worker_type: arm.medium
+                scheduler: distrib
+                topology: binders
+                compiler: clang
+              - worker_type: arm.medium
+                scheduler: distrib
+                topology: hwloc
+                compiler: clang
 
