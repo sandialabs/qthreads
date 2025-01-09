@@ -439,7 +439,7 @@ static void *qthread_master(void *arg) {
 
         *current = t;
 
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
         getcontext(&my_context);
 #endif
         qthread_exec(t, &my_context);
@@ -846,7 +846,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   qthread_before_swap_to_main();
 
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   qassert(
     swapcontext(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)),
     0);
@@ -938,21 +938,21 @@ static inline void qthread_makecontext(qt_context_t *const c,
 #ifdef UCSTACK_HAS_SSFLAGS
   c->uc_stack.ss_flags = 0;
 #endif
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   /* the makecontext man page (Linux) says: set the uc_link FIRST.
    * why? no idea */
   c->uc_link = returnc; /* NULL pthread_exit() */
 #endif
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
   makecontext(c, func, 2, high, low);
 #else  /* QTHREAD_MAKECONTEXT_SPLIT */
   makecontext(c, func, 1, arg);
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
   assert((void *)c->uc_link == (void *)returnc);
-#else  /* ifdef HAVE_NATIVE_MAKECONTEXT */
+#else  /* ifdef USE_SYSTEM_SWAPCONTEXT */
   qt_makectxt(c, func, 1, arg);
-#endif /* ifdef HAVE_NATIVE_MAKECONTEXT */
+#endif /* ifdef USE_SYSTEM_SWAPCONTEXT */
 } /*}}} */
 
 /* this adds a function to the list of cleanup functions to call at finalize;
@@ -1743,7 +1743,7 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
                           (void (*)(void))qthread_wrapper,
                           t,
                           c);
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
     } else {
       t->rdata->context.uc_link = c; /* NULL pthread_exit() */
 #endif
@@ -1766,7 +1766,7 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
 
     qthread_before_swap_to_qthread(t);
 
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
     qassert(swapcontext(atomic_load_explicit(&t->rdata->return_context,
                                              memory_order_relaxed),
                         &t->rdata->context),
@@ -2233,7 +2233,7 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
     sizeof(qt_context_t));
 #endif
   qthread_before_swap_from_qthread(t);
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   qassert(swapcontext(&t->rdata->context,
                       atomic_load_explicit(&t->rdata->return_context,
                                            memory_order_relaxed)),
@@ -2262,7 +2262,7 @@ void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
     atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed),
     sizeof(qt_context_t));
 #endif
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   setcontext(
     atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed));
 #else

@@ -83,7 +83,7 @@ int main()
 				  [qthread_cv_swapcontext_works=yes])],
 	       [qthread_cv_swapcontext_works=yes])])])
 AS_IF([test "$qthread_cv_swapcontext_works" = yes],
-	[AC_DEFINE([HAVE_NATIVE_MAKECONTEXT], [1], [The system provides functional native make/swap/get-context functions])
+	[AC_DEFINE([USE_SYSTEM_SWAPCONTEXT], [1], [Use the system provided functional native make/swap/get-context functions])
 	 QTHREAD_CHECK_MAKECONTEXT_SPLIT_ARGS(
 	 	[AC_DEFINE([QTHREAD_MAKECONTEXT_SPLIT],[1],[makecontext()passes args as int-size, not long-size])])
 	 $1],

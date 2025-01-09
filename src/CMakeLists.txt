@@ -8,6 +8,7 @@ set(QTHREADS_DEFAULT_STACK_SIZE 32768 CACHE STRING "Default qthread stack size."
 set(QTHREADS_HASHMAP hashmap CACHE STRING "Which hashmap implementation to use. Valid values are \"hashmap\" and \"lf_hashmap\".")
 set(QTHREADS_DICT_TYPE shavit CACHE STRING "Which dictionary implementation to use. Valid values are \"shavit\", \"trie\", and \"simple\".")
 set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to use. Valid values are \"clock_gettime\", \"mach\", \"gettimeofday\", and \"gethrtime\".")
+set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
 
 set(QTHREADS_SOURCES
   cacheline.c
@@ -34,8 +35,6 @@ set(QTHREADS_SOURCES
   touch.c
   tls.c
   teams.c
-  fastcontext/asm.S
-  fastcontext/context.c
   ${QTHREADS_HASHMAP}.c
   ds/qarray.c
   ds/qdqueue.c
@@ -60,10 +59,16 @@ set(QTHREADS_SOURCES
   patterns/wavefront.c
 )
 
-# TODO: switch/checks necessary to include the correct
-# fastcontext version when we need the fallback.
-
 add_library(qthread SHARED ${QTHREADS_SOURCES})
+
+if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
+  target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
+elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
+  target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
+else()
+  message(FATAL_ERROR "The specified context swap implementation does not match any known implementations.")
+endif()
+
 target_include_directories(qthread
   PRIVATE "../include"
 )
