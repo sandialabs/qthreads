@@ -219,7 +219,7 @@ jobs:
         image: [macos-15, macos-13] # Test on both ARM and X86
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
-        use_asserts: [true, false]
+        build_type: [Release, Debug]
         compiler: [gcc, clang]
     runs-on: ${{ matrix.image }}
     env:
@@ -241,7 +241,7 @@ jobs:
         export LDFLAGS="-L$(brew --prefix)/lib $LDFLAGS"
         mkdir build
         pushd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
         make -j3 VERBOSE=1
         popd
     - name: run tests
@@ -324,7 +324,7 @@ jobs:
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
-        use_asserts: [true, false]
+        build_type: [Release, Debug]
         exclude:
           - compiler: gcc
             use_libcxx: true
@@ -352,7 +352,7 @@ jobs:
       run: |
         mkdir build
         pushd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
         make -j2 VERBOSE=1
         popd
     - name: run tests
