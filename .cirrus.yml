@@ -62,16 +62,15 @@ freebsd_task:
     env:
       QTHREADS_SCHEDULER: distrib
   install_deps_script: |
-    pkg install -y bash
-    pkg install -y llvm autoconf automake libtool
+    pkg install -y llvm cmake
     pkg install -y coreutils # to get gtimeout for CI. The built-in timeout sometimes fails to kill the process.
   build_script: |
-    bash autogen.sh
-    bash configure --enable-picky --with-scheduler=$QTHREADS_SCHEDULER --with-topology=no
-    make -j$CIRRUS_CPU
-    make tests -j$CIRRUS_CPU
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=$QTHREADS_SCHEDULER -DQTHREADS_TOPOLOGY=no -DQTHREADS_CONTEXT_SWAP_IMPL=system ..
+    make -j$CIRRUS_CPU VERBOSE=1
   test_script: |
-    gtimeout --foreground -k 10s 2m make check || ( cat test/basics/test-suite.log && cat test/features/test-suite.log && cat test/stress/test-suite.log && exit 1 )
+    CTEST_OUTPUT_ON_FAILURE=1 gtimeout --foreground -k 10s 2m make test VERBOSE=1
 
 arm_linux_task:
   arm_container:
