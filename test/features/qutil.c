@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h" /* for _GNU_SOURCE */
-#endif
 #include <float.h>  /* for DBL_EPSILON (according to C89) */
 #include <limits.h> /* for INT_MIN & friends (according to C89) */
 #include <math.h>   /* for fabs() */

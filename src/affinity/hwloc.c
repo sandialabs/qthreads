@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <hwloc.h>
 
 #include "qt_affinity.h"
@@ -263,7 +259,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 
 void INTERNAL qt_affinity_deinit(void) {}
 
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
+#ifdef USE_HWLOC_MEM_AFFINITY
 void INTERNAL qt_affinity_mem_tonode(void *addr,
                                      size_t bytes,
                                      int node) { /*{{{ */
@@ -299,7 +295,7 @@ void INTERNAL qt_affinity_free(void *ptr, size_t bytes) { /*{{{ */
   hwloc_free(topology, ptr, bytes);
 } /*}}} */
 
-#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
+#endif /* ifdef USE_HWLOC_MEM_AFFINITY */
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void) { /*{{{ */
   qthread_shepherd_id_t ret = 1;
@@ -481,37 +477,10 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t *sheps,
       qt_calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
     sheps[i].shep_dists = qt_calloc(nshepherds, sizeof(unsigned int));
   }
-#ifdef QTHREAD_HAVE_HWLOC_DISTS
-  const struct hwloc_distances_s *matrix =
-    hwloc_get_whole_distance_matrix_by_type(topology, HWLOC_OBJ_NODE);
-  if (matrix) { assert(matrix->latency); }
-  size_t node_to_NUMAnode[num_extant_objs];
-  for (size_t i = 0; i < num_extant_objs; ++i) {
-    hwloc_obj_t node_obj = hwloc_get_obj_inside_cpuset_by_depth(
-      topology, allowed_cpuset, shep_depth, i);
-    while (node_obj->type > HWLOC_OBJ_NODE) {
-      node_obj = node_obj->parent;
-      assert(node_obj);
-    }
-    node_to_NUMAnode[i] = node_obj->logical_index;
-  }
-#endif /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
   for (size_t i = 0; i < nshepherds; ++i) {
     for (size_t j = 0, k = 0; j < nshepherds; ++j) {
       if (j != i) {
-#ifdef QTHREAD_HAVE_HWLOC_DISTS
-        if (matrix) {
-          sheps[i].shep_dists[j] =
-            matrix->latency[node_to_NUMAnode[sheps[i].node] +
-                            matrix->nbobjs * node_to_NUMAnode[sheps[j].node]] *
-            10;
-        } else {
-          // handle what is fundamentally a bug in old versions of hwloc
-          sheps[i].shep_dists[j] = 10;
-        }
-#else  /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
         sheps[i].shep_dists[j] = 10;
-#endif /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
         sheps[i].sorted_sheplist[k++] = j;
       }
     }

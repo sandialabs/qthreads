@@ -1,9 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
-/* System Headers */
-
 /* Internal Headers */
 #include "qt_qthread_mgmt.h" /* for qthread_internal_self() */
 #include "qt_shepherd_innards.h"

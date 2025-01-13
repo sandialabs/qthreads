@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* API */
 #include <qthread/qswsrqueue.h>
 #include <qthread/qthread.h>
@@ -21,7 +17,7 @@ struct qswsrqueue_s { /* typedef'd to qswsrqueue_t */
   void *elements[];
 };
 
-qswsrqueue_t *API_FUNC qswsrqueue_create(size_t elements) { /*{{{ */
+API_FUNC qswsrqueue_t *qswsrqueue_create(size_t elements) { /*{{{ */
   qswsrqueue_t *q;
 
   if ((elements * sizeof(void *)) < CACHELINE_WIDTH) {
@@ -42,14 +38,14 @@ qswsrqueue_t *API_FUNC qswsrqueue_create(size_t elements) { /*{{{ */
   return q;
 } /*}}} */
 
-int API_FUNC qswsrqueue_destroy(qswsrqueue_t *q) { /*{{{ */
+API_FUNC int qswsrqueue_destroy(qswsrqueue_t *q) { /*{{{ */
   qassert_ret((q != NULL), QTHREAD_BADARGS);
   qt_internal_aligned_free(
     q, sizeof(struct qswsrqueue_s) + (q->size * sizeof(void *)));
   return QTHREAD_SUCCESS;
 } /*}}} */
 
-int API_FUNC qswsrqueue_enqueue(qswsrqueue_t *q, void *elem) { /*{{{ */
+API_FUNC int qswsrqueue_enqueue(qswsrqueue_t *q, void *elem) { /*{{{ */
   uint32_t cur_tail = q->tail;
   uint32_t next_tail = (cur_tail + 1) % q->size;
   MACHINE_FENCE;
@@ -78,7 +74,7 @@ int qswsrqueue_enqueue_blocking(qswsrqueue_t *q, void *elem) { /*{{{ */
   } while (1);
 } /*}}} */
 
-void *API_FUNC qswsrqueue_dequeue(qswsrqueue_t *q) { /*{{{ */
+API_FUNC void *qswsrqueue_dequeue(qswsrqueue_t *q) { /*{{{ */
   void *item;
   uint32_t cur_head = q->head;
   MACHINE_FENCE;
@@ -106,7 +102,7 @@ void *qswsrqueue_dequeue_blocking(qswsrqueue_t *q) { /*{{{ */
 } /*}}} */
 
 /* returns 1 if the queue is empty, 0 otherwise */
-int API_FUNC qswsrqueue_empty(qswsrqueue_t *q) { /*{{{ */
+API_FUNC int qswsrqueue_empty(qswsrqueue_t *q) { /*{{{ */
   return (q->head == q->tail);
 } /*}}} */
 

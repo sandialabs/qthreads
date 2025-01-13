@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "qthread/qthread.h"
 
 #include "qt_alloc.h"

@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* System Headers */
 #include <pthread.h>
 #include <stdio.h>
@@ -901,11 +897,7 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
 
     i++;
     i *= (i < qlib->nshepherds - 1);
-    if (i == 0) {
-#if defined(HAVE_SCHED_YIELD)
-      sched_yield();
-#endif
-    }
+    if (i == 0) { sched_yield(); }
     SPINLOCK_BODY();
   }
   thief_shepherd->stealing = 0;

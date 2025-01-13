@@ -1,8 +1,6 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
+
+#include <unistd.h>
 
 #include <qthread/qtimer.h>
 
@@ -23,14 +21,7 @@ void API_FUNC qtimer_stop(qtimer_t q) { q->stop = gethrtime(); }
 
 double qtimer_wtime(void) { return ((double)gethrtime()) * 1e-9; }
 
-double qtimer_res(void) {
-#if defined(HAVE_SYSCONF) && defined(HAVE_SC_CLK_TCK)
-  return 1.0 / sysconf(_SC_CLK_TCK);
-  ;
-#else
-  return 1e-9;
-#endif
-}
+double qtimer_res(void) { return 1.0 / sysconf(_SC_CLK_TCK); }
 
 double API_FUNC qtimer_secs(qtimer_t q) {
   return ((double)(q->stop - q->start)) * 1e-9;

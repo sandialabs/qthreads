@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /******************************************************/
 /* The API                                            */
 /******************************************************/
@@ -11,23 +7,17 @@
 /* System Headers                                     */
 /******************************************************/
 #include <limits.h> /* for INT_MAX */
+#include <pthread.h>
+#include <sched.h>
 #include <stdarg.h> /* for va_list, va_start() and va_end() */
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* for malloc() and abort() */
 #include <string.h> /* for memset() */
-#include <unistd.h> /* for getpagesize() */
-#if !HAVE_MEMCPY
-#define memcpy(d, s, n) bcopy((s), (d), (n))
-#define memmove(d, s, n) bcopy((s), (d), (n))
-#endif
-#include <pthread.h>
 #include <sys/resource.h>
 #include <sys/time.h>
-#ifdef HAVE_SCHED_H
-#include <sched.h>
-#endif
+#include <unistd.h> /* for getpagesize() */
 #ifdef QTHREAD_USE_VALGRIND
 #include <valgrind/memcheck.h>
 #endif
@@ -439,7 +429,7 @@ static void *qthread_master(void *arg) {
 
         *current = t;
 
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
         getcontext(&my_context);
 #endif
         qthread_exec(t, &my_context);
@@ -588,11 +578,10 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) { /*{{{ */
  * @error ENOMEM Not enough memory could be allocated.
  */
 
-int API_FUNC qthread_initialize_agg(int (*agg_cost)(int count,
-                                                    qthread_f *f,
-                                                    void **arg),
-                                    qthread_agg_f agg_f,
-                                    int max_c) {
+int API_FUNC
+qthread_initialize_agg(int (*agg_cost)(int count, qthread_f *f, void **arg),
+                       qthread_agg_f agg_f,
+                       int max_c) {
   int r = qthread_initialize();
   if (agg_cost != NULL) qlib->agg_cost = agg_cost;
   if (agg_f != NULL) qlib->agg_f = agg_f;
@@ -847,7 +836,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
 
   qthread_before_swap_to_main();
 
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   qassert(
     swapcontext(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)),
     0);
@@ -939,21 +928,21 @@ static inline void qthread_makecontext(qt_context_t *const c,
 #ifdef UCSTACK_HAS_SSFLAGS
   c->uc_stack.ss_flags = 0;
 #endif
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   /* the makecontext man page (Linux) says: set the uc_link FIRST.
    * why? no idea */
   c->uc_link = returnc; /* NULL pthread_exit() */
 #endif
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
   makecontext(c, func, 2, high, low);
 #else  /* QTHREAD_MAKECONTEXT_SPLIT */
   makecontext(c, func, 1, arg);
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
   assert((void *)c->uc_link == (void *)returnc);
-#else  /* ifdef HAVE_NATIVE_MAKECONTEXT */
+#else  /* ifdef USE_SYSTEM_SWAPCONTEXT */
   qt_makectxt(c, func, 1, arg);
-#endif /* ifdef HAVE_NATIVE_MAKECONTEXT */
+#endif /* ifdef USE_SYSTEM_SWAPCONTEXT */
 } /*}}} */
 
 /* this adds a function to the list of cleanup functions to call at finalize;
@@ -1537,10 +1526,8 @@ extern void *qthread_fence2;
   __asm__ __volatile__(#name ":")
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
-void API_FUNC qthread_call_method(qthread_f f,
-                                  void *arg,
-                                  void *ret,
-                                  uint16_t flags) {
+void API_FUNC
+qthread_call_method(qthread_f f, void *arg, void *ret, uint16_t flags) {
   if (ret) {
     if (flags & QTHREAD_RET_IS_SINC) {
       if (flags & QTHREAD_RET_IS_VOID_SINC) {
@@ -1746,7 +1733,7 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
                           (void (*)(void))qthread_wrapper,
                           t,
                           c);
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
     } else {
       t->rdata->context.uc_link = c; /* NULL pthread_exit() */
 #endif
@@ -1769,7 +1756,7 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
 
     qthread_before_swap_to_qthread(t);
 
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
     qassert(swapcontext(atomic_load_explicit(&t->rdata->return_context,
                                              memory_order_relaxed),
                         &t->rdata->context),
@@ -2018,15 +2005,13 @@ int API_FUNC qthread_spawn(qthread_f f,
   return QTHREAD_SUCCESS;
 } /*}}}*/
 
-int API_FUNC qthread_fork(qthread_f f,
-                          void const *arg,
-                          aligned_t *ret) { /*{{{*/
+int API_FUNC
+qthread_fork(qthread_f f, void const *arg, aligned_t *ret) { /*{{{*/
   return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
 } /*}}}*/
 
-int API_FUNC qthread_fork_net(qthread_f f,
-                              void const *arg,
-                              aligned_t *ret) { /*{{{*/
+int API_FUNC
+qthread_fork_net(qthread_f f, void const *arg, aligned_t *ret) { /*{{{*/
   return qthread_spawn(
     f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NETWORK);
 } /*}}}*/
@@ -2200,9 +2185,8 @@ int API_FUNC qthread_fork_syncvar_copyargs_simple(qthread_f f,
                        QTHREAD_SPAWN_SIMPLE | QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}} */
 
-int API_FUNC qthread_fork_syncvar(qthread_f f,
-                                  void const *arg,
-                                  syncvar_t *ret) { /*{{{ */
+int API_FUNC
+qthread_fork_syncvar(qthread_f f, void const *arg, syncvar_t *ret) { /*{{{ */
   return qthread_spawn(
     f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}} */
@@ -2239,7 +2223,7 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
     sizeof(qt_context_t));
 #endif
   qthread_before_swap_from_qthread(t);
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   qassert(swapcontext(&t->rdata->context,
                       atomic_load_explicit(&t->rdata->return_context,
                                            memory_order_relaxed)),
@@ -2268,7 +2252,7 @@ void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
     atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed),
     sizeof(qt_context_t));
 #endif
-#ifdef HAVE_NATIVE_MAKECONTEXT
+#ifdef USE_SYSTEM_SWAPCONTEXT
   setcontext(
     atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed));
 #else

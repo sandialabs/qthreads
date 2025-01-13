@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdlib.h>
 
 #include <qthread/qlfqueue.h>
@@ -39,7 +35,7 @@ static void qlfqueue_internal_cleanup(void) {
  * http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf
  */
 
-qlfqueue_t *API_FUNC qlfqueue_create(void) { /*{{{ */
+API_FUNC qlfqueue_t *qlfqueue_create(void) { /*{{{ */
   qlfqueue_t *q;
 
   if (qlfqueue_node_pool == NULL) {
@@ -69,7 +65,7 @@ qlfqueue_t *API_FUNC qlfqueue_create(void) { /*{{{ */
   return q;
 } /*}}} */
 
-int API_FUNC qlfqueue_destroy(qlfqueue_t *q) { /*{{{ */
+API_FUNC int qlfqueue_destroy(qlfqueue_t *q) { /*{{{ */
   qassert_ret((q != NULL), QTHREAD_BADARGS);
   while (q->head != q->tail) {
     qlfqueue_dequeue(q);
@@ -81,7 +77,7 @@ int API_FUNC qlfqueue_destroy(qlfqueue_t *q) { /*{{{ */
   return QTHREAD_SUCCESS;
 } /*}}} */
 
-int API_FUNC qlfqueue_enqueue(qlfqueue_t *q, void *elem) { /*{{{ */
+API_FUNC int qlfqueue_enqueue(qlfqueue_t *q, void *elem) { /*{{{ */
   qlfqueue_node_t *tail;
   qlfqueue_node_t *next;
   qlfqueue_node_t *node;
@@ -122,7 +118,7 @@ static void qlfqueue_pool_free_wrapper(void *p) { /*{{{*/
   qpool_free(qlfqueue_node_pool, p);
 } /*}}}*/
 
-void *API_FUNC qlfqueue_dequeue(qlfqueue_t *q) { /*{{{ */
+API_FUNC void *qlfqueue_dequeue(qlfqueue_t *q) { /*{{{ */
   void *p = NULL;
   qlfqueue_node_t *head;
   qlfqueue_node_t *tail;
@@ -157,7 +153,7 @@ void *API_FUNC qlfqueue_dequeue(qlfqueue_t *q) { /*{{{ */
   return p;
 } /*}}} */
 
-int API_FUNC qlfqueue_empty(qlfqueue_t *q) { /*{{{ */
+API_FUNC int qlfqueue_empty(qlfqueue_t *q) { /*{{{ */
   qlfqueue_node_t *head;
   qlfqueue_node_t *tail;
   qlfqueue_node_t *next;

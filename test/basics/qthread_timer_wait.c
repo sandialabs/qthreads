@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include "qthread/qtimer.h"
 #include <qthread/qthread.h>
 #include <stdatomic.h>

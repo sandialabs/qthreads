@@ -1,3 +1,5 @@
+set(CMAKE_CXX_STANDARD 11)
+
 set(QTHREADS_BUILD_TESTS ON CACHE BOOL "Whether or not to build the qthreads tests.")
 
 if (${QTHREADS_BUILD_TESTS})

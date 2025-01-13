@@ -1,7 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,14 +43,7 @@ void API_FUNC qtimer_stop(qtimer_t q) { q->stop = mach_absolute_time(); }
 
 double qtimer_wtime(void) { return conversion * mach_absolute_time(); }
 
-double qtimer_res(void) {
-#if defined(HAVE_SYSCONF) && defined(HAVE_SC_CLK_TCK)
-  return 1.0 / sysconf(_SC_CLK_TCK);
-  ;
-#else
-  return 1e-9;
-#endif
-}
+double qtimer_res(void) { return 1.0 / sysconf(_SC_CLK_TCK); }
 
 double API_FUNC qtimer_secs(qtimer_t q) {
   uint64_t difference = q->stop - q->start;

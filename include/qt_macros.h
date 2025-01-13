@@ -12,10 +12,6 @@
 #error "C11 is required"
 #endif
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #ifdef __GNUC__
 #define Q_UNUSED(x) __attribute__((unused)) x
 #else
