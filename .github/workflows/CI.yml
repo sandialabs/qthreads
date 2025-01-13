@@ -229,6 +229,7 @@ jobs:
     - name: install deps
       run: |
         brew install coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+        if [[ "${{ matrix.compiler }}" == "gcc" ]]; then brew install gcc; fi
     - if: ${{ matrix.topology != 'no' }}
       run: |
         brew install hwloc

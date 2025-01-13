@@ -47,8 +47,9 @@ The following compilers are supported and tested regularly:
 - icc (last supported release)
 - icx 2023 or later
 - aocc 4.2 or later
-- acfl 24.04
-- Apple clang 15.4 or later
+- acfl 24.10
+- Apple clang 15 or later
+- nvc 24.9
 
 To configure and build from source you can run (in the source directory):
 
