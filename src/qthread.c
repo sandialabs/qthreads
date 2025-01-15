@@ -1809,9 +1809,7 @@ void API_FUNC qthread_yield_(int k) { /*{{{ */
   }
 } /*}}} */
 
-void API_FUNC qthread_flushsc(void){
-  /*{{{*/
-} /*}}}*/
+void API_FUNC qthread_flushsc(void) {}
 
 /***********************************************
  * FORKING                                     *
