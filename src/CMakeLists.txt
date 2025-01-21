@@ -9,6 +9,7 @@ set(QTHREADS_HASHMAP hashmap CACHE STRING "Which hashmap implementation to use. 
 set(QTHREADS_DICT_TYPE shavit CACHE STRING "Which dictionary implementation to use. Valid values are \"shavit\", \"trie\", and \"simple\".")
 set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to use. Valid values are \"clock_gettime\", \"mach\", \"gettimeofday\", and \"gethrtime\".")
 set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
+set(HWLOC_INSTALL_DIR /usr/local CACHE PATH "Install path for hwloc library")
 
 set(QTHREADS_SOURCES
   cacheline.c
@@ -75,8 +76,12 @@ target_include_directories(qthread
 set_target_properties(qthread PROPERTIES C_VISIBILITY_PRESET hidden)
 target_link_libraries(qthread PUBLIC Threads::Threads)
 if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "binders")
-  # TODO: pull this out into a simple module file so we can just do find_package instead.
-  find_library(HWLOC_LIBRARY NAMES hwloc PATH_SUFFIXES lib lib64)
+  find_path(HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
+  target_include_directories(qthread PRIVATE ${HWLOC_INCLUDE_DIR})
+  find_library(HWLOC_LIBRARY
+    NAMES hwloc libhwloc
+    HINTS ${HWLOC_INSTALL_DIR}
+    PATH_SUFFIXES lib lib64 lib32)
   target_link_libraries(qthread PUBLIC "${HWLOC_LIBRARY}")
   target_compile_definitions(qthread PRIVATE USE_HWLOC)
   if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc")
