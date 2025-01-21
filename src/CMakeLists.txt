@@ -83,7 +83,6 @@ if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "
     HINTS ${HWLOC_INSTALL_DIR}
     PATH_SUFFIXES lib lib64 lib32)
   target_link_libraries(qthread PUBLIC "${HWLOC_LIBRARY}")
-  target_compile_definitions(qthread PRIVATE USE_HWLOC)
   if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc")
     target_compile_definitions(qthread PRIVATE USE_HWLOC_MEM_AFFINITY)
   endif()
