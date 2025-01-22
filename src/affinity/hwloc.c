@@ -71,7 +71,7 @@ static unsigned int num_usable_by_depth(unsigned int depth) {
   return ret;
 }
 
-static void qt_affinity_internal_hwloc_teardown(void) { /*{{{*/
+static void qt_affinity_internal_hwloc_teardown(void) {
   hwloc_set_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
   FREEBMAP(mccoy_thread_bindings);
   if (my_topology) {
@@ -80,11 +80,11 @@ static void qt_affinity_internal_hwloc_teardown(void) { /*{{{*/
     my_topology = 0;
   }
   initialized = 0;
-} /*}}}*/
+}
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t *nbworkers,
-                               size_t *hw_par) { /*{{{ */
+                               size_t *hw_par) {
   if (qthread_cas(&initialized, 0, 1) == 0) {
     if (topology == NULL) {
       qassert(hwloc_topology_init(&topology), 0);
@@ -259,14 +259,12 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
       if (*nbworkers == 0) { *nbworkers = tmp; }
     }
   }
-} /*}}} */
+}
 
 void INTERNAL qt_affinity_deinit(void) {}
 
 #ifdef USE_HWLOC_MEM_AFFINITY
-void INTERNAL qt_affinity_mem_tonode(void *addr,
-                                     size_t bytes,
-                                     int node) { /*{{{ */
+void INTERNAL qt_affinity_mem_tonode(void *addr, size_t bytes, int node) {
   hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
 
   hwloc_bitmap_set(nodeset, node);
@@ -277,13 +275,13 @@ void INTERNAL qt_affinity_mem_tonode(void *addr,
                          HWLOC_MEMBIND_BIND,
                          HWLOC_MEMBIND_NOCPUBIND);
   hwloc_bitmap_free(nodeset);
-} /*}}} */
+}
 
-void INTERNAL *qt_affinity_alloc(size_t bytes) { /*{{{ */
+void INTERNAL *qt_affinity_alloc(size_t bytes) {
   return hwloc_alloc(topology, bytes);
-} /*}}} */
+}
 
-void INTERNAL *qt_affinity_alloc_onnode(size_t bytes, int node) { /*{{{ */
+void INTERNAL *qt_affinity_alloc_onnode(size_t bytes, int node) {
   void *ret;
   hwloc_nodeset_t nodeset;
 
@@ -293,24 +291,24 @@ void INTERNAL *qt_affinity_alloc_onnode(size_t bytes, int node) { /*{{{ */
     topology, bytes, nodeset, HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_NOCPUBIND);
   hwloc_bitmap_free(nodeset);
   return ret;
-} /*}}} */
+}
 
-void INTERNAL qt_affinity_free(void *ptr, size_t bytes) { /*{{{ */
+void INTERNAL qt_affinity_free(void *ptr, size_t bytes) {
   hwloc_free(topology, ptr, bytes);
-} /*}}} */
+}
 
 #endif /* ifdef USE_HWLOC_MEM_AFFINITY */
 
-qthread_shepherd_id_t INTERNAL guess_num_shepherds(void) { /*{{{ */
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void) {
   qthread_shepherd_id_t ret = 1;
 
   ret = num_usable_by_depth(shep_depth);
   if (ret == 0) { ret = 1; }
   return ret;
-} /*}}} */
+}
 
 qthread_worker_id_t INTERNAL
-guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds) { /*{{{ */
+guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds) {
   qthread_worker_id_t ret = 0;
   size_t total = 0;
 
@@ -411,10 +409,10 @@ guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds) { /*{{{ */
   }
   if (ret == 0) { ret = 1; }
   return ret;
-} /*}}} */
+}
 
 void INTERNAL qt_affinity_set(qthread_worker_t *me,
-                              unsigned int nworkerspershep) { /*{{{ */
+                              unsigned int nworkerspershep) {
   ASSERT_ONLY(hwloc_topology_check(topology));
 
   hwloc_const_cpuset_t const allowed_cpuset =
@@ -463,10 +461,10 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
             i);
     FREE(str, strlen(str));
   }
-} /*}}} */
+}
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t *sheps,
-                                  qthread_shepherd_id_t nshepherds) { /*{{{ */
+                                  qthread_shepherd_id_t nshepherds) {
   hwloc_const_cpuset_t allowed_cpuset =
     hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
   size_t num_extant_objs;
@@ -494,6 +492,6 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t *sheps,
   }
   /* there does not seem to be a way to extract distances... <sigh> */
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 /* vim:set expandtab: */

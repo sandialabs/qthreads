@@ -70,13 +70,12 @@ qt_threadqueue_pools_t generic_threadqueue_pools = {NULL, NULL};
   (qt_threadqueue_node_t *)qt_mpool_alloc(generic_threadqueue_pools.nodes)
 #define FREE_TQNODE(t) qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
-static void qt_threadqueue_subsystem_shutdown(void) { /*{{{*/
+static void qt_threadqueue_subsystem_shutdown(void) {
   qt_mpool_destroy(generic_threadqueue_pools.queues);
   qt_mpool_destroy(generic_threadqueue_pools.nodes);
-} /*}}}*/
+}
 
-void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
-
+void INTERNAL qt_threadqueue_subsystem_init(void) {
   num_spins_before_condwait =
     qt_internal_get_env_num("SPINCOUNT", DEFAULT_SPINCOUNT, 0);
 
@@ -85,11 +84,11 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
   generic_threadqueue_pools.nodes =
     qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 8);
   qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-} /*}}}*/
+}
 
 /* Thankfully, NEMESIS does not suffer from the ABA problem. */
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{ */
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) {
   qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
   qassert_ret(q != NULL, NULL);
@@ -105,10 +104,10 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{ */
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 
   return q;
-} /*}}} */
+}
 
 static inline qt_threadqueue_node_t *
-qt_internal_NEMESIS_dequeue(NEMESIS_queue *q) { /*{{{ */
+qt_internal_NEMESIS_dequeue(NEMESIS_queue *q) {
   if (!q->shadow_head) {
     void *head = atomic_load_explicit(&q->head, memory_order_relaxed);
     if (!head) { return NULL; }
@@ -140,10 +139,10 @@ qt_internal_NEMESIS_dequeue(NEMESIS_queue *q) { /*{{{ */
     }
   }
   return retval;
-} /*}}} */
+}
 
 static inline qt_threadqueue_node_t *
-qt_internal_NEMESIS_dequeue_st(NEMESIS_queue *q) { /*{{{ */
+qt_internal_NEMESIS_dequeue_st(NEMESIS_queue *q) {
   if (!q->shadow_head) {
     void *head = atomic_load_explicit(&q->head, memory_order_relaxed);
     if (!head) { return NULL; }
@@ -167,9 +166,9 @@ qt_internal_NEMESIS_dequeue_st(NEMESIS_queue *q) { /*{{{ */
     }
   }
   return retval;
-} /*}}} */
+}
 
-void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{ */
+void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) {
   assert(q);
   while (1) {
     qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue_st(&q->q);
@@ -188,7 +187,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{ */
   QTHREAD_COND_DESTROY(q->trigger);
 #endif
   FREE_THREADQUEUE(q);
-} /*}}} */
+}
 
 void INTERNAL qthread_steal_enable(void) {}
 
@@ -210,7 +209,7 @@ qt_threadqueue_choose_dest(qthread_shepherd_t *curr_shep) {
 }
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
-                                     qthread_t *restrict t) { /*{{{ */
+                                     qthread_t *restrict t) {
   qt_threadqueue_node_t *node, *prev;
 
   assert(q);
@@ -243,23 +242,22 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     QTHREAD_COND_UNLOCK(q->trigger);
   }
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
-} /*}}} */
+}
 
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
-                                             qthread_t *restrict t) { /*{{{ */
+                                             qthread_t *restrict t) {
   qt_threadqueue_enqueue(q, t);
-} /*}}} */
+}
 
-ssize_t INTERNAL
-qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{ */
+ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) {
   assert(q);
   return atomic_load_explicit(&q->advisory_queuelen, memory_order_relaxed);
-} /*}}} */
+}
 
 qthread_t INTERNAL *
 qt_scheduler_get_thread(qt_threadqueue_t *q,
                         qt_threadqueue_private_t *Q_UNUSED(qc),
-                        uint_fast8_t Q_UNUSED(active)) { /*{{{ */
+                        uint_fast8_t Q_UNUSED(active)) {
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
   int i;
 #endif /* QTHREAD_CONDWAIT_BLOCKING_QUEUE */
@@ -299,11 +297,11 @@ qt_scheduler_get_thread(qt_threadqueue_t *q,
   retval = node->thread;
   FREE_TQNODE(node);
   return retval;
-} /*}}} */
+}
 
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
-                                    qt_threadqueue_filter_f f) { /*{{{*/
+                                    qt_threadqueue_filter_f f) {
   NEMESIS_queue tmp;
   qt_threadqueue_node_t *curs, *prev;
 
@@ -371,7 +369,7 @@ pushback:
                         memory_order_relaxed);
   q->q.shadow_head = NULL;
   q->advisory_queuelen = tmp.nemesis_advisory_queuelen;
-} /*}}}*/
+}
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void) {}

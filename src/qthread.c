@@ -138,7 +138,7 @@ qt_mpool generic_big_qthread_pool = NULL;
 
 static qt_mpool generic_stack_pool = NULL;
 #ifdef QTHREAD_GUARD_PAGES
-static inline void *ALLOC_STACK(void) { /*{{{ */
+static inline void *ALLOC_STACK(void) {
   if (GUARD_PAGES) {
     uint8_t *tmp = qt_mpool_alloc(generic_stack_pool);
 
@@ -156,9 +156,9 @@ static inline void *ALLOC_STACK(void) { /*{{{ */
   } else {
     return qt_mpool_alloc(generic_stack_pool);
   }
-} /*}}} */
+}
 
-static inline void FREE_STACK(void *t) { /*{{{ */
+static inline void FREE_STACK(void *t) {
   if (GUARD_PAGES) {
     assert(t);
     t = (uint8_t *)t - getpagesize();
@@ -172,7 +172,7 @@ static inline void FREE_STACK(void *t) { /*{{{ */
     }
   }
   qt_mpool_free(generic_stack_pool, t);
-} /*}}} */
+}
 
 #else /* ifdef QTHREAD_GUARD_PAGES */
 #define ALLOC_STACK() qt_mpool_alloc(generic_stack_pool)
@@ -191,7 +191,7 @@ int qthread_library_initialized = 0;
 void *shep0arg = NULL;
 #endif
 
-static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
+static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) {
   void *stack = NULL;
   struct qthread_runtime_data_s *rdata;
 
@@ -228,7 +228,7 @@ static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
   assert(atomic_load_explicit(&rdata->tsan_fiber, memory_order_relaxed));
 #endif
 #endif
-} /*}}}*/
+}
 
 #if defined(__has_feature)
 #if __has_feature(thread_sanitizer)
@@ -303,8 +303,7 @@ static inline void alloc_rdata(qthread_shepherd_t *me, qthread_t *t) { /*{{{*/
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 static void *qthread_master(void *arg);
 
-static void *qthread_master_wrapper(unsigned int high,
-                                    unsigned int low) { /*{{{ */
+static void *qthread_master_wrapper(unsigned int high, unsigned int low) {
   qthread_shepherd_t *me =
     (qthread_shepherd_t *)((((uintptr_t)high) << 32) | low);
 
@@ -517,7 +516,7 @@ static void *qthread_master(void *arg) {
 
   pthread_exit(NULL);
   return NULL;
-} /*}}} */
+}
 
 /* By default allow merging of tasks of the same kind
  * Rely on the limitation put on max number of tasks
@@ -536,14 +535,14 @@ void qthread_default_agg_f(
   }
 }
 
-int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) { /*{{{ */
+int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) {
   char newenv[100];
 
   snprintf(newenv, 99, "%i", (int)nshepherds);
   qassert(setenv("QT_NUM_SHEPHERDS", newenv, 1), 0);
   qassert(setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1), 0);
   return qthread_initialize();
-} /*}}} */
+}
 
 /**
  *
@@ -589,7 +588,7 @@ qthread_initialize_agg(int (*agg_cost)(int count, qthread_f *f, void **arg),
   return r;
 }
 
-int API_FUNC qthread_initialize(void) { /*{{{ */
+int API_FUNC qthread_initialize(void) {
   int r;
   size_t i;
   uint_fast8_t print_info = 0;
@@ -896,7 +895,7 @@ int API_FUNC qthread_initialize(void) { /*{{{ */
   qt_barrier_internal_init();
 
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
@@ -906,7 +905,7 @@ static inline void qthread_makecontext(qt_context_t *const c,
                                        size_t const stacksize,
                                        void (*func)(void),
                                        void const *const arg,
-                                       qt_context_t *const returnc) { /*{{{ */
+                                       qt_context_t *const returnc) {
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
   unsigned int const high = ((uintptr_t)arg) >> 32;
   unsigned int const low = ((uintptr_t)arg) & 0xffffffff;
@@ -943,42 +942,42 @@ static inline void qthread_makecontext(qt_context_t *const c,
 #else  /* ifdef USE_SYSTEM_SWAPCONTEXT */
   qt_makectxt(c, func, 1, arg);
 #endif /* ifdef USE_SYSTEM_SWAPCONTEXT */
-} /*}}} */
+}
 
 /* this adds a function to the list of cleanup functions to call at finalize;
  * these functions get called *way* AFTER shepherds are torn down */
-void INTERNAL qthread_internal_cleanup_late(void (*function)(void)) { /*{{{*/
+void INTERNAL qthread_internal_cleanup_late(void (*function)(void)) {
   struct qt_cleanup_funcs_s *ng = MALLOC(sizeof(struct qt_cleanup_funcs_s));
 
   assert(ng);
   ng->func = function;
   ng->next = qt_cleanup_late_funcs;
   qt_cleanup_late_funcs = ng;
-} /*}}}*/
+}
 
 /* this adds a function to the list of cleanup functions to call at finalize;
  * these functions get called AFTER shepherds are torn down */
-void INTERNAL qthread_internal_cleanup(void (*function)(void)) { /*{{{*/
+void INTERNAL qthread_internal_cleanup(void (*function)(void)) {
   struct qt_cleanup_funcs_s *ng = MALLOC(sizeof(struct qt_cleanup_funcs_s));
 
   assert(ng);
   ng->func = function;
   ng->next = qt_cleanup_funcs;
   qt_cleanup_funcs = ng;
-} /*}}}*/
+}
 
 /* this adds a function to the list of cleanup functions to call at finalize;
  * these functions get called BEFORE shepherds are torn down */
-void INTERNAL qthread_internal_cleanup_early(void (*function)(void)) { /*{{{*/
+void INTERNAL qthread_internal_cleanup_early(void (*function)(void)) {
   struct qt_cleanup_funcs_s *ng = MALLOC(sizeof(struct qt_cleanup_funcs_s));
 
   assert(ng);
   ng->func = function;
   ng->next = qt_cleanup_early_funcs;
   qt_cleanup_early_funcs = ng;
-} /*}}}*/
+}
 
-void API_FUNC qthread_finalize(void) { /*{{{ */
+void API_FUNC qthread_finalize(void) {
   int r;
   qthread_shepherd_id_t i;
   qthread_t *t;
@@ -1200,9 +1199,9 @@ void API_FUNC qthread_finalize(void) { /*{{{ */
   MACHINE_FENCE;
 #endif
   fflush(stdout);
-} /*}}} */
+}
 
-qthread_t INTERNAL *qthread_internal_self(void) { /*{{{ */
+qthread_t INTERNAL *qthread_internal_self(void) {
   extern TLS_DECL(qthread_t *, IO_task_struct);
 
   qthread_worker_t *worker = qthread_internal_getworker();
@@ -1212,10 +1211,9 @@ qthread_t INTERNAL *qthread_internal_self(void) { /*{{{ */
   } else {
     return worker->current;
   }
+}
 
-} /*}}} */
-
-void API_FUNC *qthread_get_tasklocal(unsigned int size) { /*{{{*/
+void API_FUNC *qthread_get_tasklocal(unsigned int size) {
   qthread_t *f = qthread_internal_self();
 
   if (NULL != f) {
@@ -1258,9 +1256,9 @@ void API_FUNC *qthread_get_tasklocal(unsigned int size) { /*{{{*/
   }
 
   return NULL;
-} /*}}}*/
+}
 
-unsigned API_FUNC qthread_size_tasklocal(void) { /*{{{*/
+unsigned API_FUNC qthread_size_tasklocal(void) {
   qthread_t const *f = qthread_internal_self();
 
   assert(NULL != f);
@@ -1268,7 +1266,7 @@ unsigned API_FUNC qthread_size_tasklocal(void) { /*{{{*/
 
   return f->rdata->tasklocal_size ? f->rdata->tasklocal_size
                                   : qlib->qthread_tasklocal_size;
-} /*}}}*/
+}
 
 API_FUNC void *qthread_tos(void) {
   qthread_t const *f = qthread_internal_self();
@@ -1282,7 +1280,7 @@ API_FUNC void *qthread_bos(void) {
   return (void *)((char *)f->rdata->stack + qlib->qthread_stack_size);
 }
 
-size_t API_FUNC qthread_stackleft(void) { /*{{{ */
+size_t API_FUNC qthread_stackleft(void) {
   qthread_t const *f = qthread_internal_self();
 
   if ((f != NULL) && (f->rdata->stack != NULL)) {
@@ -1306,10 +1304,9 @@ size_t API_FUNC qthread_stackleft(void) { /*{{{ */
   } else {
     return 0;
   }
-} /*}}} */
+}
 
-size_t API_FUNC
-qthread_readstate(const enum introspective_state type) { /*{{{ */
+size_t API_FUNC qthread_readstate(const enum introspective_state type) {
   switch (type) {
     case STACK_SIZE: return qlib->qthread_stack_size;
 
@@ -1399,9 +1396,9 @@ qthread_readstate(const enum introspective_state type) { /*{{{ */
 
     default: return (size_t)(-1);
   }
-} /*}}} */
+}
 
-aligned_t API_FUNC *qthread_retloc(void) { /*{{{ */
+aligned_t API_FUNC *qthread_retloc(void) {
   qthread_t *me = qthread_internal_self();
 
   if (me) {
@@ -1409,7 +1406,7 @@ aligned_t API_FUNC *qthread_retloc(void) { /*{{{ */
   } else {
     return NULL;
   }
-} /*}}} */
+}
 
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
@@ -1419,7 +1416,7 @@ static inline qthread_t *qthread_thread_new(qthread_f const f,
                                             size_t arg_size,
                                             void *ret,
                                             qt_team_t *team,
-                                            int team_leader) { /*{{{ */
+                                            int team_leader) {
   qthread_t *t;
 
   if ((arg_size > 0) && (arg_size <= qlib->qthread_argcopy_size)) {
@@ -1464,9 +1461,9 @@ static inline qthread_t *qthread_thread_new(qthread_f const f,
     &t->thread_state, QTHREAD_STATE_NEW, memory_order_relaxed);
 
   return t;
-} /*}}} */
+}
 
-void qthread_thread_free(qthread_t *t) { /*{{{ */
+void qthread_thread_free(qthread_t *t) {
   assert(t != NULL);
 
   if (t->rdata != NULL) {
@@ -1513,7 +1510,7 @@ void qthread_thread_free(qthread_t *t) { /*{{{ */
   } else {
     FREE_QTHREAD(t);
   }
-} /*}}} */
+}
 
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
 
@@ -1551,7 +1548,7 @@ qthread_call_method(qthread_f f, void *arg, void *ret, uint16_t flags) {
 
 /* this function runs a thread until it completes or yields */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-static void qthread_wrapper(unsigned int high, unsigned int low) { /*{{{ */
+static void qthread_wrapper(unsigned int high, unsigned int low) {
   qthread_t *t = (qthread_t *)((((uintptr_t)high) << 32) | low);
 
 #else
@@ -1706,7 +1703,7 @@ static void qthread_wrapper(void *ptr) {
     qthread_after_swap_to_qthread(t);
     qthread_before_swap_from_qthread(t);
   }
-} /*}}} */
+}
 
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
 int in_qthread_fence(void *addr) {
@@ -1717,7 +1714,7 @@ int in_qthread_fence(void *addr) {
 
 /* This function means "run thread t". The second argument (c) is a pointer
  * to the current context. */
-void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
+void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) {
   assert(t != NULL);
   assert(c != NULL);
 
@@ -1785,11 +1782,10 @@ void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c) { /*{{{ */
 
   assert(t != NULL);
   assert(c != NULL);
-
-} /*}}} */
+}
 
 /* this function yields thread t to the master kernel thread */
-void API_FUNC qthread_yield_(int k) { /*{{{ */
+void API_FUNC qthread_yield_(int k) {
   assert(qthread_library_initialized);
   qthread_t *t = qthread_internal_self();
 
@@ -1807,7 +1803,7 @@ void API_FUNC qthread_yield_(int k) { /*{{{ */
     }
     qthread_back_to_master(t);
   }
-} /*}}} */
+}
 
 void API_FUNC qthread_flushsc(void) {}
 
@@ -1848,7 +1844,7 @@ int API_FUNC qthread_spawn(qthread_f f,
                            size_t npreconds,
                            void *preconds,
                            qthread_shepherd_id_t target_shep,
-                           unsigned int feature_flag) { /*{{{*/
+                           unsigned int feature_flag) {
   assert(qthread_library_initialized);
   qthread_t *t;
   qthread_t *me = qthread_internal_self(); // note: cannot be myshep->current on
@@ -2001,25 +1997,23 @@ int API_FUNC qthread_spawn(qthread_f f,
     atomic_fetch_or_explicit(&t->flags, QTHREAD_NETWORK, memory_order_relaxed);
 
   return QTHREAD_SUCCESS;
-} /*}}}*/
+}
 
-int API_FUNC
-qthread_fork(qthread_f f, void const *arg, aligned_t *ret) { /*{{{*/
+int API_FUNC qthread_fork(qthread_f f, void const *arg, aligned_t *ret) {
   return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
-} /*}}}*/
+}
 
-int API_FUNC
-qthread_fork_net(qthread_f f, void const *arg, aligned_t *ret) { /*{{{*/
+int API_FUNC qthread_fork_net(qthread_f f, void const *arg, aligned_t *ret) {
   return qthread_spawn(
     f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NETWORK);
-} /*}}}*/
+}
 
 int API_FUNC qthread_fork_copyargs_precond(qthread_f f,
                                            void const *arg,
                                            size_t arg_size,
                                            syncvar_t *ret,
                                            int npreconds,
-                                           ...) { /*{{{*/
+                                           ...) {
   // Collect sync info
   va_list args;
   aligned_t **preconds = NULL;
@@ -2050,7 +2044,7 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f f,
                        preconds,
                        NO_SHEPHERD,
                        QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}}*/
+}
 
 /*
  * Duplicate code from qthreads function qthread_fork_precond
@@ -2058,7 +2052,7 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f f,
  * TODO: not happy with code duplication here
  */
 int API_FUNC qthread_fork_precond_simple(
-  qthread_f f, void const *arg, aligned_t *ret, int npreconds, ...) { /*{{{*/
+  qthread_f f, void const *arg, aligned_t *ret, int npreconds, ...) {
   // Collect sync info
   va_list args;
   aligned_t **preconds = NULL;
@@ -2082,14 +2076,14 @@ int API_FUNC qthread_fork_precond_simple(
   va_end(args);
   return qthread_spawn(
     f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD, QTHREAD_SPAWN_SIMPLE);
-} /*}}}*/
+}
 
 int API_FUNC qthread_fork_precond_to(qthread_f f,
                                      void const *arg,
                                      aligned_t *ret,
                                      qthread_shepherd_id_t shepherd,
                                      int npreconds,
-                                     ...) { /*{{{ */
+                                     ...) {
   // Collect sync info
   va_list args;
   aligned_t **preconds = NULL;
@@ -2116,10 +2110,10 @@ int API_FUNC qthread_fork_precond_to(qthread_f f,
     shepherd %= qlib->nshepherds;
   }
   return qthread_spawn(f, arg, 0, ret, npreconds, preconds, shepherd, 0);
-} /*}}} */
+}
 
 int API_FUNC qthread_fork_precond(
-  qthread_f f, void const *arg, aligned_t *ret, int npreconds, ...) { /*{{{*/
+  qthread_f f, void const *arg, aligned_t *ret, int npreconds, ...) {
   // Collect sync info
   va_list args;
   aligned_t **preconds = NULL;
@@ -2143,36 +2137,35 @@ int API_FUNC qthread_fork_precond(
   va_end(args);
 
   return qthread_spawn(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD, 0);
-} /*}}}*/
+}
 
-int API_FUNC
-qthread_fork_copyargs_to(qthread_f f,
-                         void const *arg,
-                         size_t arg_size,
-                         syncvar_t *ret,
-                         qthread_shepherd_id_t preferred_shep) { /*{{{*/
+int API_FUNC qthread_fork_copyargs_to(qthread_f f,
+                                      void const *arg,
+                                      size_t arg_size,
+                                      syncvar_t *ret,
+                                      qthread_shepherd_id_t preferred_shep) {
   return qthread_spawn(f, arg, arg_size, ret, 0, NULL, preferred_shep, 0);
-} /*}}}*/
+}
 
 int API_FUNC qthread_fork_copyargs(qthread_f f,
                                    void const *arg,
                                    size_t arg_size,
-                                   aligned_t *ret) { /*{{{*/
+                                   aligned_t *ret) {
   return qthread_spawn(f, arg, arg_size, ret, 0, NULL, NO_SHEPHERD, 0);
-} /*}}}*/
+}
 
 int API_FUNC qthread_fork_syncvar_copyargs(qthread_f f,
                                            void const *arg,
                                            size_t arg_size,
-                                           syncvar_t *ret) { /*{{{ */
+                                           syncvar_t *ret) {
   return qthread_spawn(
     f, arg, arg_size, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}} */
+}
 
 int API_FUNC qthread_fork_syncvar_copyargs_simple(qthread_f f,
                                                   void const *arg,
                                                   size_t arg_size,
-                                                  syncvar_t *ret) { /*{{{ */
+                                                  syncvar_t *ret) {
   return qthread_spawn(f,
                        arg,
                        arg_size,
@@ -2181,33 +2174,33 @@ int API_FUNC qthread_fork_syncvar_copyargs_simple(qthread_f f,
                        NULL,
                        NO_SHEPHERD,
                        QTHREAD_SPAWN_SIMPLE | QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}} */
+}
 
 int API_FUNC
-qthread_fork_syncvar(qthread_f f, void const *arg, syncvar_t *ret) { /*{{{ */
+qthread_fork_syncvar(qthread_f f, void const *arg, syncvar_t *ret) {
   return qthread_spawn(
     f, arg, 0, ret, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}} */
+}
 
 int API_FUNC qthread_fork_to(qthread_f f,
                              void const *arg,
                              aligned_t *ret,
-                             qthread_shepherd_id_t shepherd) { /*{{{*/
+                             qthread_shepherd_id_t shepherd) {
   if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
     shepherd %= qlib->nshepherds;
   }
   return qthread_spawn(f, arg, 0, ret, 0, NULL, shepherd, 0);
-} /*}}}*/
+}
 
 int API_FUNC qthread_fork_syncvar_to(qthread_f f,
                                      void const *arg,
                                      syncvar_t *ret,
-                                     qthread_shepherd_id_t s) { /*{{{*/
+                                     qthread_shepherd_id_t s) {
   if ((s != NO_SHEPHERD) && (s >= qlib->nshepherds)) { s %= qlib->nshepherds; }
   return qthread_spawn(f, arg, 0, ret, 0, NULL, s, QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}}*/
+}
 
-void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
+void INTERNAL qthread_back_to_master(qthread_t *t) {
   assert((atomic_load_explicit(&t->flags, memory_order_relaxed) &
           QTHREAD_SIMPLE) == 0);
 #ifdef QTHREAD_USE_VALGRIND
@@ -2234,10 +2227,9 @@ void INTERNAL qthread_back_to_master(qthread_t *t) { /*{{{ */
 #endif
 
   qthread_after_swap_to_qthread(t);
+}
 
-} /*}}} */
-
-void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
+void INTERNAL qthread_back_to_master2(qthread_t *t) {
   assert((atomic_load_explicit(&t->flags, memory_order_relaxed) &
           QTHREAD_SIMPLE) == 0);
 #ifdef QTHREAD_USE_VALGRIND
@@ -2257,10 +2249,10 @@ void INTERNAL qthread_back_to_master2(qthread_t *t) { /*{{{ */
   qt_setmctxt(
     &atomic_load_explicit(&t->rdata->return_context, memory_order_relaxed)->mc);
 #endif
-} /*}}} */
+}
 
 /* function to move a qthread from one shepherd to another */
-int API_FUNC qthread_migrate_to(qthread_shepherd_id_t const shepherd) { /*{{{ */
+int API_FUNC qthread_migrate_to(qthread_shepherd_id_t const shepherd) {
   assert(qthread_library_initialized);
   qthread_t *me = qthread_internal_self();
 
@@ -2292,7 +2284,7 @@ int API_FUNC qthread_migrate_to(qthread_shepherd_id_t const shepherd) { /*{{{ */
   } else {
     return QTHREAD_BADARGS;
   }
-} /*}}} */
+}
 
 void API_FUNC qthread_reset_target_shep(void) {
   assert(qthread_library_initialized);
@@ -2308,7 +2300,7 @@ void API_FUNC qthread_reset_target_shep(void) {
 }
 
 /* These are just accessor functions */
-unsigned int API_FUNC qthread_id(void) { /*{{{ */
+unsigned int API_FUNC qthread_id(void) {
   assert(qthread_library_initialized);
   qthread_t *t = qthread_internal_self();
 
@@ -2328,18 +2320,18 @@ unsigned int API_FUNC qthread_id(void) { /*{{{ */
       &(qlib->max_thread_id), &qlib->max_thread_id_lock, 1);
   }
   return t->thread_id;
-} /*}}} */
+}
 
-void qt_set_barrier(qt_barrier_t *bar) { /*{{{ */
+void qt_set_barrier(qt_barrier_t *bar) {
   qthread_t *me = qthread_internal_self();
 
   me->rdata->barrier = bar;
-} /*}}} */
+}
 
-qt_barrier_t *qt_get_barrier(void) { /*{{{ */
+qt_barrier_t *qt_get_barrier(void) {
   qthread_t *me = qthread_internal_self();
 
   return me->rdata->barrier;
-} /*}}} */
+}
 
 /* vim:set expandtab: */
