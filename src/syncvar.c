@@ -126,7 +126,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
                                unsigned char const statemask,
                                unsigned int timeout,
-                               eflags_t *restrict const err) { /*{{{ */
+                               eflags_t *restrict const err) {
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   syncvar_t unlocked;
 #endif
@@ -209,7 +209,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
 errexit:
   *err = e;
   return 0;
-} /*}}} */
+}
 
 static void qt_syncvar_subsystem_shutdown(void) {
   for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
@@ -229,7 +229,7 @@ void INTERNAL qt_syncvar_subsystem_init(uint_fast8_t need_sync) {
   qthread_internal_cleanup_late(qt_syncvar_subsystem_shutdown);
 }
 
-int API_FUNC qthread_syncvar_status(syncvar_t *const v) { /*{{{ */
+int API_FUNC qthread_syncvar_status(syncvar_t *const v) {
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   unsigned int realret;
 
@@ -255,9 +255,9 @@ int API_FUNC qthread_syncvar_status(syncvar_t *const v) { /*{{{ */
     BUILD_UNLOCKED_SYNCVAR(local_copy_of_v.u.s.data,
                            local_copy_of_v.u.s.state));
   return (realret & 0x2) ? 0 : 1;
-} /*}}} */
+}
 
-static aligned_t qthread_syncvar_nonblocker_thread(void *arg) { /*{{{ */
+static aligned_t qthread_syncvar_nonblocker_thread(void *arg) {
   qthread_syncvar_blocker_t *restrict const a =
     (qthread_syncvar_blocker_t *)arg;
 
@@ -268,9 +268,9 @@ static aligned_t qthread_syncvar_nonblocker_thread(void *arg) { /*{{{ */
     default: return 1;
   }
   return 0;
-} /*}}} */
+}
 
-static aligned_t qthread_syncvar_blocker_thread(void *arg) { /*{{{ */
+static aligned_t qthread_syncvar_blocker_thread(void *arg) {
   qthread_syncvar_blocker_t *restrict const a =
     (qthread_syncvar_blocker_t *)arg;
 
@@ -291,10 +291,10 @@ static aligned_t qthread_syncvar_blocker_thread(void *arg) { /*{{{ */
   pthread_cond_signal(&a->condition);
   pthread_mutex_unlock(&a->lock);
   return 0;
-} /*}}} */
+}
 
 static int
-qthread_syncvar_nonblocker_func(void *dest, void *src, blocker_type t) { /*{{{*/
+qthread_syncvar_nonblocker_func(void *dest, void *src, blocker_type t) {
   qthread_syncvar_blocker_t args = {PTHREAD_MUTEX_INITIALIZER,
                                     PTHREAD_COND_INITIALIZER,
                                     0u,
@@ -305,10 +305,9 @@ qthread_syncvar_nonblocker_func(void *dest, void *src, blocker_type t) { /*{{{*/
 
   qthread_fork(qthread_syncvar_nonblocker_thread, &args, NULL);
   return args.retval;
-} /*}}}*/
+}
 
-static int
-qthread_syncvar_blocker_func(void *dest, void *src, blocker_type t) { /*{{{*/
+static int qthread_syncvar_blocker_func(void *dest, void *src, blocker_type t) {
   qthread_syncvar_blocker_t args = {PTHREAD_MUTEX_INITIALIZER,
                                     PTHREAD_COND_INITIALIZER,
                                     0u,
@@ -324,7 +323,7 @@ qthread_syncvar_blocker_func(void *dest, void *src, blocker_type t) { /*{{{*/
   pthread_cond_destroy(&args.condition);
   pthread_mutex_destroy(&args.lock);
   return args.retval;
-} /*}}}*/
+}
 
 /* state 0: full, no waiters
  * state 1: full, queued waiters (who are waiting for it to be empty)
@@ -348,7 +347,7 @@ qthread_syncvar_blocker_func(void *dest, void *src, blocker_type t) { /*{{{*/
 #define SYNCFEB_STATE_EMPTY_WITH_WAITERS 0x3
 
 int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
-                                    syncvar_t *restrict src) { /*{{{ */
+                                    syncvar_t *restrict src) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret;
@@ -455,10 +454,10 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     if (dest) { *dest = ret; }
   }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
-                                       syncvar_t *restrict src) { /*{{{ */
+                                       syncvar_t *restrict src) {
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret;
   qthread_t *me = qthread_internal_self();
@@ -499,9 +498,9 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
     if (dest) { *dest = ret; }
   }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
-int API_FUNC qthread_syncvar_fill(syncvar_t *restrict addr) { /*{{{ */
+int API_FUNC qthread_syncvar_fill(syncvar_t *restrict addr) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret;
@@ -572,9 +571,9 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict addr) { /*{{{ */
     UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, e.sf);
   }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
-int API_FUNC qthread_syncvar_empty(syncvar_t *restrict addr) { /*{{{ */
+int API_FUNC qthread_syncvar_empty(syncvar_t *restrict addr) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret;
@@ -642,10 +641,10 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict addr) { /*{{{ */
       addr, ret, SYNCFEB_STATE_EMPTY_NO_WAITERS | e.sf);
   }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
-                                    syncvar_t *restrict src) { /*{{{ */
+                                    syncvar_t *restrict src) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret;
@@ -788,10 +787,10 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
   }
   if (dest) { *dest = ret; }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_readFE_nb(uint64_t *restrict dest,
-                                       syncvar_t *restrict src) { /*{{{ */
+                                       syncvar_t *restrict src) {
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret;
   int const lockbin = QTHREAD_CHOOSE_STRIPE(src);
@@ -862,10 +861,10 @@ int API_FUNC qthread_syncvar_readFE_nb(uint64_t *restrict dest,
   }
   if (dest) { *dest = ret; }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 static inline void qthread_syncvar_schedule(qthread_t *waiter,
-                                            qthread_shepherd_t *shep) { /*{{{*/
+                                            qthread_shepherd_t *shep) {
   assert(waiter);
   assert(shep);
   atomic_store_explicit(
@@ -876,9 +875,9 @@ static inline void qthread_syncvar_schedule(qthread_t *waiter,
   } else {
     qt_threadqueue_enqueue(shep->ready, waiter);
   }
-} /*}}}*/
+}
 
-static inline void qthread_syncvar_remove(void *maddr) { /*{{{*/
+static inline void qthread_syncvar_remove(void *maddr) {
   int const lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
   qthread_addrstat_t *m;
 
@@ -928,12 +927,12 @@ static inline void qthread_syncvar_remove(void *maddr) { /*{{{*/
     qthread_addrstat_delete(m);
 #endif
   }
-} /*}}}*/
+}
 
 static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                  qthread_addrstat_t *m,
                                                  syncvar_t *maddr,
-                                                 uint64_t const sf) { /*{{{ */
+                                                 uint64_t const sf) {
   qthread_addrres_t *X = NULL;
   int removeable;
 
@@ -956,12 +955,12 @@ static inline void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
   }
   QTHREAD_FASTLOCK_UNLOCK(&m->lock);
   if (removeable) { qthread_syncvar_remove(maddr); }
-} /*}}} */
+}
 
 static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
                                                 qthread_addrstat_t *m,
                                                 syncvar_t *maddr,
-                                                uint64_t const ret) { /*{{{ */
+                                                uint64_t const ret) {
   qthread_addrres_t *X = NULL;
   int removeable;
 
@@ -993,10 +992,10 @@ static inline void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
   }
   QTHREAD_FASTLOCK_UNLOCK(&m->lock);
   if (removeable) { qthread_syncvar_remove(maddr); }
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict dest,
-                                    uint64_t const *restrict src) { /*{{{ */
+                                    uint64_t const *restrict src) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t ret = *src;
@@ -1064,16 +1063,16 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict dest,
   }
 
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_writeF_const(syncvar_t *restrict dest,
-                                          uint64_t const src) { /*{{{ */
+                                          uint64_t const src) {
   assert(qthread_library_initialized);
   return qthread_syncvar_writeF(dest, &src);
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
-                                     uint64_t const *restrict src) { /*{{{ */
+                                     uint64_t const *restrict src) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   int const lockbin = QTHREAD_CHOOSE_STRIPE(dest);
@@ -1211,16 +1210,16 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict dest,
     UNLOCK_THIS_MODIFIED_SYNCVAR(dest, val, SYNCFEB_STATE_FULL_NO_WAITERS);
   }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_writeEF_const(syncvar_t *restrict dest,
-                                           uint64_t const src) { /*{{{ */
+                                           uint64_t const src) {
   assert(qthread_library_initialized);
   return qthread_syncvar_writeEF(dest, &src);
-} /*}}} */
+}
 
 int qthread_syncvar_writeEF_nb(syncvar_t *restrict dest,
-                               uint64_t const *restrict src) { /*{{{ */
+                               uint64_t const *restrict src) {
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   int const lockbin = QTHREAD_CHOOSE_STRIPE(dest);
   qthread_t *me = qthread_internal_self();
@@ -1292,15 +1291,15 @@ int qthread_syncvar_writeEF_nb(syncvar_t *restrict dest,
     UNLOCK_THIS_MODIFIED_SYNCVAR(dest, val, SYNCFEB_STATE_FULL_NO_WAITERS);
   }
   return QTHREAD_SUCCESS;
-} /*}}} */
+}
 
 int API_FUNC qthread_syncvar_writeEF_const_nb(syncvar_t *restrict dest,
-                                              uint64_t const src) { /*{{{ */
+                                              uint64_t const src) {
   return qthread_syncvar_writeEF_nb(dest, &src);
-} /*}}} */
+}
 
 uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict operand,
-                                        uint64_t const inc) { /*{{{ */
+                                        uint64_t const inc) {
   assert(qthread_library_initialized);
   eflags_t e = {0u, 0u, 0u, 0u, 0u};
   uint64_t newv;
@@ -1368,11 +1367,11 @@ uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict operand,
   }
 
   return newv;
-} /*}}} */
+}
 
 static filter_code qt_syncvar_tf_call_cb(qt_key_t const addr,
                                          qthread_t *restrict const waiter,
-                                         void *restrict tf_arg) { /*{{{*/
+                                         void *restrict tf_arg) {
   qt_syncvar_callback_f f = (qt_syncvar_callback_f)((void **)tf_arg)[0];
   void *f_arg = ((void **)tf_arg)[1];
   void *tls;
@@ -1400,11 +1399,10 @@ static filter_code qt_syncvar_tf_call_cb(qt_key_t const addr,
     tls,
     f_arg);
   return IGNORE_AND_CONTINUE;
-} /*}}}*/
+}
 
-static void qt_syncvar_call_tf(qt_key_t const addr,
-                               qthread_addrstat_t *m,
-                               void *arg) { /*{{{*/
+static void
+qt_syncvar_call_tf(qt_key_t const addr, qthread_addrstat_t *m, void *arg) {
   qt_syncvar_taskfilter_f tf = (qt_syncvar_taskfilter_f)((void **)arg)[0];
   void *const f_arg = ((void **)arg)[1];
   uintptr_t const sync = (uintptr_t)(((void **)arg)[2]);
@@ -1443,33 +1441,32 @@ static void qt_syncvar_call_tf(qt_key_t const addr,
     }
   }
   if (sync) { QTHREAD_FASTLOCK_UNLOCK(&m->lock); }
-} /*}}}*/
+}
 
 void INTERNAL qthread_syncvar_taskfilter_serial(qt_syncvar_taskfilter_f tf,
-                                                void *arg) { /*{{{*/
+                                                void *arg) {
   void *pass[3] = {tf, arg, NULL};
 
   for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
     qt_hash_callback(
       syncvars[i], (qt_hash_callback_fn)qt_syncvar_call_tf, pass);
   }
-} /*}}}*/
+}
 
 void INTERNAL qthread_syncvar_taskfilter(qt_syncvar_taskfilter_f tf,
-                                         void *arg) { /*{{{*/
+                                         void *arg) {
   void *pass[3] = {tf, arg, (void *)(uintptr_t)1};
 
   for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
     qt_hash_callback(
       syncvars[i], (qt_hash_callback_fn)qt_syncvar_call_tf, pass);
   }
-} /*}}}*/
+}
 
-void API_FUNC qthread_syncvar_callback(qt_syncvar_callback_f cb,
-                                       void *arg) { /*{{{*/
+void API_FUNC qthread_syncvar_callback(qt_syncvar_callback_f cb, void *arg) {
   void *pass[2] = {cb, arg};
 
   qthread_syncvar_taskfilter(qt_syncvar_tf_call_cb, pass);
-} /*}}}*/
+}
 
 /* vim:set expandtab: */

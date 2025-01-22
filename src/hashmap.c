@@ -41,16 +41,15 @@ static size_t bucketmask;
 #define KEY_NULL ((qt_key_t)0)
 #define KEY_DELETED ((qt_key_t)1)
 
-static inline size_t encompassing_power_of_two(size_t k) { /*{{{*/
+static inline size_t encompassing_power_of_two(size_t k) {
   size_t z = 1;
 
   while (z < k) z <<= 1;
   assert((z >> 1) <= k && z >= k);
   return z;
-} /*}}}*/
+}
 
-static inline void qt_hash_internal_create(qt_hash ret,
-                                           size_t entries) { /*{{{*/
+static inline void qt_hash_internal_create(qt_hash ret, size_t entries) {
   size_t min_entries = 2 * pagesize / sizeof(hash_entry);
 
   /* meta data */
@@ -80,9 +79,9 @@ static inline void qt_hash_internal_create(qt_hash ret,
     FREE(ret, sizeof(struct qt_hash_s));
     ret = NULL;
   }
-} /*}}}*/
+}
 
-static inline void **qt_hash_internal_find(qt_hash h, qt_key_t key) { /*{{{*/
+static inline void **qt_hash_internal_find(qt_hash h, qt_key_t key) {
   assert(h);
 
   if ((key == KEY_DELETED) || (key == KEY_NULL)) {
@@ -126,7 +125,7 @@ static inline void **qt_hash_internal_find(qt_hash h, qt_key_t key) { /*{{{*/
     }
   } while (bucket != quit);
   return NULL;
-} /*}}}*/
+}
 
 void INTERNAL qt_hash_initialize_subsystem(void) {
   linesize = qthread_cacheline();
@@ -134,7 +133,7 @@ void INTERNAL qt_hash_initialize_subsystem(void) {
   bucketmask = bucketsize - 1;
 }
 
-qt_hash INTERNAL qt_hash_create(int needSync) { /*{{{*/
+qt_hash INTERNAL qt_hash_create(int needSync) {
   qt_hash ret;
 
   ret = qt_calloc(1, sizeof(struct qt_hash_s));
@@ -151,9 +150,9 @@ qt_hash INTERNAL qt_hash_create(int needSync) { /*{{{*/
     }
   }
   return ret;
-} /*}}}*/
+}
 
-void INTERNAL qt_hash_destroy(qt_hash h) { /*{{{*/
+void INTERNAL qt_hash_destroy(qt_hash h) {
   assert(h);
   if (h->lock) {
     QTHREAD_FASTLOCK_DESTROY_PTR(h->lock);
@@ -162,12 +161,11 @@ void INTERNAL qt_hash_destroy(qt_hash h) { /*{{{*/
   assert(h->entries);
   qt_internal_aligned_free(h->entries, linesize);
   FREE(h, sizeof(struct qt_hash_s));
-} /*}}}*/
+}
 
 /* This function destroys the hash and applies the given deallocator function
  * to each value stored in the hash */
-void INTERNAL qt_hash_destroy_deallocate(qt_hash h,
-                                         qt_hash_deallocator_fn f) { /*{{{*/
+void INTERNAL qt_hash_destroy_deallocate(qt_hash h, qt_hash_deallocator_fn f) {
   size_t visited = 0;
 
   assert(h);
@@ -199,9 +197,9 @@ void INTERNAL qt_hash_destroy_deallocate(qt_hash h,
   assert(visited == atomic_load_explicit(&h->population, memory_order_relaxed));
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   qt_hash_destroy(h);
-} /*}}}*/
+}
 
-int INTERNAL qt_hash_put(qt_hash h, qt_key_t key, void *value) { /*{{{*/
+int INTERNAL qt_hash_put(qt_hash h, qt_key_t key, void *value) {
   int ret;
 
   assert(h);
@@ -209,9 +207,9 @@ int INTERNAL qt_hash_put(qt_hash h, qt_key_t key, void *value) { /*{{{*/
   ret = qt_hash_put_locked(h, key, value);
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   return ret;
-} /*}}}*/
+}
 
-static void brehash(qt_hash h, size_t len, size_t population) { /*{{{*/
+static void brehash(qt_hash h, size_t len, size_t population) {
   qt_hash d = qt_calloc(1, sizeof(struct qt_hash_s));
   size_t i, copied;
 
@@ -249,9 +247,9 @@ static void brehash(qt_hash h, size_t len, size_t population) { /*{{{*/
   h->has_key[0] = d->has_key[0];
   h->has_key[1] = d->has_key[1];
   FREE(d, sizeof(struct qt_hash_s));
-} /*}}}*/
+}
 
-int INTERNAL qt_hash_put_locked(qt_hash h, qt_key_t key, void *value) { /*{{{*/
+int INTERNAL qt_hash_put_locked(qt_hash h, qt_key_t key, void *value) {
   assert(h);
   if ((key == KEY_DELETED) || (key == KEY_NULL)) {
     assert(h->has_key);
@@ -343,9 +341,9 @@ restart: {
   atomic_store_explicit(&z[f].value, value, memory_order_relaxed);
   atomic_fetch_add_explicit(&h->population, 1u, memory_order_relaxed);
   return 1;
-} /*}}}*/
+}
 
-int INTERNAL qt_hash_remove(qt_hash h, qt_key_t const key) { /*{{{*/
+int INTERNAL qt_hash_remove(qt_hash h, qt_key_t const key) {
   int ret;
 
   assert(h);
@@ -353,9 +351,9 @@ int INTERNAL qt_hash_remove(qt_hash h, qt_key_t const key) { /*{{{*/
   ret = qt_hash_remove_locked(h, key);
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   return ret;
-} /*}}}*/
+}
 
-int INTERNAL qt_hash_remove_locked(qt_hash h, qt_key_t const key) { /*{{{*/
+int INTERNAL qt_hash_remove_locked(qt_hash h, qt_key_t const key) {
   hash_entry *p;
   void **value;
 
@@ -383,9 +381,9 @@ int INTERNAL qt_hash_remove_locked(qt_hash h, qt_key_t const key) { /*{{{*/
     brehash(h, h->num_entries / 2, population_loc);
   }
   return 1;
-} /*}}}*/
+}
 
-int INTERNAL qt_hash_pop(void **val, qt_hash h, qt_key_t const key) { /*{{{*/
+int INTERNAL qt_hash_pop(void **val, qt_hash h, qt_key_t const key) {
   int ret;
 
   assert(h);
@@ -393,11 +391,9 @@ int INTERNAL qt_hash_pop(void **val, qt_hash h, qt_key_t const key) { /*{{{*/
   ret = qt_hash_pop_locked(val, h, key);
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   return ret;
-} /*}}}*/
+}
 
-int INTERNAL qt_hash_pop_locked(void **val,
-                                qt_hash h,
-                                qt_key_t const key) { /*{{{*/
+int INTERNAL qt_hash_pop_locked(void **val, qt_hash h, qt_key_t const key) {
   hash_entry *p;
   void **value;
 
@@ -431,9 +427,9 @@ int INTERNAL qt_hash_pop_locked(void **val,
     brehash(h, h->num_entries / 2, population_loc);
   }
   return 1;
-} /*}}}*/
+}
 
-void INTERNAL *qt_hash_get(qt_hash h, qt_key_t const key) { /*{{{*/
+void INTERNAL *qt_hash_get(qt_hash h, qt_key_t const key) {
   void *ret;
 
   assert(h);
@@ -441,9 +437,9 @@ void INTERNAL *qt_hash_get(qt_hash h, qt_key_t const key) { /*{{{*/
   ret = qt_hash_get_locked(h, key);
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   return (void *)ret;
-} /*}}}*/
+}
 
-void INTERNAL *qt_hash_get_locked(qt_hash h, qt_key_t const key) { /*{{{*/
+void INTERNAL *qt_hash_get_locked(qt_hash h, qt_key_t const key) {
   void **value;
 
   assert(h);
@@ -453,11 +449,9 @@ void INTERNAL *qt_hash_get_locked(qt_hash h, qt_key_t const key) { /*{{{*/
   } else {
     return atomic_load_explicit((void *_Atomic *)value, memory_order_relaxed);
   }
-} /*}}}*/
+}
 
-void INTERNAL qt_hash_callback(qt_hash h,
-                               qt_hash_callback_fn f,
-                               void *arg) { /*{{{*/
+void INTERNAL qt_hash_callback(qt_hash h, qt_hash_callback_fn f, void *arg) {
   size_t visited = 0;
 
   assert(h);
@@ -487,9 +481,9 @@ void INTERNAL qt_hash_callback(qt_hash h,
     }
   }
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
-} /*}}}*/
+}
 
-size_t INTERNAL qt_hash_count(qt_hash h) { /*{{{*/
+size_t INTERNAL qt_hash_count(qt_hash h) {
   size_t ct;
 
   assert(h);
@@ -498,16 +492,16 @@ size_t INTERNAL qt_hash_count(qt_hash h) { /*{{{*/
        h->has_key[0] + h->has_key[1];
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
   return ct;
-} /*}}}*/
+}
 
-void INTERNAL qt_hash_lock(qt_hash h) { /*{{{*/
+void INTERNAL qt_hash_lock(qt_hash h) {
   assert(h);
   if (h->lock) { QTHREAD_FASTLOCK_LOCK(h->lock); }
-} /*}}}*/
+}
 
-void INTERNAL qt_hash_unlock(qt_hash h) { /*{{{*/
+void INTERNAL qt_hash_unlock(qt_hash h) {
   assert(h);
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
-} /*}}}*/
+}
 
 /* vim:set expandtab: */

@@ -30,7 +30,6 @@ AC_CANONICAL_HOST
 ## ----------------- ##
 ## Check the options ##
 ## ----------------- ##
-#{{{
 AC_ARG_ENABLE([picky],
               [AS_HELP_STRING([--enable-picky],
                               [turns on extra compiler warnings (for developers of qthreads)])])
@@ -154,7 +153,6 @@ AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
 AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
 
 AC_CACHE_SAVE
-#}}}
 
 ## ------------------- ##
 ## Checks for programs ##

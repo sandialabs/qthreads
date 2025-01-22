@@ -24,7 +24,7 @@ static double bang(int i) {
   return product;
 }
 
-static double chisquare_alphafive(int v /* degfreedom */) { /*{{{*/
+static double chisquare_alphafive(int v /* degfreedom */) {
   switch (v) {
     case 1: return 3.84;
 
@@ -103,9 +103,9 @@ static double chisquare_alphafive(int v /* degfreedom */) { /*{{{*/
         return (124.3 - 113.1) / 10.0 * (v - 90);
       }
   }
-} /*}}}*/
+}
 
-static void runs(void) { /*{{{*/
+static void runs(void) {
   unsigned int a = 0;
   int n1 = 0, n2 = 0, meanruns = 0;
   int lastdir = 0;
@@ -230,9 +230,9 @@ static void runs(void) { /*{{{*/
   free(oi);
   free(runlengths);
   free(A);
-} /*}}}*/
+}
 
-static void ks_test(void) { /*{{{*/
+static void ks_test(void) {
   double Dplus, Dminus, D, Dalpha1, Dalpha2, Dalpha3;
   double *A[2];
 
@@ -265,11 +265,11 @@ static void ks_test(void) { /*{{{*/
   iprintf("alpha of 0.01: %s\n", (D <= Dalpha3) ? "Passed" : "Failed");
   free(A[0]);
   free(A[1]);
-} /*}}}*/
+}
 
 // TODO: This check is likely buggy. What is a more sane/readable way to check
 // the RNG?
-static void autocorrelation(void) { /*{{{*/
+static void autocorrelation(void) {
   int eye = 3, m = 5, M;
   int k;
   double pim, sigmapim, Zzero;
@@ -295,7 +295,7 @@ static void autocorrelation(void) { /*{{{*/
               (Zzero >= -1.96 && Zzero <= 1.96) ? "Passed" : "Failed");
     }
   }
-} /*}}}*/
+}
 
 int main(int argc, char *argv[]) {
   qtimer_t t;

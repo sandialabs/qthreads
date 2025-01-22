@@ -50,31 +50,31 @@ static unsigned long timeout = 100; // in microseconds
 static int _Atomic proxy_exit = 0;
 TLS_DECL_INIT(qthread_t *, IO_task_struct);
 
-static void qt_blocking_subsystem_internal_stopwork(void) { /*{{{*/
+static void qt_blocking_subsystem_internal_stopwork(void) {
   atomic_store_explicit(&proxy_exit, 1, memory_order_relaxed);
   MACHINE_FENCE;
   while (atomic_load_explicit(&io_worker_count, memory_order_relaxed))
     SPINLOCK_BODY();
   QTHREAD_LOCK(&theQueue.lock);
   QTHREAD_UNLOCK(&theQueue.lock);
-} /*}}}*/
+}
 
-static void qt_blocking_subsystem_internal_freemem(void) { /*{{{*/
+static void qt_blocking_subsystem_internal_freemem(void) {
   qt_mpool_destroy(syscall_job_pool);
   QTHREAD_DESTROYLOCK(&theQueue.lock);
   QTHREAD_DESTROYCOND(&theQueue.notempty);
-} /*}}}*/
+}
 
-static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) { /*{{{*/
+static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) {
   while (!atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
     if (qt_process_blocking_call()) { break; }
   }
   atomic_fetch_sub_explicit(&io_worker_count, 1, memory_order_relaxed);
   pthread_exit(NULL);
   return 0;
-} /*}}}*/
+}
 
-static void qt_blocking_subsystem_spawnworker(void) { /*{{{*/
+static void qt_blocking_subsystem_spawnworker(void) {
   int r;
   pthread_t thr;
 
@@ -87,9 +87,9 @@ static void qt_blocking_subsystem_spawnworker(void) { /*{{{*/
   }
   atomic_fetch_add_explicit(&io_worker_count, 1, memory_order_relaxed);
   pthread_detach(thr);
-} /*}}}*/
+}
 
-void INTERNAL qt_blocking_subsystem_init(void) { /*{{{*/
+void INTERNAL qt_blocking_subsystem_init(void) {
   syscall_job_pool = qt_mpool_create(sizeof(qt_blocking_queue_node_t));
   theQueue.head = NULL;
   theQueue.tail = NULL;
@@ -105,9 +105,9 @@ void INTERNAL qt_blocking_subsystem_init(void) { /*{{{*/
   /* must be torn down *after* shepherds die, because live shepherd might try
    * to enqueue into my queue during shutdown */
   qthread_internal_cleanup(qt_blocking_subsystem_internal_freemem);
-} /*}}}*/
+}
 
-int INTERNAL qt_process_blocking_call(void) { /*{{{*/
+int INTERNAL qt_process_blocking_call(void) {
   qt_blocking_queue_node_t *item;
 
   QTHREAD_LOCK(&theQueue.lock);
@@ -236,10 +236,9 @@ int INTERNAL qt_process_blocking_call(void) { /*{{{*/
                          item->thread);
   FREE_SYSCALLJOB(item);
   return 0;
-} /*}}}*/
+}
 
-void INTERNAL
-qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job) { /*{{{*/
+void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job) {
   qt_blocking_queue_node_t *prev;
 
   assert(job->next == NULL);
@@ -263,6 +262,6 @@ qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job) { /*{{{*/
     QTHREAD_COND_SIGNAL(theQueue.notempty);
   }
   QTHREAD_UNLOCK(&theQueue.lock);
-} /*}}}*/
+}
 
 /* vim:set expandtab: */

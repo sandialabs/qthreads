@@ -117,20 +117,20 @@ qt_threadqueue_pools_t generic_threadqueue_pools;
   (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
 #define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t)
 
-static inline qt_threadqueue_node_t *ALLOC_TQNODE(void) { /*{{{ */
+static inline qt_threadqueue_node_t *ALLOC_TQNODE(void) {
   return (qt_threadqueue_node_t *)qt_mpool_alloc(
     generic_threadqueue_pools.nodes);
-} /*}}} */
+}
 
 #define FREE_TQNODE(t) qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
-static void qt_threadqueue_subsystem_shutdown(void) { /*{{{*/
+static void qt_threadqueue_subsystem_shutdown(void) {
   qt_mpool_destroy(generic_threadqueue_pools.nodes);
   qt_mpool_destroy(generic_threadqueue_pools.queues);
   free_agged_tasks();
-} /*}}}*/
+}
 
-void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
+void INTERNAL qt_threadqueue_subsystem_init(void) {
   init_agged_tasks();
   generic_threadqueue_pools.queues =
     qt_mpool_create_aligned(sizeof(qt_threadqueue_t), qthread_cacheline());
@@ -138,9 +138,9 @@ void INTERNAL qt_threadqueue_subsystem_init(void) { /*{{{*/
     qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), qthread_cacheline());
   steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
   qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-} /*}}}*/
+}
 
-ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
+ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) {
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
   /* only works if a basic load is atomic */
@@ -155,7 +155,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)                      \
         */
-} /*}}}*/
+}
 
 /*****************************************/
 /* functions to manage the thread queues */
@@ -164,7 +164,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) { /*{{{*/
 static inline qt_threadqueue_node_t *
 qthread_steal(qthread_shepherd_t *thief_shepherd);
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{*/
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) {
   qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
   if (q != NULL) {
@@ -176,13 +176,13 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void) { /*{{{*/
   }
 
   return q;
-} /*}}}*/
+}
 
 extern qt_mpool generic_qthread_pool;
 #define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
 #define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
 
-void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{*/
+void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) {
   if (q->head != q->tail) {
     qthread_t *t;
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
@@ -209,18 +209,18 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q) { /*{{{*/
   assert(q->head == q->tail);
   QTHREAD_TRYLOCK_DESTROY(q->qlock);
   FREE_THREADQUEUE(q);
-} /*}}}*/
+}
 
-static inline int qt_threadqueue_isstealable(qthread_t *t) { /*{{{*/
+static inline int qt_threadqueue_isstealable(qthread_t *t) {
   return ((atomic_load_explicit(&t->flags, memory_order_relaxed) &
            QTHREAD_UNSTEALABLE) == 0)
            ? 1
            : 0;
-} /*}}}*/
+}
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
-                                     qthread_t *restrict t) { /*{{{*/
+                                     qthread_t *restrict t) {
   qt_threadqueue_node_t *node;
 
   node = ALLOC_TQNODE();
@@ -244,11 +244,11 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
   q->qlength++;
   q->qlength_stealable += node->stealable;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-} /*}}}*/
+}
 
 /* yielded threads enqueue at head */
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
-                                             qthread_t *restrict t) { /*{{{*/
+                                             qthread_t *restrict t) {
   qt_threadqueue_node_t *node;
 
   node = ALLOC_TQNODE();
@@ -272,7 +272,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
   q->qlength++;
   if (node->stealable) { q->qlength_stealable++; }
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-} /*}}}*/
+}
 
 #define QTHREAD_TASK_IS_AGGREGABLE(f)                                          \
   (0 && (f & QTHREAD_SIMPLE) && !(f & QTHREAD_HAS_ARGCOPY) &&                  \
@@ -492,7 +492,7 @@ void INTERNAL qt_add_first_agg_task(qthread_t *agg_task,
 /* dequeue at tail */
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
                                             qt_threadqueue_private_t *qc,
-                                            uint_fast8_t active) { /*{{{*/
+                                            uint_fast8_t active) {
   qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
   qthread_t *t;
   qthread_worker_id_t worker_id = NO_WORKER;
@@ -712,11 +712,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
     }
   }
   return (t);
-} /*}}}*/
+}
 
 /* enqueue multiple (from steal) */
-void INTERNAL qt_threadqueue_enqueue_multiple(
-  qt_threadqueue_t *q, qt_threadqueue_node_t *first) { /*{{{*/
+void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t *q,
+                                              qt_threadqueue_node_t *first) {
   qt_threadqueue_node_t *last;
   size_t addCnt = 1;
 
@@ -741,12 +741,11 @@ void INTERNAL qt_threadqueue_enqueue_multiple(
   q->qlength += addCnt;
   q->qlength_stealable += addCnt;
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-} /*}}}*/
+}
 
 /* dequeue stolen threads at head, skip yielded threads */
 qt_threadqueue_node_t INTERNAL *
-qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
-                             qt_threadqueue_t *v) { /*{{{ */
+qt_threadqueue_dequeue_steal(qt_threadqueue_t *h, qt_threadqueue_t *v) {
   qt_threadqueue_node_t *node;
   qt_threadqueue_node_t *first = NULL;
   qt_threadqueue_node_t *last = NULL;
@@ -837,13 +836,13 @@ qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
   QTHREAD_TRYLOCK_UNLOCK(&v->qlock);
 
   return (first);
-} /*}}} */
+}
 
 /*  Steal work from another shepherd's queue
  *  Returns the work stolen
  */
 static inline qt_threadqueue_node_t *
-qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
+qthread_steal(qthread_shepherd_t *thief_shepherd) {
   qt_threadqueue_node_t *stolen = NULL;
 
   assert(thief_shepherd);
@@ -853,14 +852,14 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
     // spin on my own queue.
     return NULL;
   } else {
-#ifdef QTHREAD_OMP_AFFINITY /*{{{*/
+#ifdef QTHREAD_OMP_AFFINITY
     if (thief_shepherd->stealing_mode == QTHREAD_STEAL_ON_ALL_IDLE) {
       int i;
       for (i = 0; i < qlib->nworkerspershep; i++)
         if (thief_shepherd->workers[i].current != NULL) { return NULL; }
       thief_shepherd->stealing_mode = QTHREAD_STEAL_ON_ANY_IDLE;
     }
-#endif /*}}}*/
+#endif
     if (qthread_cas(&thief_shepherd->stealing, 0, 1) !=
         0) { // avoid unnecessary stealing with a CAS
       return NULL;
@@ -902,11 +901,11 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) { /*{{{*/
   }
   thief_shepherd->stealing = 0;
   return stolen;
-} /*}}}*/
+}
 
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
-                                    qt_threadqueue_filter_f f) { /*{{{*/
+                                    qt_threadqueue_filter_f f) {
   qt_threadqueue_node_t *node = NULL;
   qthread_t *t = NULL;
 
@@ -976,13 +975,13 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t *q,
     }
   }
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-} /*}}}*/
+}
 
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
  */
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
-                                                    void *value) { /*{{{*/
+                                                    void *value) {
   qt_threadqueue_node_t *node = NULL;
   qthread_t *t = NULL;
 
@@ -1014,11 +1013,11 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
   QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
   return (t);
-} /*}}}*/
+}
 
-void INTERNAL qthread_steal_enable(void) { /*{{{*/ steal_disable = 0; } /*}}}*/
+void INTERNAL qthread_steal_enable(void) { steal_disable = 0; }
 
-void INTERNAL qthread_steal_disable(void) { /*{{{*/ steal_disable = 1; } /*}}}*/
+void INTERNAL qthread_steal_disable(void) { steal_disable = 1; }
 
 qthread_shepherd_id_t INTERNAL
 qt_threadqueue_choose_dest(qthread_shepherd_t *curr_shep) {

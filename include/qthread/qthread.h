@@ -634,8 +634,7 @@ int qthread_lock_destroy(aligned_t *a);
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
-static inline float qthread_fincr(float *operand, float incr) { /*{{{ */
-
+static inline float qthread_fincr(float *operand, float incr) {
   union {
     float f;
     uint32_t i;
@@ -649,10 +648,9 @@ static inline float qthread_fincr(float *operand, float incr) { /*{{{ */
       __sync_val_compare_and_swap((uint32_t *)operand, oldval.i, newval.i);
   } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
   return oldval.f;
-} /*}}} */
+}
 
-static inline double qthread_dincr(double *operand, double incr) { /*{{{ */
-
+static inline double qthread_dincr(double *operand, double incr) {
   union {
     uint64_t i;
     double d;
@@ -666,20 +664,17 @@ static inline double qthread_dincr(double *operand, double incr) { /*{{{ */
       __sync_val_compare_and_swap((uint64_t *)operand, oldval.i, newval.i);
   } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
   return oldval.d;
-} /*}}} */
+}
 
-static inline uint32_t qthread_incr32(uint32_t *operand,
-                                      uint32_t incr) { /*{{{ */
+static inline uint32_t qthread_incr32(uint32_t *operand, uint32_t incr) {
   return __sync_fetch_and_add(operand, incr);
-} /*}}} */
+}
 
-static inline uint64_t qthread_incr64(uint64_t *operand,
-                                      uint64_t incr) { /*{{{ */
+static inline uint64_t qthread_incr64(uint64_t *operand, uint64_t incr) {
   return __sync_fetch_and_add(operand, incr);
-} /*}}} */
+}
 
-static inline int64_t
-qthread_incr_xx(void *addr, int64_t incr, size_t length) { /*{{{ */
+static inline int64_t qthread_incr_xx(void *addr, int64_t incr, size_t length) {
   switch (length) {
     case 4: return qthread_incr32((uint32_t *)addr, incr);
 
@@ -688,7 +683,7 @@ qthread_incr_xx(void *addr, int64_t incr, size_t length) { /*{{{ */
     default: QTHREAD_TRAP();
   }
   return 0; /* compiler check */
-} /*}}} */
+}
 
 uint64_t qthread_syncvar_incrF(syncvar_t *restrict operand, uint64_t inc);
 
