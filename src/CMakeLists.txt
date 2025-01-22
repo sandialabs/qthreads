@@ -98,6 +98,8 @@ target_compile_definitions(qthread
   PRIVATE QTHREAD_DEFAULT_STACK_SIZE=${QTHREADS_DEFAULT_STACK_SIZE}
 )
 
+# CMAKE_INSTALL_LIBDIR is less reliable with CMake 3.21 and earlier.
+# In those case, it may be necessary for the end-user to specify it manually.
 install(
   TARGETS qthread
   EXPORT qthread
