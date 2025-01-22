@@ -6,13 +6,6 @@
 
 #include <pthread.h>
 
-#ifdef USE_HWLOC
-#include <hwloc.h>
-#if (HWLOC_API_VERSION < 0x00010000)
-#error HWLOC version unrecognized
-#endif
-#endif
-
 /* Internal Headers */
 #include "qt_asserts.h"
 #include "qt_atomics.h"

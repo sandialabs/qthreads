@@ -1,5 +1,9 @@
 #include <hwloc.h>
 
+#if (HWLOC_API_VERSION < 0x00020000)
+#error HWLOC version unrecognized
+#endif
+
 #include "qt_affinity.h"
 #include "qt_alloc.h"
 #include "qt_asserts.h" /* for qassert() */
