@@ -89,7 +89,7 @@ if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "
 endif()
 target_include_directories(qthread
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/qthread>
 )
 # TODO: move these into a configure header instead of piping them through the flags.
@@ -98,23 +98,20 @@ target_compile_definitions(qthread
   PRIVATE QTHREAD_DEFAULT_STACK_SIZE=${QTHREADS_DEFAULT_STACK_SIZE}
 )
 
-#file(GLOB QTHREADS_INTERNAL_HEADERS "../include/*.h")
-file(GLOB QTHREADS_PUBLIC_HEADERS "../include/qthread/*.h*")
-
-target_sources(qthread
-  PUBLIC
-    FILE_SET qthreads_public_headers
-    TYPE HEADERS
-    BASE_DIRS "../include"
-    FILES ${QTHREADS_PUBLIC_HEADERS}
-)
-
 install(
   TARGETS qthread
   EXPORT qthread
   LIBRARY
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     COMPONENT shlib
-  FILE_SET qthreads_public_headers
+)
+install(
+  DIRECTORY ${CMAKE_SOURCE_DIR}/include/qthread
+  DESTINATION include
+  PATTERN "top" EXCLUDE
+)
+install(
+  FILES "${CMAKE_SOURCE_DIR}/include/qthread/top/qthread.h"
+  DESTINATION include
 )
 install(EXPORT qthread DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/qthread")
