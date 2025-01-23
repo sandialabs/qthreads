@@ -1,4 +1,8 @@
-cmake_minimum_required(VERSION 3.2)
+if(CMAKE_VERSION VERSION_LESS "3.12.0")
+  cmake_minimum_required(VERSION 3.2)
+else()
+  cmake_minimum_required(VERSION 3.2...3.31)
+endif()
 
 set(CMAKE_C_STANDARD 11)
 
