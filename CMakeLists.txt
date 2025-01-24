@@ -1,11 +1,21 @@
-cmake_minimum_required(VERSION 3.23)
+if(CMAKE_VERSION VERSION_LESS "3.12.0")
+  cmake_minimum_required(VERSION 3.2)
+else()
+  cmake_minimum_required(VERSION 3.2...3.31)
+endif()
 
 set(CMAKE_C_STANDARD 11)
 
-project(qthreads
-  VERSION 1.22
-  DESCRIPTION "A user-level threading library"
-  LANGUAGES C ASM CXX)
+if(CMAKE_VERSION VERSION_LESS "3.9.0")
+  project(qthreads
+    VERSION 1.22
+    DESCRIPTION "A user-level threading library"
+    LANGUAGES C ASM CXX)
+else()
+  project(qthreads
+    VERSION 1.22
+    LANGUAGES C ASM CXX)
+endif()
 
 include(GNUInstallDirs)
 
