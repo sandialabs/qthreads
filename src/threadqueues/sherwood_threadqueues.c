@@ -699,13 +699,16 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
     }
 #endif
 
-    if ((node == NULL) && my_shepherd->stealing) {
+    if ((node == NULL) &&
+        atomic_load_explicit(&my_shepherd->stealing, memory_order_relaxed)) {
       if (worker_id == NO_WORKER) { worker_id = qthread_worker(NULL); }
       if ((my_shepherd->shepherd_id == 0) && (worker_id == 0)) {
-        while (my_shepherd->stealing == 1)
+        while (atomic_load_explicit(&my_shepherd->stealing,
+                                    memory_order_relaxed) == 1)
           SPINLOCK_BODY(); // no sense contending for the lock
       } else {
-        while (my_shepherd->stealing)
+        while (
+          atomic_load_explicit(&my_shepherd->stealing, memory_order_relaxed))
           SPINLOCK_BODY(); // no sense contending for the lock
       }
       continue;
@@ -738,13 +741,21 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
             QTHREAD_TRAP(); // should never happen
             abort();
             continue; // keep looking
-          case 0:
-            if (my_shepherd->stealing) { my_shepherd->stealing = 0; }
+          case 0: {
+            unsigned int expected = atomic_load_explicit(&my_shepherd->stealing,
+                                                         memory_order_relaxed);
+            while (expected && !atomic_compare_exchange_strong_explicit(
+                                 &my_shepherd->stealing,
+                                 &expected,
+                                 0u,
+                                 memory_order_relaxed,
+                                 memory_order_relaxed)) {}
             return (t);
-
+          }
           default:
             /* McCoy thread can only run on worker 0 */
-            my_shepherd->stealing = 2; // no stealing
+            atomic_store_explicit(
+              &my_shepherd->stealing, 2, memory_order_relaxed); // no stealing
             MACHINE_FENCE;
             qt_threadqueue_enqueue_yielded(q, t);
 #ifdef QTHREAD_TASK_AGGREGATION
@@ -903,7 +914,7 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) {
 
   assert(thief_shepherd);
 
-  if (thief_shepherd->stealing) {
+  if (atomic_load_explicit(&thief_shepherd->stealing, memory_order_relaxed)) {
     // this means that someone else on this shepherd is already stealing; I will
     // spin on my own queue.
     return NULL;
@@ -916,7 +927,7 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) {
       thief_shepherd->stealing_mode = QTHREAD_STEAL_ON_ANY_IDLE;
     }
 #endif
-    if (qthread_cas(&thief_shepherd->stealing, 0, 1) !=
+    if (qthread_cas((unsigned int *)&thief_shepherd->stealing, 0, 1) !=
         0) { // avoid unnecessary stealing with a CAS
       return NULL;
     }
@@ -956,7 +967,7 @@ qthread_steal(qthread_shepherd_t *thief_shepherd) {
     if (i == 0) { sched_yield(); }
     SPINLOCK_BODY();
   }
-  thief_shepherd->stealing = 0;
+  atomic_store_explicit(&thief_shepherd->stealing, 0, memory_order_relaxed);
   return stolen;
 }
 

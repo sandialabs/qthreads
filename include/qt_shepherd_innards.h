@@ -58,8 +58,8 @@ struct qthread_shepherd_s {
   unsigned int node; /* whereami */
   unsigned int *shep_dists;
   qthread_shepherd_id_t *sorted_sheplist;
-  unsigned int stealing; /* True when a worker is in the steal (attempt) process
-                            OR if stealing disabled*/
+  _Atomic unsigned int stealing; /* True when a worker is in the steal (attempt)
+                                    process OR if stealing disabled*/
 #ifdef QTHREAD_OMP_AFFINITY
   unsigned int stealing_mode; /* Specifies when a shepherd may steal */
 #endif
