@@ -5,6 +5,7 @@ else()
 endif()
 
 set(CMAKE_C_STANDARD 11)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build using shared libraries.")
 
 if(CMAKE_VERSION VERSION_LESS "3.9.0")
   project(qthreads
