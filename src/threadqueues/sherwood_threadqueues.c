@@ -80,20 +80,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void) {
 }
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) {
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-  /* only works if a basic load is atomic */
   return atomic_load_explicit(&q->qlength, memory_order_relaxed);
-
-#else
-  ssize_t tmp;
-  QTHREAD_TRYLOCK_LOCK(&q->qlock);
-  tmp = atomic_load_explicit(&q->qlength, memory_order_relaxed);
-  QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-  return tmp;
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)                      \
-        */
 }
 
 /*****************************************/
