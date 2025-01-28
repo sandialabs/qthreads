@@ -52,23 +52,6 @@ qt_threadqueue_dequeue_steal(qt_threadqueue_t *h, qt_threadqueue_t *v);
 void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t *q,
                                               qt_threadqueue_node_t *first);
 
-#if defined(AKP_DEBUG) && AKP_DEBUG
-/* function added to ease debugging and tuning around queue critical sections -
- * 4/1/11 AKP */
-
-void qt_spin_exclusive_lock(qt_spin_exclusive_t *l) {
-  uint64_t val = qthread_incr(&l->enter, 1);
-
-  while (val != l->exit) {} // spin waiting for my turn
-}
-
-void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l) {
-  qthread_incr(&l->exit, 1); // allow next guy's turn
-}
-
-/* end of added functions - AKP */
-#endif /* if AKP_DEBUG */
-
 /* Memory Management */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 #define ALLOC_THREADQUEUE()                                                    \
