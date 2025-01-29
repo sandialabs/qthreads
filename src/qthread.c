@@ -66,7 +66,6 @@
 #include "qt_qthread_struct.h"
 #include "qt_queue.h"
 #include "qt_shepherd_innards.h"
-#include "qt_spawncache.h"
 #include "qt_subsystems.h"
 #include "qt_syncvar.h"
 #include "qt_teams.h"
@@ -320,7 +319,6 @@ static void *qthread_master(void *arg) {
   if (my_id == 0 && me_worker->worker_id == 0) { qthread_after_swap_to_main(); }
   qt_context_t my_context;
   qt_threadqueue_t *threadqueue;
-  qt_threadqueue_private_t *localqueue = NULL;
   qthread_t *t;
   qthread_t *_Atomic *current;
   int done = 0;
@@ -359,9 +357,7 @@ static void *qthread_master(void *arg) {
       SPINLOCK_BODY();
     }
     t = qt_scheduler_get_thread(
-      threadqueue,
-      localqueue,
-      atomic_load_explicit(&me->active, memory_order_relaxed));
+      threadqueue, atomic_load_explicit(&me->active, memory_order_relaxed));
     assert(t);
 
     // Process input preconditions if this is a NASCENT thread
@@ -453,7 +449,6 @@ static void *qthread_master(void *arg) {
             {
               qthread_t *f = qt_scheduler_get_thread(
                 threadqueue,
-                NULL,
                 atomic_load_explicit(&me->active, memory_order_relaxed));
               qt_threadqueue_enqueue(me->ready, t);
               qt_threadqueue_enqueue(me->ready, f);
