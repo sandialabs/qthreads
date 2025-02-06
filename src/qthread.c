@@ -66,7 +66,6 @@
 #include "qt_qthread_struct.h"
 #include "qt_queue.h"
 #include "qt_shepherd_innards.h"
-#include "qt_spawncache.h"
 #include "qt_subsystems.h"
 #include "qt_syncvar.h"
 #include "qt_teams.h"
@@ -124,8 +123,7 @@ static inline qthread_t *qthread_thread_new(qthread_f f,
                                             qt_team_t *team,
                                             int team_leader);
 
-/*Make method externally available for the scheduler; to be used when agg
- * tasks*/
+/*Make method externally available for the schedulers*/
 void qthread_thread_free(qthread_t *t);
 
 qt_mpool generic_qthread_pool = NULL;
@@ -321,7 +319,6 @@ static void *qthread_master(void *arg) {
   if (my_id == 0 && me_worker->worker_id == 0) { qthread_after_swap_to_main(); }
   qt_context_t my_context;
   qt_threadqueue_t *threadqueue;
-  qt_threadqueue_private_t *localqueue = NULL;
   qthread_t *t;
   qthread_t *_Atomic *current;
   int done = 0;
@@ -360,9 +357,7 @@ static void *qthread_master(void *arg) {
       SPINLOCK_BODY();
     }
     t = qt_scheduler_get_thread(
-      threadqueue,
-      localqueue,
-      atomic_load_explicit(&me->active, memory_order_relaxed));
+      threadqueue, atomic_load_explicit(&me->active, memory_order_relaxed));
     assert(t);
 
     // Process input preconditions if this is a NASCENT thread
@@ -454,7 +449,6 @@ static void *qthread_master(void *arg) {
             {
               qthread_t *f = qt_scheduler_get_thread(
                 threadqueue,
-                NULL,
                 atomic_load_explicit(&me->active, memory_order_relaxed));
               qt_threadqueue_enqueue(me->ready, t);
               qt_threadqueue_enqueue(me->ready, f);
@@ -518,23 +512,6 @@ static void *qthread_master(void *arg) {
   return NULL;
 }
 
-/* By default allow merging of tasks of the same kind
- * Rely on the limitation put on max number of tasks
- * allowed to be aggregated from a queue
- * (relative to available work per worker) */
-int qthread_default_agg_cost(int count, qthread_f *f, void **arg) {
-  if (f[count] != f[0]) return qlib->max_c + 1;
-  return qlib->max_c - 1;
-}
-
-void qthread_default_agg_f(
-  int count, qthread_f *f, void **arg, void **ret, uint16_t flags) {
-  int i;
-  for (i = count - 1; i >= 0; i--) {
-    qthread_call_method(f[i], arg[i], ret[i], flags);
-  }
-}
-
 int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) {
   char newenv[100];
 
@@ -562,10 +539,6 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) {
  * shepherd if no information about the system could be found. Shepherds will
  * attempt to pin themselves to processors using whatever CPU affinity libraries
  * are available.
- * qthread_initialize_agg is another wrapper, receiving the method that can
- aggregate tasks.
- * By default, qthreads provide such a method for spawned tasks marked as
- AGGREGABLE.
 
  * @name qthread_initialize
  *
@@ -576,17 +549,6 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds) {
  *
  * @error ENOMEM Not enough memory could be allocated.
  */
-
-int API_FUNC
-qthread_initialize_agg(int (*agg_cost)(int count, qthread_f *f, void **arg),
-                       qthread_agg_f agg_f,
-                       int max_c) {
-  int r = qthread_initialize();
-  if (agg_cost != NULL) qlib->agg_cost = agg_cost;
-  if (agg_f != NULL) qlib->agg_f = agg_f;
-  if (max_c >= 0) qlib->max_c = max_c;
-  return r;
-}
 
 int API_FUNC qthread_initialize(void) {
   int r;
@@ -732,9 +694,6 @@ int API_FUNC qthread_initialize(void) {
   qt_threadqueue_subsystem_init();
   qt_blocking_subsystem_init();
 
-  /* Set up agg methods*/
-  qlib->agg_cost = qthread_default_agg_cost;
-  qlib->agg_f = qthread_default_agg_f;
   /* initialize the shepherd structures */
   for (i = 0; i < nshepherds; i++) {
     qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t)i;
@@ -1605,24 +1564,7 @@ static void qthread_wrapper(void *ptr) {
   }
 
   assert(t->rdata);
-  if (atomic_load_explicit(&t->flags, memory_order_relaxed) &
-      QTHREAD_AGGREGATED) {
-    int count = ((int *)t->preconds)[0];
-    qthread_f *list_of_f = (qthread_f *)(&(((int *)t->preconds)[1]));
-    qthread_agg_f agg_f = (qthread_agg_f)(t->f);
-    agg_f(count,
-          list_of_f,
-          (void **)t->arg,
-          (void **)t->ret,
-          atomic_load_explicit(&t->flags, memory_order_relaxed));
-    if (NULL != t->team) {
-      qt_internal_teamfinish(
-        t->team, atomic_load_explicit(&t->flags, memory_order_relaxed));
-    }
-    // TODO: How to handle ret sinc flags?
-    // Temp solution: use qthread_call_method and pass task flags to the agg
-    // function.
-  } else if (t->ret) {
+  if (t->ret) {
     if (atomic_load_explicit(&t->flags, memory_order_relaxed) &
         QTHREAD_RET_IS_SINC) {
       if (atomic_load_explicit(&t->flags, memory_order_relaxed) &

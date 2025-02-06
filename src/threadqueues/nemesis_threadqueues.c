@@ -29,9 +29,11 @@
 int num_spins_before_condwait;
 #define DEFAULT_SPINCOUNT 300000
 
+typedef struct qt_threadqueue_node_s qt_threadqueue_node_t;
+
 /* Data Structures */
-struct _qt_threadqueue_node {
-  struct _qt_threadqueue_node *_Atomic next;
+struct qt_threadqueue_node_s {
+  struct qt_threadqueue_node_s *_Atomic next;
   qthread_t *thread;
 };
 
@@ -119,7 +121,7 @@ qt_internal_NEMESIS_dequeue(NEMESIS_queue *q) {
   qt_threadqueue_node_t *const retval = (void *)(q->shadow_head);
 
   if ((retval != NULL) && (retval != (void *)1)) {
-    struct _qt_threadqueue_node *next_loc =
+    struct qt_threadqueue_node_s *next_loc =
       atomic_load_explicit(&retval->next, memory_order_acquire);
     if (next_loc != NULL) {
       q->shadow_head = next_loc;
@@ -254,10 +256,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q) {
   return atomic_load_explicit(&q->advisory_queuelen, memory_order_relaxed);
 }
 
-qthread_t INTERNAL *
-qt_scheduler_get_thread(qt_threadqueue_t *q,
-                        qt_threadqueue_private_t *Q_UNUSED(qc),
-                        uint_fast8_t Q_UNUSED(active)) {
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t *q,
+                                            uint_fast8_t Q_UNUSED(active)) {
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
   int i;
 #endif /* QTHREAD_CONDWAIT_BLOCKING_QUEUE */
