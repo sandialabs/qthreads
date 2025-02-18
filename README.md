@@ -43,9 +43,9 @@ Hwloc is also highly recommended.
 
 The following compilers are supported and tested regularly:
 - gcc 9 or later
-- clang 11 or later
+- clang 14 or later
 - icc (last supported release)
-- icx 2023 or later
+- icx 2024 or later
 - aocc 4.2 or later
 - acfl 24.10
 - Apple clang 15 or later
