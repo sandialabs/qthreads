@@ -79,7 +79,7 @@ using std::memory_order_relaxed;
  * digit for EXT, and 2 digits for EXT_NUMBER.  For example, 1.17.1rc1 is
  * converted to the numeric version 011701201.
  */
-#define QTHREAD_NUMVERSION 012100000
+#define QTHREAD_NUMVERSION 012200201
 
 #define QTHREADS_GET_VERSION(MAJOR, MINOR, REVISION, TYPE, PATCH)              \
   (((MAJOR) * 10000000) + ((MINOR) * 100000) + ((REVISION) * 1000) +           \
