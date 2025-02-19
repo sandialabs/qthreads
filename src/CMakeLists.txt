@@ -10,6 +10,7 @@ set(QTHREADS_DICT_TYPE shavit CACHE STRING "Which dictionary implementation to u
 set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to use. Valid values are \"clock_gettime\", \"mach\", \"gettimeofday\", and \"gethrtime\".")
 set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
 set(HWLOC_INSTALL_DIR /usr/local CACHE PATH "Install path for hwloc library")
+set(QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION "" CACHE STRING "function to get hwloc topology (otherwise uses hwloc_topology_init and hwloc_topology_load)")
 
 set(QTHREADS_SOURCES
   cacheline.c
@@ -97,6 +98,12 @@ target_compile_definitions(qthread
   PRIVATE CACHELINE_WIDTH=${QTHREADS_CACHELINE_SIZE_ESTIMATE}
   PRIVATE QTHREAD_DEFAULT_STACK_SIZE=${QTHREADS_DEFAULT_STACK_SIZE}
 )
+
+if(NOT "${QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION}" STREQUAL "")
+  target_compile_definitions(qthread
+    PRIVATE HWLOC_GET_TOPOLOGY_FUNCTION=${QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION}
+  )
+endif()
 
 # CMAKE_INSTALL_LIBDIR is less reliable with CMake 3.21 and earlier.
 # In those case, it may be necessary for the end-user to specify it manually.
