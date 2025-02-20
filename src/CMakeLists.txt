@@ -11,6 +11,7 @@ set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to
 set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
 set(HWLOC_INSTALL_DIR /usr/local CACHE PATH "Install path for hwloc library")
 set(QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION "" CACHE STRING "function to get hwloc topology (otherwise uses hwloc_topology_init and hwloc_topology_load)")
+set(QTHREADS_GUARD_PAGES OFF CACHE BOOL "Whether or not to guard memory pages to help with debugging stack overflows. Default is OFF.")
 
 set(QTHREADS_SOURCES
   cacheline.c
@@ -102,6 +103,12 @@ target_compile_definitions(qthread
 if(NOT "${QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION}" STREQUAL "")
   target_compile_definitions(qthread
     PRIVATE HWLOC_GET_TOPOLOGY_FUNCTION=${QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION}
+  )
+endif()
+
+if(QTHREADS_GUARD_PAGES)
+  target_compile_definitions(qthread
+    PRIVATE QTHREADS_GUARD_PAGES
   )
 endif()
 
