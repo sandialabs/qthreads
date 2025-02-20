@@ -12,6 +12,7 @@ set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap impl
 set(HWLOC_INSTALL_DIR /usr/local CACHE PATH "Install path for hwloc library")
 set(QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION "" CACHE STRING "function to get hwloc topology (otherwise uses hwloc_topology_init and hwloc_topology_load)")
 set(QTHREADS_GUARD_PAGES OFF CACHE BOOL "Whether or not to guard memory pages to help with debugging stack overflows. Default is OFF.")
+set(QTHREADS_CONDWAIT_QUEUE OFF CACHE BOOL "Use a waiting queue based on pthread condition variables instead of a spin-based queue for inter-thread communication. Default is OFF.")
 
 set(QTHREADS_SOURCES
   cacheline.c
@@ -108,7 +109,13 @@ endif()
 
 if(QTHREADS_GUARD_PAGES)
   target_compile_definitions(qthread
-    PRIVATE QTHREADS_GUARD_PAGES
+    PRIVATE QTHREADS_GUARD_PAGES=1
+  )
+endif()
+
+if(QTHREADS_CONDWAIT_QUEUE)
+  target_compile_definitions(qthread
+    PRIVATE QTHREAD_CONDWAIT_BLOCKING_QUEUE=1
   )
 endif()
 
