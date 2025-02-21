@@ -15,7 +15,9 @@ jobs:
       CC: gcc-14
       CXX: g++-14
     steps:
-      - checkout
+      - run: |
+          export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
+          git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
           sudo apt-add-repository -y universe
           sudo apt-get install -y gcc-14 g++-14
@@ -47,7 +49,9 @@ jobs:
       CC: clang-19
       CXX: clang++-19
     steps:
-      - checkout
+      - run: |
+          export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
+          git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
           sudo apt-add-repository -y universe
           sudo apt-get install -y gcc-14 g++-14
@@ -89,7 +93,9 @@ jobs:
       QTHREAD_STACK_SIZE: 524288
       ASAN_OPTIONS: "check_initialization_order=1"
     steps:
-      - checkout
+      - run: |
+          export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
+          git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
           sudo apt-add-repository -y universe
           sudo apt-get install -y gcc-14 g++-14
@@ -124,7 +130,9 @@ jobs:
       CC: armclang
       CXX: armclang++
     steps:
-      - checkout
+      - run: |
+          export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
+          git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
           # Set up apt to get a more recent CMake directly from Kitware.
           wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
@@ -173,7 +181,9 @@ jobs:
       CC: nvc
       CXX: nvc++
     steps:
-      - checkout
+      - run: |
+          export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
+          git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
           curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
           export MACHINE_TYPE=`uname -m`
@@ -214,7 +224,10 @@ jobs:
       - image: alpine:latest
     resource_class: << parameters.worker_type >>
     steps:
-      - checkout
+      - run: |
+          apk add --no-cache --no-progress git
+          export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
+          git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
           apk add --no-cache --no-progress bash make musl-dev hwloc-dev cmake gcc g++
           if [ "<< parameters.compiler >>" == "clang" ]; then apk add clang; fi
