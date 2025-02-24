@@ -15,7 +15,8 @@
   } while (0)
 
 static aligned_t spinner(void *arg) {
-  while (*(aligned_t *)arg == 0);
+  while (atomic_load_explicit((_Atomic aligned_t *)arg, memory_order_relaxed) ==
+         0);
   return 1;
 }
 
@@ -32,11 +33,12 @@ int main(int argc, char *argv[]) {
 
   TEST_OPTION(STACK_SIZE, >=, 2048);
   {
-    aligned_t r = 0;
+    _Atomic aligned_t r;
+    atomic_store_explicit(&r, 0u, memory_order_relaxed);
     TEST_OPTION(BUSYNESS, ==, 1); // Just this thread
     TEST_OPTION(NODE_BUSYNESS, ==, 1);
     TEST_OPTION(WORKER_OCCUPATION, ==, 1);
-    qthread_fork(spinner, &r, &r);
+    qthread_fork(spinner, (void *)&r, (aligned_t *)&r);
     qthread_flushsc();
     TEST_OPTION(BUSYNESS, >=, 1);
     TEST_OPTION(BUSYNESS, <=, 2);
@@ -45,8 +47,8 @@ int main(int argc, char *argv[]) {
     TEST_OPTION(NODE_BUSYNESS, <=, 2);
     TEST_OPTION(WORKER_OCCUPATION, >=, 1);
     TEST_OPTION(WORKER_OCCUPATION, <=, 2);
-    r = 1;
-    qthread_readFF(NULL, &r);
+    atomic_store_explicit(&r, 1u, memory_order_relaxed);
+    qthread_readFF(NULL, (aligned_t *)&r);
   }
   {
     size_t sheps;
