@@ -4,7 +4,7 @@ AllowShortCaseLabelsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortLoopsOnASingleLine: true
 AlwaysBreakTemplateDeclarations: Yes
-AttributeMacros: ['Q_UNUSED', 'STACKLEFT_NOINLINE']
+AttributeMacros: ['Q_UNUSED', 'STACKLEFT_NOINLINE', 'API_FUNC']
 BinPackArguments: false
 BinPackParameters: false
 BreakArrays: false

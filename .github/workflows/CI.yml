@@ -2,9 +2,15 @@ name: CI
 
 on: [push, pull_request]
 
+# Cancel the current workflow if a newer commit gets pushed to the
+# branch or PR that triggered it.
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   linux-gcc:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
@@ -15,9 +21,7 @@ jobs:
       CC: gcc-${{ matrix.gcc_version }}
       CXX: g++-${{ matrix.gcc_version }}
     steps:
-    - uses: actions/checkout@v3
-    - if: ${{ matrix.gcc_version == '13' }}
-      run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
+    - uses: actions/checkout@v4
     - name: install compiler
       run: sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
     - if: ${{ matrix.topology != 'no' }}
@@ -26,29 +30,27 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 3m make check
-      timeout-minutes: 4
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
+      timeout-minutes: 13
 
   linux-clang:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
-        clang_version: [11, 12, 13, 14, 15, 16, 17, 18]
+        clang_version: [14, 15, 16, 17, 18]
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         include:
-          - clang_version: 11
-            gcc_version: 10
-          - clang_version: 12
-            gcc_version: 11
-          - clang_version: 13
-            gcc_version: 11
           - clang_version: 14
             gcc_version: 11
           - clang_version: 15
@@ -63,13 +65,7 @@ jobs:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++-${{ matrix.clang_version }}
     steps:
-    - uses: actions/checkout@v3
-    - if: ${{ matrix.clang_version == '16' || matrix.clang_version == '17' || matrix.clang_version == '18' }}
-      run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
-        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-${{ matrix.clang_version }} main' && break || sleep 1
-    - if: ${{ matrix.gcc_version == '13' }}
-      run: sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
+    - uses: actions/checkout@v4
     - name: install gcc
       run: sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
     - name: install clang
@@ -80,16 +76,20 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 6m make check
-      timeout-minutes: 7
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
+      timeout-minutes: 13
 
   linux-icx:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
@@ -99,34 +99,36 @@ jobs:
       CC: icx
       CXX: icpx
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
     - name: install gcc
       run: |
-        sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
-        sudo apt-get install gcc-13 g++-13
+        sudo apt-get install gcc-14 g++-14
     - name: install icx
       run: |
         wget -O - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add - && break || sleep 1
         sudo apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && break || sleep 1
-        sudo apt-get install intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.4
+        sudo apt-get install intel-oneapi-compiler-dpcpp-cpp-2024.2
         source /opt/intel/oneapi/setvars.sh
         icx -v
     - name: build qthreads
       run: |
         source /opt/intel/oneapi/setvars.sh
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
+        pushd build
         source /opt/intel/oneapi/setvars.sh
-        timeout -k 10s --foreground 6m make check
-      timeout-minutes: 7
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
+      timeout-minutes: 13
 
   linux-icc:
     runs-on: ubuntu-22.04
@@ -141,7 +143,7 @@ jobs:
       CFLAGS: "-diag-disable=10441"
       CXXFLAGS: "-diag-disable=10441"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
@@ -153,24 +155,27 @@ jobs:
       run: |
         wget -O - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo apt-key add - && break || sleep 1
         sudo apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && break || sleep 1
-        sudo apt-get install intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.1
+        sudo apt-get install intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2023.2.4
         source /opt/intel/oneapi/setvars.sh
         icc -v
     - name: build qthreads
       run: |
         source /opt/intel/oneapi/setvars.sh
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
+        pushd build
         source /opt/intel/oneapi/setvars.sh
-        timeout -k 10s --foreground 6m make check
-      timeout-minutes: 7
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
+      timeout-minutes: 13
 
   linux-aocc:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     continue-on-error: true
     strategy:
       matrix:
@@ -180,14 +185,13 @@ jobs:
       CC: clang
       CXX: clang++
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
     - name: install gcc
       run: |
-        sudo apt-add-repository 'ppa:ubuntu-toolchain-r/test' && break || sleep 1
         sudo apt-get install gcc-13 g++-13
     - name: install aocc
       run: |
@@ -196,50 +200,60 @@ jobs:
         clang -v
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }} || cat config.log
-        make -j2
-        make tests -j2
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
       run: |
-        timeout -k 10s --foreground 6m make check
-      timeout-minutes: 7
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
+      timeout-minutes: 13
 
   mac:
-    runs-on: macos-latest
     continue-on-error: true
     strategy:
       matrix:
+        image: [macos-15, macos-13] # Test on both ARM and X86
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
-        use_asserts: [true, false]
+        build_type: [Release, Debug]
+        compiler: [gcc, clang]
+    runs-on: ${{ matrix.image }}
     env:
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: install deps
       run: |
-        brew install autoconf automake libtool coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+        brew install coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
+        if [[ "${{ matrix.compiler }}" == "gcc" ]]; then brew install gcc; fi
     - if: ${{ matrix.topology != 'no' }}
       run: |
         brew install hwloc
         hwloc-ls --version
     - name: build qthreads
       run: |
+        if [[ "${{ matrix.compiler }}" == "gcc" ]]; then export CC=gcc && export CXX=g++ ; fi
         export CFLAGS="-I$(brew --prefix)/include $CFLAGS"
         export CXXFLAGS="-I$(brew --prefix)/include $CXXFLAGS"
         export LDFLAGS="-L$(brew --prefix)/lib $LDFLAGS"
-        ./autogen.sh
-        ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j3
-        make tests -j3
-    - name: make check
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j3 VERBOSE=1
+        popd
+    - name: run tests
       run: |
         # commented example for how to get a backtrace from CI usign lldb on OSX:
         #echo "settings set target.process.stop-on-exec false" > ~/.lldbinit
         #QT_NUM_SHEPHERDS=2 QT_NUM_WORKERS_PER_SHEPHERD=1 lldb bash --batch --one-line 'process launch' --one-line-on-crash 'bt' --one-line-on-crash 'quit' -- test/basics/hello_world
-        gtimeout -k 10s --foreground 8m make check
-      timeout-minutes: 9
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 gtimeout -k 10s --foreground 12m make test VERBOSE=1
+        popd
+      timeout-minutes: 13
 
   sanitizers:
     runs-on: ubuntu-24.04
@@ -250,6 +264,19 @@ jobs:
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
+        exclude:
+          - sanitizer: memory
+            topology: hwloc
+          - sanitizer: memory
+            topology: binders
+          - sanitizer: thread
+            scheduler: sherwood
+          - sanitizer: thread
+            scheduler: distrib
+          - sanitizer: thread
+            topology: hwloc
+          - sanitizer: thread
+            topology: binders
     env:
       CC: clang-19
       CXX: clang++-19
@@ -259,10 +286,9 @@ jobs:
       QTHREAD_STACK_SIZE: 2097152
       ASAN_OPTIONS: "check_initialization_order=1"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - if:  ${{ ! matrix.use_libcxx }}
       run: |
-        sudo apt-add-repository universe && break || sleep 1
         sudo apt-get install gcc-14 g++-14
     - name: install compiler
       run: |
@@ -277,13 +303,18 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 8m make check
-      timeout-minutes: 9
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        if [[ "${{ matrix.sanitizer }}" == "thread" ]]; then cd test/basics; fi
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
+        popd
+      timeout-minutes: 19
 
   linux-thorough:
     runs-on: ubuntu-24.04
@@ -294,7 +325,7 @@ jobs:
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         use_libcxx: [false] # disable testing on libcxx since its effect seems very limited for now.
-        use_asserts: [true, false]
+        build_type: [Release, Debug]
         exclude:
           - compiler: gcc
             use_libcxx: true
@@ -304,9 +335,8 @@ jobs:
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - run: |
-        sudo apt-add-repository universe && break || sleep 1
         sudo apt-get install gcc-14 g++-14
     - if: ${{ matrix.compiler == 'clang' }}
       run: |
@@ -321,10 +351,33 @@ jobs:
         hwloc-ls --version
     - name: build qthreads
       run: |
-        ./autogen.sh
-        ./configure $QTHREADS_ENABLE_ASSERTS --enable-picky --with-scheduler=${{ matrix.scheduler }} --with-topology=${{ matrix.topology }}
-        make -j2
-        make tests -j2
-    - name: make check
-      run: timeout -k 10s --foreground 6m make check
-      timeout-minutes: 7
+        mkdir build
+        pushd build
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
+        make -j2 VERBOSE=1
+        popd
+    - name: run tests
+      run: |
+        pushd build
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
+        popd
+      timeout-minutes: 19
+
+  clang-format:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    env:
+      CC: 'clang-19'
+      CXX: 'clang++-19'
+    steps:
+    - uses: actions/checkout@v4
+    - run: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main' && break || sleep 1
+        sudo apt-get install clang-format-19
+    - name: check formatting
+      run: |
+        clang-format --version
+        sh clang-format.sh
+        git --no-pager diff
+        if [[ $(git --no-pager diff) ]]; then echo "need to rerun clang-format"; exit 1; fi
