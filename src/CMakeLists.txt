@@ -9,7 +9,6 @@ set(QTHREADS_HASHMAP hashmap CACHE STRING "Which hashmap implementation to use. 
 set(QTHREADS_DICT_TYPE shavit CACHE STRING "Which dictionary implementation to use. Valid values are \"shavit\", \"trie\", and \"simple\".")
 set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to use. Valid values are \"clock_gettime\", \"mach\", \"gettimeofday\", and \"gethrtime\".")
 set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
-set(HWLOC_INSTALL_DIR /usr/local CACHE PATH "Install path for hwloc library")
 set(QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION "" CACHE STRING "function to get hwloc topology (otherwise uses hwloc_topology_init and hwloc_topology_load)")
 set(QTHREADS_GUARD_PAGES OFF CACHE BOOL "Whether or not to guard memory pages to help with debugging stack overflows. Default is OFF.")
 set(QTHREADS_CONDWAIT_QUEUE OFF CACHE BOOL "Use a waiting queue based on pthread condition variables instead of a spin-based queue for inter-thread communication. Default is OFF.")
@@ -79,13 +78,9 @@ target_include_directories(qthread
 set_target_properties(qthread PROPERTIES C_VISIBILITY_PRESET hidden)
 target_link_libraries(qthread PUBLIC Threads::Threads)
 if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "binders")
-  find_path(HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
-  target_include_directories(qthread PRIVATE ${HWLOC_INCLUDE_DIR})
-  find_library(HWLOC_LIBRARY
-    NAMES hwloc libhwloc
-    HINTS ${HWLOC_INSTALL_DIR}
-    PATH_SUFFIXES lib lib64 lib32)
-  target_link_libraries(qthread PUBLIC "${HWLOC_LIBRARY}")
+  find_package(hwloc REQUIRED)
+  target_include_directories(qthread PRIVATE "${hwloc_INCLUDE_DIR}")
+  target_link_libraries(qthread PUBLIC "${hwloc_LIBRARY}")
   if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc")
     target_compile_definitions(qthread PRIVATE USE_HWLOC_MEM_AFFINITY)
   endif()

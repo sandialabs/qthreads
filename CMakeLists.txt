@@ -1,8 +1,6 @@
-if(CMAKE_VERSION VERSION_LESS "3.12.0")
-  cmake_minimum_required(VERSION 3.2)
-else()
-  cmake_minimum_required(VERSION 3.2...3.31)
-endif()
+cmake_minimum_required(VERSION 3.12...3.31)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_C_STANDARD 11)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build using shared libraries.")
