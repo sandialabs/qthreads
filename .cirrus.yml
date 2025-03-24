@@ -113,28 +113,28 @@ arm_linux_clang_task:
   timeout_in: 5m
   matrix:
     env:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: hwloc
     env:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
       QTHREADS_SCHEDULER: nemesis
       QTHREADS_TOPOLOGY: binders
     env:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
       QTHREADS_SCHEDULER: sherwood
       QTHREADS_TOPOLOGY: no
     env:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
       QTHREADS_SCHEDULER: distrib
       QTHREADS_TOPOLOGY: no
   install_deps_script: |
@@ -145,9 +145,9 @@ arm_linux_clang_task:
     gpg --no-default-keyring --keyring ./tmp.gpg --export --output llvm-snapshot.gpg
     rm tmp.gpg
     cp llvm-snapshot.gpg /etc/apt/trusted.gpg.d/llvm-snapshot.gpg # This is for CI so no need to do something more complicated to restrict key use to a specific repo.
-    apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-19 main'
-    apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-19 main' # Something's buggy upstream but running this twice fixes it.
-    apt-get install -y clang-19
+    apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-20 main'
+    apt-add-repository -y 'deb https://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-20 main' # Something's buggy upstream but running this twice fixes it.
+    apt-get install -y clang-20
     apt-get install -y cmake
     apt-get install -y hwloc libhwloc-dev
   build_script: |

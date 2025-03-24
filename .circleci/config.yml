@@ -46,8 +46,8 @@ jobs:
       image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
     steps:
       - run: |
           export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
@@ -58,8 +58,8 @@ jobs:
           sudo apt-get install -y cmake
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main'
-          sudo apt-get install -y clang-19
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/noble/ llvm-toolchain-noble-20 main'
+          sudo apt-get install -y clang-20
       - run: |
           mkdir build
           pushd build
@@ -85,8 +85,8 @@ jobs:
       image: ubuntu-2404:edge
     resource_class: arm.medium
     environment:
-      CC: clang-19
-      CXX: clang++-19
+      CC: clang-20
+      CXX: clang++-20
       CFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       CXXFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       LDFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
@@ -102,8 +102,8 @@ jobs:
           sudo apt-get install -y cmake
           sudo apt-get install -y hwloc libhwloc-dev
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main'
-          sudo apt-get install -y clang-19
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/noble/ llvm-toolchain-noble-20 main'
+          sudo apt-get install -y clang-20
       - run: |
           mkdir build
           pushd build
