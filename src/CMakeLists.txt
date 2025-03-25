@@ -35,6 +35,7 @@ set(QTHREADS_SOURCES
   alloc/${QTHREADS_ALLOC}.c
   affinity/common.c
   affinity/${QTHREADS_TOPOLOGY}.c
+  threadpool.c
   touch.c
   tls.c
   teams.c
