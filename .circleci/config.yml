@@ -229,7 +229,7 @@ jobs:
           export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
           git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
-          apk add --no-cache --no-progress bash make musl-dev hwloc-dev cmake gcc g++
+          apk add --no-cache --no-progress bash make musl-dev hwloc-dev cmake gcc g++ linux-headers
           if [ "<< parameters.compiler >>" == "clang" ]; then apk add clang; fi
       - run: |
           if [ "<< parameters.compiler >>" == "clang" ]; then export CC=clang && export CXX=clang++; fi
