@@ -76,7 +76,20 @@ target_include_directories(qthread
   PRIVATE "../include"
 )
 set_target_properties(qthread PROPERTIES C_VISIBILITY_PRESET hidden)
+
+# Link pthreads.
 target_link_libraries(qthread PUBLIC Threads::Threads)
+
+# The c11 threading library has to be linked
+# via a separate library on BSD OSs.
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD" OR
+    "${CMAKE_SYSTEM_NAME}" STREQUAL "kFreeBSD" OR
+    "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD" OR
+    "${CMAKE_SYSTEM_NAME}" STREQUAL "NetBSD" OR
+    "${CMAKE_SYSTEM_NAME}" STREQUAL "DragonFly")
+  target_link_libraries(qthread PUBLIC "stdthreads")
+endif()
+
 if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "binders")
   find_package(hwloc REQUIRED)
   target_include_directories(qthread PRIVATE "${hwloc_INCLUDE_DIR}")
