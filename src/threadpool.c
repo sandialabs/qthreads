@@ -75,6 +75,8 @@ typedef struct {
 #endif
 } pool_header;
 
+_Thread_local pool_header *delegated_pool;
+
 typedef struct {
   // 16 byte aligned to allow loading it in one atomic instruction
   // on architectures where that makes sense (most of them).
@@ -306,6 +308,7 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
 #ifdef QPOOL_USE_PTHREADS
   pthread_attr_destroy(&attr);
 #endif
+  delegated_pool = &hw_pool;
   return POOL_INIT_SUCCESS;
 cleanup_threads:
   if (i) {
@@ -348,6 +351,7 @@ release_pool:
 }
 
 API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
+  delegated_pool = NULL;
   uint32_t num_threads =
     atomic_load_explicit(&hw_pool.num_threads, memory_order_relaxed);
   char *buffer = atomic_load_explicit(&hw_pool.threads, memory_order_relaxed);
@@ -398,6 +402,10 @@ pool_run_on_all(pool_header *pool, qt_threadpool_func_type func, void *arg) {
     launch_work_on_thread(thread_control, func, arg);
   }
   suspend_main_while_working(pool);
+}
+
+API_FUNC void run_on_current_pool(qt_threadpool_func_type func, void *arg) {
+  pool_run_on_all(delegated_pool, func, arg);
 }
 
 API_FUNC void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg) {
