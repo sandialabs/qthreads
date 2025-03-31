@@ -382,6 +382,17 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
 }
 
+// TODO: If no thread pool is delegated, just run the function directly.
+
+// TODO: interface for querying about the delgated thread pool.
+// At least let the user get the number of threads available.
+// If no thread pool is delgated, just report a single thread.
+
+// TODO: have the main thread fill the role of thread 0.
+// Instead of having the main thread wait/resume, swap in its thread-locals
+// then have it run the per-thread function.
+// This will avoid the suspend/resume OS overheads for at least that thread.
+
 API_FUNC void
 pool_run_on_all(pool_header *pool, qt_threadpool_func_type func, void *arg) {
   uint32_t num_threads =
@@ -410,5 +421,22 @@ API_FUNC void run_on_current_pool(qt_threadpool_func_type func, void *arg) {
 
 API_FUNC void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg) {
   pool_run_on_all(&hw_pool, func, arg);
+}
+
+API_FUNC void divide_pool(uint32_t num_groups, ...) {
+  // TODO: for each group:
+  //   make a new threadpool header for the group
+  //   wake the leader thread and have it:
+  //     update its own thread-local thread pool and index
+  //     re-wake and launch a new iteration loop on its delegated worker
+  //     threads, having them:
+  //       update their thread-local indices then launch their own iteration
+  //       loops
+  //     wait for the other threads in the group to finish (busy or futex?)
+  //     restore its own thread-locals
+  //     signal completion to main via the atomic on the outer pool
+  // have the main thread act as leader for the first group
+  // wait for the groups to finish (busy or futex?)
+  ;
 }
 
