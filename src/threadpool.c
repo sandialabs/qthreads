@@ -382,9 +382,11 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
 }
 
-// TODO: interface for querying about the delgated thread pool.
-// At least let the user get the number of threads available.
-// If no thread pool is delgated, just report a single thread.
+API_FUNC uint32_t get_num_delegated_threads() {
+  if (delegated_pool) return delegated_pool->num_threads;
+  // Every thread at least has itself available for work.
+  return 1;
+}
 
 // TODO: have the main thread fill the role of thread 0.
 // Instead of having the main thread wait/resume, swap in its thread-locals
