@@ -382,8 +382,6 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
 }
 
-// TODO: If no thread pool is delegated, just run the function directly.
-
 // TODO: interface for querying about the delgated thread pool.
 // At least let the user get the number of threads available.
 // If no thread pool is delgated, just report a single thread.
@@ -416,7 +414,14 @@ pool_run_on_all(pool_header *pool, qt_threadpool_func_type func, void *arg) {
 }
 
 API_FUNC void run_on_current_pool(qt_threadpool_func_type func, void *arg) {
-  pool_run_on_all(delegated_pool, func, arg);
+  if (delegated_pool) {
+    pool_run_on_all(delegated_pool, func, arg);
+  } else {
+    uint32_t outer_index = context_index;
+    context_index = 0;
+    func(arg);
+    context_index = outer_index;
+  }
 }
 
 API_FUNC void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg) {
