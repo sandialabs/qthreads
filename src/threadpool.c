@@ -283,15 +283,6 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
   while (i < num_threads) {
     pooled_thread_control *thread_control =
       (pooled_thread_control *)(buffer + alignment * (size_t)i);
-    // Initialize the thread control struct in two 128b atomic writes.
-    // TODO: It's possible to just do this in a single 256b atomic write on most
-    // x86 platforms. That may also require increasing the alignment constraints
-    // for the control_slice.
-    // TODO: also ifdef in an implementation for platforms that can't do
-    // lock-free 128b writes or that don't handle mixed-size atomic writes.
-    // TODO: making some kind of ifunc to handle this initialization is probably
-    // actually the right way to do it because it's hard to know enough about
-    // the CPU at compile-time.
     init_thread_control(thread_control, i, &hw_pool);
     int status;
 #ifdef QPOOL_USE_PTHREADS
