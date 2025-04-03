@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdalign.h>
+#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -44,7 +45,7 @@ _Thread_local uint32_t context_index;
 // Placeholder
 #define DEFAULT_CACHE_LINE_SIZE 64
 
-unsigned int get_cache_line_size() { return DEFAULT_CACHE_LINE_SIZE; }
+uint32_t get_cache_line_size() { return DEFAULT_CACHE_LINE_SIZE; }
 
 // Reserved pointer value to signal pool shutdown.
 #define POOL_END_SIGNAL ((void *)1u)
@@ -441,7 +442,78 @@ API_FUNC void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg) {
   pool_run_on_all(&hw_pool, func, arg);
 }
 
-API_FUNC void divide_pool(uint32_t num_groups, ...) {
+typedef struct {
+  uint32_t num_threads;
+  uint32_t flags; // reserved
+  qt_threadpool_func_type func;
+  void *arg;
+} thread_group_spec;
+
+thread_group_spec
+make_group_spec(uint32_t num_threads, qt_threadpool_func_type func, void *arg) {
+  thread_group_spec ret;
+  ret.num_threads = num_threads;
+  ret.flags = 0u;
+  ret.func = func;
+  ret.arg = arg;
+  return ret;
+}
+
+// Arguments:
+// uint32_t num_groups: number of groups
+// followed by num_groups of the thread_group_spec struct which carries the info
+// for:
+//   - the number of threads delegated to that group
+//   - the function to execute on that group of qt_threadpool_func_type
+//   - a void* argument to pass to that function when calling it.
+API_FUNC void divide_pool(uint32_t num_groups_i, thread_group_spec *groups) {
+  if (!delegated_pool) {
+    // Unclear what dividing a thread into multiple groups would even mean here.
+    // Maybe have it run all the groups itself? That could be added as a wrapper
+    // tho this interace though.
+    assert(num_groups_i == 1);
+    assert(groups[0].num_threads == 1);
+    uint32_t outer_index = context_index;
+    context_index = 0;
+    groups[0].func(groups[0].arg);
+    context_index = outer_index;
+    return;
+  }
+  assert(num_groups_i <= atomic_load_explicit(&delegated_pool->num_threads));
+  // Sanity check that the numbers of threads requested can actually be used.
+  // TODO: should we actually be able to group fewer threads than are available?
+  // Currently this is disallowed.
+  size_t num_delegated_threads =
+    atomic_load_explicit(&delegated_pool->num_threads, memory_order_relaxed);
+#ifndef NDEBUG
+  assert(num_groups <= num_delegated_threads);
+  uint32_t threads_counted_in_groups = 0u;
+  for (uint32_t i = 0u; i < num_threads; ++i) {
+    threads_counted_in_groups += groups[i].num_threads;
+  }
+  assert(threads_counted_in_groups == num_delegated_threads);
+#endif
+  size_t num_groups = num_groups_i;
+  size_t cache_line_size = get_cache_line_size();
+  // TODO: handle the case of a very small cache line size
+  // in case this gets run on a weird architecture.
+  assert(cache_line_size % alignof(pool_header) == 0);
+  assert(sizeof(pool_header) < cache_line_size);
+  alignas(
+    alignof(pool_header)) char subpool_headers[cache_line_size * num_groups];
+  assert(cache_line_size & alignof(pooled_thread_control) == 0);
+  assert(sizeof(pooled_thread_control) < cache_line_size);
+  alignas(alignof(pooled_thread_control)) char
+    thread_controls[cache_line_size * num_delegated_threads];
+  // TODO initialize the thread pool headers and thread control headers.
+  uint32_t j = 0;
+  for (uint32_t i = 0; i < num_groups; i++) {
+    // TODO: fill in implementation here.
+    ;
+  }
+}
+
+API_FUNC void divide_pool_va(uint32_t num_groups, ...) {
   // TODO: for each group:
   //   make a new threadpool header for the group
   //   wake the leader thread and have it:
