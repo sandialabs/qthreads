@@ -121,7 +121,7 @@ endif()
 target_include_directories(qthread
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/qthread>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 # TODO: move these into a configure header instead of piping them through the flags.
 target_compile_definitions(qthread
