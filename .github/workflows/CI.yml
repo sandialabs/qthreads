@@ -197,7 +197,7 @@ jobs:
         sudo apt-get install gcc-13 g++-13
     - name: install aocc
       run: |
-        wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-4-2/aocc-compiler-4.2.0_1_amd64.deb
+        wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-5-0/aocc-compiler-5.0.0_1_amd64.deb
         sudo apt install -y ./aocc.deb
         clang -v
     - name: build qthreads
