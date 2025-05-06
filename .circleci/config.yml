@@ -204,13 +204,13 @@ jobs:
           if [ ${MACHINE_TYPE} == 'x86_64' ]; then echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list; fi
           if [ ${MACHINE_TYPE} == 'aarch64' ]; then echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/arm64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list; fi
           sudo apt-get update -y
-          sudo apt-get install -y nvhpc-24-9
+          sudo apt-get install -y nvhpc-25-3
           sudo apt-get install -y cmake
           sudo apt-get install -y hwloc libhwloc-dev
       - run: |
           export MACHINE_TYPE=`uname -m`
-          if [ ${MACHINE_TYPE} == 'x86_64' ]; then export PATH="$PATH:/opt/nvidia/hpc_sdk/Linux_x86_64/24.9/compilers/bin"; fi
-          if [ ${MACHINE_TYPE} == 'aarch64' ]; then export PATH="$PATH:/opt/nvidia/hpc_sdk/Linux_aarch64/24.9/compilers/bin"; fi
+          if [ ${MACHINE_TYPE} == 'x86_64' ]; then export PATH="$PATH:/opt/nvidia/hpc_sdk/Linux_x86_64/25.3/compilers/bin"; fi
+          if [ ${MACHINE_TYPE} == 'aarch64' ]; then export PATH="$PATH:/opt/nvidia/hpc_sdk/Linux_aarch64/25.3/compilers/bin"; fi
           nvc --version
           mkdir build
           pushd build
