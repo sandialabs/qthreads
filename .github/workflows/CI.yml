@@ -14,7 +14,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        gcc_version: [9, 10, 11, 12, 13]
+        gcc_version: [9, 10, 11, 12, 13, 14]
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
     env:
@@ -259,6 +259,7 @@ jobs:
 
   sanitizers:
     runs-on: ubuntu-24.04
+    container: ubuntu:25.04
     continue-on-error: true
     strategy:
       matrix:
@@ -291,35 +292,39 @@ jobs:
     - uses: actions/checkout@v4
     - if:  ${{ ! matrix.use_libcxx }}
       run: |
-        sudo apt-get install gcc-14 g++-14
+        apt-get update
+        apt-get install -y sudo # Updating and installing sudo is only neccesary in a container.
+        # Installing sudo is just so that the later commands using sudo can be the same whether in a container or not.
+        sudo apt-get install -y gcc-15 g++-15
+        sudo apt-get install -y cmake # Only needed in a container. Cmake is installed by default on VM images.
     - name: install compiler
       run: |
+        sudo apt-get install -y software-properties-common # Only needed in container.
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
-        sudo apt-add-repository 'deb https://apt.llvm.org/noble/ llvm-toolchain-noble-20 main' && break || sleep 1
-        sudo apt-get install clang-20
+        sudo apt-add-repository 'deb https://apt.llvm.org/oracular/ llvm-toolchain-oracular-20 main' && break || sleep 1
+        sudo apt-get install -y clang-20
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install libc++-20-dev libc++abi-20-dev
+      run: sudo apt-get install -y libc++-20-dev libc++abi-20-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
-        sudo apt-get install hwloc libhwloc-dev
+        sudo apt-get install -y hwloc libhwloc-dev
         hwloc-ls --version
     - name: build qthreads
       run: |
         mkdir build
-        pushd build
+        cd build
         cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
         make -j2 VERBOSE=1
-        popd
     - name: run tests
       run: |
-        pushd build
-        if [[ "${{ matrix.sanitizer }}" == "thread" ]]; then cd test/basics; fi
+        cd build
+        if [ "${{ matrix.sanitizer }}" = "thread" ]; then cd test/basics; fi
         CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
-        popd
       timeout-minutes: 19
 
   linux-thorough:
     runs-on: ubuntu-24.04
+    container: ubuntu:25.04
     continue-on-error: true
     strategy:
       matrix:
@@ -332,37 +337,40 @@ jobs:
           - compiler: gcc
             use_libcxx: true
     env:
-      CC: ${{ matrix.compiler == 'gcc' && 'gcc-14' || 'clang-20' }}
-      CXX: ${{ matrix.compiler == 'gcc' && 'g++-14' || 'clang++-20' }}
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc-15' || 'clang-20' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++-15' || 'clang++-20' }}
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
     - uses: actions/checkout@v4
     - run: |
-        sudo apt-get install gcc-14 g++-14
+        apt-get update
+        apt-get install -y sudo # Updating and installing sudo is only neccesary in a container.
+        # Installing sudo is just so that the later commands using sudo can be the same whether in a container or not.
+        sudo apt-get install -y gcc-15 g++-15
+        sudo apt-get install -y cmake # Only needed in a container. Cmake is installed by default on VM images.
     - if: ${{ matrix.compiler == 'clang' }}
       run: |
+        sudo apt-get install -y software-properties-common # Only needed in container.
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
-        sudo apt-add-repository 'deb https://apt.llvm.org/noble/ llvm-toolchain-noble-20 main' && break || sleep 1
-        sudo apt-get install clang-20
+        sudo apt-add-repository 'deb https://apt.llvm.org/oracular/ llvm-toolchain-oracular-20 main' && break || sleep 1
+        sudo apt-get install -y clang-20
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install libc++-20-dev libc++abi-20-dev
+      run: sudo apt-get install -y libc++-20-dev libc++abi-20-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
-        sudo apt-get install hwloc libhwloc-dev
+        sudo apt-get install -y hwloc libhwloc-dev
         hwloc-ls --version
     - name: build qthreads
       run: |
         mkdir build
-        pushd build
+        cd build
         cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
         make -j2 VERBOSE=1
-        popd
     - name: run tests
       run: |
-        pushd build
+        cd build
         CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
-        popd
       timeout-minutes: 19
 
   clang-format:
