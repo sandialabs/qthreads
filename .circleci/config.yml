@@ -18,7 +18,7 @@ jobs:
       CXX: g++-15
     steps:
       - run: |
-          apt-get update
+          apt-get update --quiet=2 || apt-get update --quiet=2 || apt-get update --quiet=2
           apt-get install -y sudo
           sudo apt-get install -y git # Updating and installing sudo and git is only neccesary in a container.
           # Installing sudo is just so that the later commands using sudo can be the same whether in a container or not.
@@ -55,7 +55,7 @@ jobs:
       CXX: clang++-20
     steps:
       - run: |
-          apt-get update
+          apt-get update --quiet=2 || apt-get update --quiet=2 || apt-get update --quiet=2
           apt-get install -y sudo
           sudo apt-get install -y git # Updating and installing sudo and git is only neccesary in a container.
           # Installing sudo is just so that the later commands using sudo can be the same whether in a container or not.
@@ -104,7 +104,7 @@ jobs:
       ASAN_OPTIONS: "check_initialization_order=1"
     steps:
       - run: |
-          apt-get update
+          apt-get update --quiet=2 || apt-get update --quiet=2 || apt-get update --quiet=2
           apt-get install -y sudo
           sudo apt-get install -y git # Updating and installing sudo and git is only neccesary in a container.
           # Installing sudo is just so that the later commands using sudo can be the same whether in a container or not.
