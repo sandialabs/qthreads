@@ -1,4 +1,5 @@
 #if 0
+/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC; see COPYING */
 /* Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
 /* Portions of this file are Copyright Sandia National Laboratories */
 #endif
@@ -48,6 +49,10 @@
 #elif defined(__linux__)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
 #  define NEEDARMCONTEXT 1
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
+#  define NEEDRISCVCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
@@ -634,6 +639,116 @@ SET:
         ldr     r14, [r0,#56]
         ldr     r0, [r0]
 	bx      lr
+#endif
+
+#ifdef NEEDRISCVCONTEXT
+/* Register Usage:
+ *
+ * x1/ra       - return address
+ * x2/sp       - stack pointer
+ * x3/gp       - global pointer
+ * x4/tp       - thread pointer
+ * x5/t0       - temporary 0
+ * x6/t1       - temporary 1
+ * x7/t2       - temporary 2
+ * x8/s0/fp    - saved register 0 / frame pointer
+ * x9/s1       - saved register 0
+ * x10/a0      - function argument 0
+ * x11/a1      - function argument 1
+ * x12/a2      - function argument 2
+ * x13/a3      - function argument 3
+ * x14/a4      - function argument 4
+ * x15/a5      - function argument 5
+ * x16/a6      - function argument 6
+ * x17/a7      - function argument 7
+ * x18/s2      - saved register 2
+ * x19/s3      - saved register 3
+ * x20/s4      - saved register 4
+ * x21/s5      - saved register 5
+ * x22/s6      - saved register 6
+ * x22/s7      - saved register 7
+ * x22/s8      - saved register 8
+ * x22/s9      - saved register 9
+ * x22/s10     - saved register 10
+ * x22/s11     - saved register 11
+ * x22/t3      - temporary 3
+ * x22/t4      - temporary 4
+ * x22/t5      - temporary 5
+ * x22/t6      - temporary 6
+  */
+.globl GET
+.global GET
+.type GET, %function
+GET:
+        st     a1, [a0,#8]        _(/* ARG 1 */)
+        st     a2, [a0,#12]        _(/* ARG 2 */)
+        st     a3, [a0,#16]       _(/* ARG 3 */)
+        st     a4, [a0,#20]       _(/* ARG 4 */)
+        st     a5, [a0,#24]       _(/* ARG 5 */)
+        st     a6, [a0,#28]       _(/* ARG 8 */)
+        st     a7, [a0,#32]       _(/* ARG 7 */)
+        st     s2  [a0,#36]       _(/* saved registers */
+        st     s3  [a0,#40]       _(/* saved registers */
+        st     s4  [a0,#44]       _(/* saved registers */
+        st     s5  [a0,#48]       _(/* saved registers */
+        st     s6  [a0,#52]       _(/* saved registers */
+        st     s7  [a0,#56]       _(/* saved registers */
+        st     s8  [a0,#60]       _(/* saved registers */
+        st     s9  [a0,#64]       _(/* saved registers */
+        st     s10  [a0,#68]      _(/* saved registers */
+        st     s11  [a0,#72]      _(/* saved registers */
+        st     t0  [a0,#76]       _(/* saved registers */
+        st     t1  [a0,#80]       _(/* saved registers */
+        st     t2  [a0,#84]       _(/* saved registers */
+        st     t3  [a0,#88]       _(/* saved registers */
+        st     t4  [a0,#92]       _(/* saved registers */
+        st     t5  [a0,#96]       _(/* saved registers */
+        st     t6  [a0,#100]       _(/* saved registers */
+        st     sp, [a0,#104]      _(/* SP */)
+        st     ra, [a0,#108]      _(/* LR */)
+        st     gp, [a0,#112]
+        st     tp, [a0,#116]
+        _(/*) store 1 as a0-to-restore */)
+        mov     a1, #1
+        st     a1, [a0]           _(/* arg 1 / RET 1 */)
+        _(/*) return 0 */)
+        mov     a0, #0
+        ret
+
+.globl SET
+.global SET
+.type SET, %function
+SET:
+        ld     a1, [a0,#4]        _(/* ARG 1 */)
+        ld     a2, [a0,#8]        _(/* ARG 2 */)
+        ld     a3, [a0,#12]       _(/* ARG 3 */)
+        ld     a4, [a0,#16]       _(/* ARG 4 */)
+        ld     a5, [a0,#20]       _(/* ARG 5 */)
+        ld     a6, [a0,#24]       _(/* ARG 8 */)
+        ld     a7, [a0,#28]       _(/* ARG 7 */)
+        ld     s2  [a0,#32]       _(/* saved registers */
+        ld     s3  [a0,#36]       _(/* saved registers */
+        ld     s4  [a0,#40]       _(/* saved registers */
+        ld     s5  [a0,#44]       _(/* saved registers */
+        ld     s6  [a0,#48]       _(/* saved registers */
+        ld     s7  [a0,#52]       _(/* saved registers */
+        ld     s8  [a0,#56]       _(/* saved registers */
+        ld     s9  [a0,#60]       _(/* saved registers */
+        ld     s10  [a0,#64]      _(/* saved registers */
+        ld     s11  [a0,#68]      _(/* saved registers */
+        ld     t0  [a0,#72]       _(/* saved registers */
+        ld     t1  [a0,#76]       _(/* saved registers */
+        ld     t2  [a0,#80]       _(/* saved registers */
+        ld     t3  [a0,#84]       _(/* saved registers */
+        ld     t4  [a0,#88]       _(/* saved registers */
+        ld     t5  [a0,#92]       _(/* saved registers */
+        ld     t6  [a0,#96]       _(/* saved registers */
+        ld     sp, [a0,#100]      _(/* SP */)
+        ld     ra, [a0,#104]      _(/* LR */)
+        ld     gp, [a0,#108]
+        ld     tp, [a0,#112]
+        ld     a0, [a0]
+        ret
 #endif
 
 #if defined(__ELF__)
