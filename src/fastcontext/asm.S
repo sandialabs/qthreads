@@ -51,7 +51,7 @@
 #  define NEEDARMCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
 #  define NEEDRISCVCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
