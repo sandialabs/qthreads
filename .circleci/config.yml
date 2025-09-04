@@ -51,8 +51,8 @@ jobs:
       - image: ubuntu:25.04
     resource_class: arm.medium
     environment:
-      CC: clang-20
-      CXX: clang++-20
+      CC: clang-21
+      CXX: clang++-21
     steps:
       - run: |
           apt-get update --quiet=2 || apt-get update --quiet=2 || apt-get update --quiet=2
@@ -62,14 +62,16 @@ jobs:
           export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
           git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
-          sudo apt-get install -y gnupg wget # Only needed in container.
+          # tzdata is required by clang and software-properties-common and has to be installed carefully to avoid user prompts stalling the script.
+          ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
+          sudo apt-get install -y wget software-properties-common # Only needed in container.
           sudo apt-get install -y gcc-15 g++-15
           sudo apt-get install -y cmake
           sudo apt-get install -y hwloc libhwloc-dev
-          # tzdata is required by clang and has to be installed carefully to avoid user prompts stalling the script.
-          ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
-          sudo apt-get install -y clang-20
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-21 main'
+          sudo apt-get install -y clang-21
       - run: |
           mkdir build
           cd build
@@ -95,8 +97,8 @@ jobs:
       - image: ubuntu:25.04
     resource_class: arm.medium
     environment:
-      CC: clang-20
-      CXX: clang++-20
+      CC: clang-21
+      CXX: clang++-21
       CFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       CXXFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
       LDFLAGS: "-fsanitize=<< parameters.sanitizer >> -fno-sanitize-recover=all"
@@ -111,14 +113,16 @@ jobs:
           export REPO_HTTPS=`echo "$CIRCLE_REPOSITORY_URL" | sed "s|git@github.com:|https://github.com/|g"`
           git clone -b "$CIRCLE_BRANCH" "$REPO_HTTPS" . --depth=1
       - run: |
-          sudo apt-get install -y gnupg wget # Only needed in container.
+          # tzdata is required by clang and software-properties-common and has to be installed carefully to avoid user prompts stalling the script.
+          ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
+          sudo apt-get install -y wget software-properties-common # Only needed in container.
           sudo apt-get install -y gcc-15 g++-15
           sudo apt-get install -y cmake
           sudo apt-get install -y hwloc libhwloc-dev
-          # tzdata is required by clang and has to be installed carefully to avoid user prompts stalling the script.
-          ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
-          sudo apt-get install -y clang-20
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          sudo apt-add-repository -y 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-21 main'
+          sudo apt-get install -y clang-21
       - run: |
           mkdir build
           cd build
