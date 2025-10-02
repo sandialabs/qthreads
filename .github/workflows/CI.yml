@@ -217,7 +217,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        image: [macos-15, macos-13] # Test on both ARM and X86
+        image: [macos-15, macos-15-intel] # Test on both ARM and X86 (through fall 2027)
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         build_type: [Release, Debug]
