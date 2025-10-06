@@ -100,7 +100,6 @@ set_target_properties(
   PROPERTIES C_VISIBILITY_PRESET hidden
              VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR})
- target_link_libraries(qthread PUBLIC Threads::Threads)
 # Link pthreads.
 target_link_libraries(qthread PUBLIC Threads::Threads)
 
