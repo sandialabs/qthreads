@@ -1,4 +1,5 @@
 /* System Headers */
+/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC; see COPYING */
 #include <limits.h> /* for INT_MAX */
 #include <stdint.h>
 
@@ -80,6 +81,19 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 ||                                 \
      QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM ||                                   \
      QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+#define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
+  do {                                                                         \
+    atomic_store_explicit(                                                     \
+      (_Atomic uint64_t *)&(addr)->u.w, (unlocked), memory_order_relaxed);     \
+  } while (0)
+#define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state)                         \
+  do {                                                                         \
+    MACHINE_FENCE;                                                             \
+    atomic_store_explicit((_Atomic uint64_t *)&(addr)->u.w,                    \
+                          BUILD_UNLOCKED_SYNCVAR(val, state),                  \
+                          memory_order_relaxed);                               \
+  } while (0)
+#elif (QTHREAD_RISCV)
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
