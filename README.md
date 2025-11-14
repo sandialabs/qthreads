@@ -20,7 +20,7 @@ Qthreads are assigned to specific shepherds and are only allowed to migrate
 
 The API includes utility functions for making threaded loops, sorting, and similar operations convenient.
 
-There is also an experimental interface for qthreads using C++26 senders under development at [github.com/sandialabs/qthreads-stdexec.git](github.com/sandialabs/qthreads-stdexec.git).
+There is also an experimental interface for qthreads using C++26 senders under development at [https://github.com/sandialabs/qthreads-stdexec](https://github.com/sandialabs/qthreads-stdexec).
 
 ## Collaboration
 
