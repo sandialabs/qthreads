@@ -33,7 +33,7 @@
   do { __asm__ __volatile__("yield" ::: "memory"); } while (0)
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV
 #define SPINLOCK_BODY()                                                        \
-  do { atomic_thread_fence(memory_order_acq_rel); } while (0)
+  do { __asm__ __volatile__(".word 0x0100000F" ::: "memory"); } while (0)
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64 ||                            \
   QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 // For whatever reason the 29 (mdoio) version of this instruction performed
