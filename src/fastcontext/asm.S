@@ -642,58 +642,24 @@ SET:
 #endif
 
 #ifdef NEEDRISCVCONTEXT
-/* Register Usage:
- *
- * x1/ra       - return address
- * x2/sp       - stack pointer
- * x3/gp       - global pointer
- * x4/tp       - thread pointer
- * x5/t0       - temporary 0
- * x6/t1       - temporary 1
- * x7/t2       - temporary 2
- * x8/s0/fp    - saved register 0 / frame pointer
- * x9/s1       - saved register 0
- * x10/a0      - function argument 0
- * x11/a1      - function argument 1
- * x12/a2      - function argument 2
- * x13/a3      - function argument 3
- * x14/a4      - function argument 4
- * x15/a5      - function argument 5
- * x16/a6      - function argument 6
- * x17/a7      - function argument 7
- * x18/s2      - saved register 2
- * x19/s3      - saved register 3
- * x20/s4      - saved register 4
- * x21/s5      - saved register 5
- * x22/s6      - saved register 6
- * x22/s7      - saved register 7
- * x22/s8      - saved register 8
- * x22/s9      - saved register 9
- * x22/s10     - saved register 10
- * x22/s11     - saved register 11
- * x22/t3      - temporary 3
- * x22/t4      - temporary 4
- * x22/t5      - temporary 5
- * x22/t6      - temporary 6
- */
 .globl GET
 .global GET
 .type GET, %function
 GET:
-        sd     a1, 8(a0)        _(/* arg 1 8 */)
-        sd     a2, 16(a0)        _(/* arg 2 16 */)
-	sd     a3, 24(a0)
-	sd     a4, 32(a0)
-	sd     a5, 40(a0)
-	sd     a6, 48(a0)
-	sd     a7, 56(a0)
-	sd     t0, 64(a0)
-	sd     t1, 72(a0)
-        sd     t2, 80(a0)        _(/* arg 3 */)
-        sd     t3, 88(a0)        _(/* arg 4 */)
-        sd     t4, 96(a0)        _(/* arg 5 */)
-        sd     t5, 104(a0)        _(/* arg 5 */)
-        sd     t6, 112(a0)        _(/* arg 5 */)
+        sd     a1, 8(a0)
+        sd     a2, 16(a0)
+	    sd     a3, 24(a0)
+	    sd     a4, 32(a0)
+	    sd     a5, 40(a0)
+	    sd     a6, 48(a0)
+	    sd     a7, 56(a0)
+	    sd     t0, 64(a0)
+	    sd     t1, 72(a0)
+        sd     t2, 80(a0)
+        sd     t3, 88(a0)
+        sd     t4, 96(a0)
+        sd     t5, 104(a0)
+        sd     t6, 112(a0)
         sd     s1, 120(a0)
         sd     s2, 128(a0)
         sd     s3, 136(a0)
@@ -750,20 +716,20 @@ GET:
 .global SET
 .type SET, %function
 SET:
-        ld     a1, 8(a0)        _(/* arg 1 8 */)
-        ld     a2, 16(a0)        _(/* arg 2 16 */)
-	ld     a3, 24(a0)
-	ld     a4, 32(a0)
-	ld     a5, 40(a0)
-	ld     a6, 48(a0)
-	ld     a7, 56(a0)
-	ld     t0, 64(a0)
-	ld     t1, 72(a0)
-        ld     t2, 80(a0)        _(/* arg 3 */)
-        ld     t3, 88(a0)        _(/* arg 4 */)
-        ld     t4, 96(a0)        _(/* arg 5 */)
-        ld     t5, 104(a0)        _(/* arg 5 */)
-        ld     t6, 112(a0)        _(/* arg 5 */)
+        ld     a1, 8(a0)
+        ld     a2, 16(a0)
+	    ld     a3, 24(a0)
+	    ld     a4, 32(a0)
+	    ld     a5, 40(a0)
+	    ld     a6, 48(a0)
+	    ld     a7, 56(a0)
+	    ld     t0, 64(a0)
+     	ld     t1, 72(a0)
+        ld     t2, 80(a0)
+        ld     t3, 88(a0)
+        ld     t4, 96(a0)
+        ld     t5, 104(a0)
+        ld     t6, 112(a0)
         ld     s1, 120(a0)
         ld     s2, 128(a0)
         ld     s3, 136(a0)
