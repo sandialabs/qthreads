@@ -24,7 +24,7 @@
 #define NEEDARMMAKECONTEXT
 #define NEEDSWAPCONTEXT
 #include "arm-ucontext.h"
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
 #include <stdarg.h>
 #define NEEDRISCVMAKECONTEXT
 #define NEEDSWAPCONTEXT

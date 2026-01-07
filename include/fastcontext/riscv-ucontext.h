@@ -6,20 +6,18 @@
 
 #include "qt_visibility.h"
 
-#define setcontext(u) qt_setmctxt(&(u)->mc)
-#define getcontext(u) qt_getmctxt(&(u)->mc)
+#define setcontext(u) qt_setmctxt( &(u)->mc )
+#define getcontext(u) qt_getmctxt( &(u)->mc )
 typedef struct mctxt mctxt_t;
 typedef struct uctxt uctxt_t;
 
 struct mctxt {
   /* Saved main processor registers. */
-#ifdef NEEDARMA64CONTEXT
   uint64_t regs[32];     /* callee saves x0-x30, SP */
   uint64_t fpu_regs[32]; /* 32 64 bit FPU Registers */
-#else
-  uint32_t regs[16]; /* callee saves r0-r15 */
-#endif
+  const uint32_t fcsr;
   char first;
+  const char padding[7];
 };
 
 struct uctxt {

@@ -42,6 +42,7 @@
 #define QTHREAD_POWERPC64 7
 #define QTHREAD_ARM 12
 #define QTHREAD_ARMV8_A64 13
+#define QTHREAD_RISCV 14
 
 #if defined(__amd64__) || defined(_M_AMD_64)
 #define QTHREAD_ASSEMBLY_ARCH QTHREAD_AMD64

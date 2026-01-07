@@ -675,80 +675,145 @@ SET:
  * x22/t4      - temporary 4
  * x22/t5      - temporary 5
  * x22/t6      - temporary 6
-  */
+ */
 .globl GET
 .global GET
 .type GET, %function
 GET:
-        st     a1, [a0,#8]        _(/* ARG 1 */)
-        st     a2, [a0,#12]        _(/* ARG 2 */)
-        st     a3, [a0,#16]       _(/* ARG 3 */)
-        st     a4, [a0,#20]       _(/* ARG 4 */)
-        st     a5, [a0,#24]       _(/* ARG 5 */)
-        st     a6, [a0,#28]       _(/* ARG 8 */)
-        st     a7, [a0,#32]       _(/* ARG 7 */)
-        st     s2  [a0,#36]       _(/* saved registers */
-        st     s3  [a0,#40]       _(/* saved registers */
-        st     s4  [a0,#44]       _(/* saved registers */
-        st     s5  [a0,#48]       _(/* saved registers */
-        st     s6  [a0,#52]       _(/* saved registers */
-        st     s7  [a0,#56]       _(/* saved registers */
-        st     s8  [a0,#60]       _(/* saved registers */
-        st     s9  [a0,#64]       _(/* saved registers */
-        st     s10  [a0,#68]      _(/* saved registers */
-        st     s11  [a0,#72]      _(/* saved registers */
-        st     t0  [a0,#76]       _(/* saved registers */
-        st     t1  [a0,#80]       _(/* saved registers */
-        st     t2  [a0,#84]       _(/* saved registers */
-        st     t3  [a0,#88]       _(/* saved registers */
-        st     t4  [a0,#92]       _(/* saved registers */
-        st     t5  [a0,#96]       _(/* saved registers */
-        st     t6  [a0,#100]       _(/* saved registers */
-        st     sp, [a0,#104]      _(/* SP */)
-        st     ra, [a0,#108]      _(/* LR */)
-        st     gp, [a0,#112]
-        st     tp, [a0,#116]
-        _(/*) store 1 as a0-to-restore */)
-        mov     a1, #1
-        st     a1, [a0]           _(/* arg 1 / RET 1 */)
-        _(/*) return 0 */)
-        mov     a0, #0
+        sd     a1, 8(a0)        _(/* arg 1 8 */)
+        sd     a2, 16(a0)        _(/* arg 2 16 */)
+	sd     a3, 24(a0)
+	sd     a4, 32(a0)
+	sd     a5, 40(a0)
+	sd     a6, 48(a0)
+	sd     a7, 56(a0)
+	sd     t0, 64(a0)
+	sd     t1, 72(a0)
+        sd     t2, 80(a0)        _(/* arg 3 */)
+        sd     t3, 88(a0)        _(/* arg 4 */)
+        sd     t4, 96(a0)        _(/* arg 5 */)
+        sd     t5, 104(a0)        _(/* arg 5 */)
+        sd     t6, 112(a0)        _(/* arg 5 */)
+        sd     s1, 120(a0)
+        sd     s2, 128(a0)
+        sd     s3, 136(a0)
+        sd     s4, 144(a0)
+        sd     s5, 152(a0)
+        sd     s6, 160(a0)
+        sd     s7, 168(a0)
+        sd     s8, 176(a0)
+        sd     s9, 184(a0)
+        sd     s10, 192(a0)
+        sd     s11, 200(a0)
+        sd     s0, 232(a0)
+        sd     ra, 240(a0)
+        sd     sp, 248(a0)
+        addi   t0, a0, 256
+        fsd    f0, 0(t0)
+        fsd    f1, 8(t0)
+        fsd    f2, 16(t0)
+        fsd    f3, 24(t0)
+        fsd    f4, 32(t0)
+        fsd    f5, 40(t0)
+        fsd    f6, 48(t0)
+        fsd    f7, 56(t0)
+        fsd    f8, 64(t0)
+        fsd    f9, 72(t0)
+        fsd    f10, 80(t0)
+        fsd    f11, 88(t0)
+        fsd    f12, 96(t0)
+        fsd    f13, 104(t0)
+        fsd    f14, 112(t0)
+        fsd    f15, 120(t0)
+        fsd    f16, 128(t0)
+        fsd    f17, 136(t0)
+        fsd    f18, 144(t0)
+        fsd    f19, 152(t0)
+        fsd    f20, 160(t0)
+        fsd    f21, 168(t0)
+        fsd    f22, 176(t0)
+        fsd    f23, 184(t0)
+        fsd    f24, 192(t0)
+        fsd    f25, 200(t0)
+        fsd    f26, 208(t0)
+        fsd    f27, 216(t0)
+        fsd    f28, 224(t0)
+        fsd    f29, 232(t0)
+        fsd    f30, 240(t0)
+        fsd    f31, 248(t0)
+        li     t1, 1
+        sd     t1, 0(a0)
+        li     a0, 0
         ret
 
 .globl SET
 .global SET
 .type SET, %function
 SET:
-        ld     a1, [a0,#4]        _(/* ARG 1 */)
-        ld     a2, [a0,#8]        _(/* ARG 2 */)
-        ld     a3, [a0,#12]       _(/* ARG 3 */)
-        ld     a4, [a0,#16]       _(/* ARG 4 */)
-        ld     a5, [a0,#20]       _(/* ARG 5 */)
-        ld     a6, [a0,#24]       _(/* ARG 8 */)
-        ld     a7, [a0,#28]       _(/* ARG 7 */)
-        ld     s2  [a0,#32]       _(/* saved registers */
-        ld     s3  [a0,#36]       _(/* saved registers */
-        ld     s4  [a0,#40]       _(/* saved registers */
-        ld     s5  [a0,#44]       _(/* saved registers */
-        ld     s6  [a0,#48]       _(/* saved registers */
-        ld     s7  [a0,#52]       _(/* saved registers */
-        ld     s8  [a0,#56]       _(/* saved registers */
-        ld     s9  [a0,#60]       _(/* saved registers */
-        ld     s10  [a0,#64]      _(/* saved registers */
-        ld     s11  [a0,#68]      _(/* saved registers */
-        ld     t0  [a0,#72]       _(/* saved registers */
-        ld     t1  [a0,#76]       _(/* saved registers */
-        ld     t2  [a0,#80]       _(/* saved registers */
-        ld     t3  [a0,#84]       _(/* saved registers */
-        ld     t4  [a0,#88]       _(/* saved registers */
-        ld     t5  [a0,#92]       _(/* saved registers */
-        ld     t6  [a0,#96]       _(/* saved registers */
-        ld     sp, [a0,#100]      _(/* SP */)
-        ld     ra, [a0,#104]      _(/* LR */)
-        ld     gp, [a0,#108]
-        ld     tp, [a0,#112]
-        ld     a0, [a0]
+        ld     a1, 8(a0)        _(/* arg 1 8 */)
+        ld     a2, 16(a0)        _(/* arg 2 16 */)
+	ld     a3, 24(a0)
+	ld     a4, 32(a0)
+	ld     a5, 40(a0)
+	ld     a6, 48(a0)
+	ld     a7, 56(a0)
+	ld     t0, 64(a0)
+	ld     t1, 72(a0)
+        ld     t2, 80(a0)        _(/* arg 3 */)
+        ld     t3, 88(a0)        _(/* arg 4 */)
+        ld     t4, 96(a0)        _(/* arg 5 */)
+        ld     t5, 104(a0)        _(/* arg 5 */)
+        ld     t6, 112(a0)        _(/* arg 5 */)
+        ld     s1, 120(a0)
+        ld     s2, 128(a0)
+        ld     s3, 136(a0)
+        ld     s4, 144(a0)
+        ld     s5, 152(a0)
+        ld     s6, 160(a0)
+        ld     s7, 168(a0)
+        ld     s8, 176(a0)
+        ld     s9, 184(a0)
+        ld     s10, 192(a0)
+        ld     s11, 200(a0)
+        ld     sp, 248(a0)
+        ld     s0, 232(a0)
+        ld     ra, 240(a0)
+        addi   t0, a0, 256
+        fld    f0, 0(t0)
+        fld    f1, 8(t0)
+        fld    f2, 16(t0)
+        fld    f3, 24(t0)
+        fld    f4, 32(t0)
+        fld    f5, 40(t0)
+        fld    f6, 48(t0)
+        fld    f7, 56(t0)
+        fld    f8, 64(t0)
+        fld    f9, 72(t0)
+        fld    f10, 80(t0)
+        fld    f11, 88(t0)
+        fld    f12, 96(t0)
+        fld    f13, 104(t0)
+        fld    f14, 112(t0)
+        fld    f15, 120(t0)
+        fld    f16, 128(t0)
+        fld    f17, 136(t0)
+        fld    f18, 144(t0)
+        fld    f19, 152(t0)
+        fld    f20, 160(t0)
+        fld    f21, 168(t0)
+        fld    f22, 176(t0)
+        fld    f23, 184(t0)
+        fld    f24, 192(t0)
+        fld    f25, 200(t0)
+        fld    f26, 208(t0)
+        fld    f27, 216(t0)
+        fld    f28, 224(t0)
+        fld    f29, 232(t0)
+        fld    f30, 240(t0)
+        fld    f31, 248(t0)
+        ld     a0, 0(a0)
         ret
+
 #endif
 
 #if defined(__ELF__)
