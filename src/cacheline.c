@@ -16,7 +16,7 @@ enum vendor { AMD, Intel, Unknown };
 static int cacheline_bytes = 0;
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#if defined(__riscv)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
 
 #include <unistd.h>
 
