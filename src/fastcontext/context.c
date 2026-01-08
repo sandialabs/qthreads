@@ -137,8 +137,8 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   for (int i = 0; i < limit; i++) { ucp->mc.regs[i] = va_arg(arg, uint64_t); }
   va_end(arg);
 
-  ucp->mc.regs[30U] = (uintptr_t)func; // LR so that swapcontext returns into it
-  ucp->mc.regs[31U] = (uintptr_t)top_of_stack; // SP
+  ucp->mc.regs[13U] = (uintptr_t)func; // LR so that swapcontext returns into it
+  ucp->mc.regs[14U] = (uintptr_t)top_of_stack; // SP
   ucp->mc.first = 1;
 }
 

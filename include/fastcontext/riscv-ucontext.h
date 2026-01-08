@@ -13,8 +13,8 @@ typedef struct uctxt uctxt_t;
 
 struct mctxt {
   /* Saved main processor registers. */
-  uint64_t regs[32];     /* callee saves x0-x30, SP */
-  uint64_t fpu_regs[32]; /* 32 64 bit FPU Registers */
+  uint64_t regs[14];     /* callee saves RA, SP and other registers as required */
+  uint64_t fpu_regs[12]; /* 12 x 64 bit FPU Registers */
   const uint32_t fcsr;
   char first;
   const char padding[7];
