@@ -347,7 +347,7 @@ release_pool:
   return retval;
 }
 
-API_FUNC __attribute__((no_sanitize("memory"))) void hw_pool_destroy() {
+API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   uint32_t num_threads =
     atomic_load_explicit(&hw_pool.num_threads, memory_order_relaxed);
   char *buffer = atomic_load_explicit(&hw_pool.threads, memory_order_relaxed);
