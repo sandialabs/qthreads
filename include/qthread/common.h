@@ -4,7 +4,8 @@
  * ------------------------------------------------------------------
  */
 
-/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC; see COPYING */
+/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC;
+ * see COPYING */
 
 #ifndef QTHREAD_COMMON_H
 #define QTHREAD_COMMON_H

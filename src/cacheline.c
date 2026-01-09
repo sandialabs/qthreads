@@ -1,4 +1,5 @@
-/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC; see COPYING */
+/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC;
+ * see COPYING */
 
 #ifdef DEBUG_CPUID
 #include <stdio.h>
@@ -24,12 +25,12 @@ static int cacheline_bytes = 0;
 //
 static unsigned int cpuid() {
   register unsigned int hart_id = 0;
-  __asm__ __volatile__("csrr %0, mhartid" : "=r" (hart_id) : : );
+  __asm__ __volatile__("csrr %0, mhartid" : "=r"(hart_id) : :);
   return hart_id;
 }
 
 static void figure_out_cacheline_size(void) {
-  cacheline_bytes = sysconf (_SC_LEVEL1_DCACHE_LINESIZE);
+  cacheline_bytes = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
 }
 
 #else
@@ -42,7 +43,6 @@ static void cpuid(unsigned int const op,
                   unsigned int *ebx_ptr,
                   unsigned int *ecx_ptr,
                   unsigned int *edx_ptr) {
-
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__)
   unsigned int eax, ebx, ecx, edx;
@@ -64,7 +64,6 @@ static void cpuid(unsigned int const op,
     : "=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
     : "a"(op));
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__) */
-
 }
 
 static void cpuid4(int const cache,

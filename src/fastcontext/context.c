@@ -128,12 +128,12 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   // equivalent to the following:
   // (top_of_stack / 16U) * 16U
   // (top_of_stack >> 4U) << 4U
-  // 
+  //
   top_of_stack &= ~0xFULL;
   assert((top_of_stack % 16U) == 0U);
 
   va_start(arg, argc);
-  const int limit = (argc < 8) ? argc : 8;
+  int const limit = (argc < 8) ? argc : 8;
   for (int i = 0; i < limit; i++) { ucp->mc.regs[i] = va_arg(arg, uint64_t); }
   va_end(arg);
 

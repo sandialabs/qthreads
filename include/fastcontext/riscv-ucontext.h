@@ -1,4 +1,5 @@
-/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC; see COPYING */
+/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC;
+ * see COPYING */
 #include "qthread/common.h"
 
 #include <stddef.h>
@@ -6,18 +7,18 @@
 
 #include "qt_visibility.h"
 
-#define setcontext(u) qt_setmctxt( &(u)->mc )
-#define getcontext(u) qt_getmctxt( &(u)->mc )
+#define setcontext(u) qt_setmctxt(&(u)->mc)
+#define getcontext(u) qt_getmctxt(&(u)->mc)
 typedef struct mctxt mctxt_t;
 typedef struct uctxt uctxt_t;
 
 struct mctxt {
   /* Saved main processor registers. */
-  uint64_t regs[14];     /* callee saves RA, SP and other registers as required */
+  uint64_t regs[14]; /* callee saves RA, SP and other registers as required */
   uint64_t fpu_regs[12]; /* 12 x 64 bit FPU Registers */
   char first;
-  const char padding[3];
-  const uint32_t fcsr;
+  char const padding[3];
+  uint32_t const fcsr;
 };
 
 struct uctxt {

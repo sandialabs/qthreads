@@ -1,5 +1,6 @@
 /* System Headers */
-/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC; see COPYING */
+/* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC;
+ * see COPYING */
 #include <limits.h> /* for INT_MAX */
 #include <stdint.h>
 
