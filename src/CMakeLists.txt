@@ -96,8 +96,11 @@ endif()
 target_include_directories(qthread
   PRIVATE "../include"
 )
-set_target_properties(qthread PROPERTIES C_VISIBILITY_PRESET hidden)
-
+set_target_properties(
+  qthread
+  PROPERTIES C_VISIBILITY_PRESET hidden
+             VERSION ${PROJECT_VERSION}
+             SOVERSION ${PROJECT_VERSION_MAJOR})
 # Link pthreads.
 target_link_libraries(qthread PUBLIC Threads::Threads)
 
