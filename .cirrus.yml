@@ -50,7 +50,7 @@ osx_m1_task:
 
 freebsd_task:
   freebsd_instance:
-    image_family: freebsd-14-2
+    image_family: freebsd-15-0-amd64-ufs
   timeout_in: 5m
   matrix:
     env:
