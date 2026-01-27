@@ -195,10 +195,10 @@ jobs:
         hwloc-ls --version
     - name: install gcc
       run: |
-        sudo apt-get install gcc-13 g++-13
+        sudo apt-get install gcc-14 g++-14
     - name: install aocc
       run: |
-        wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-5-0/aocc-compiler-5.0.0_1_amd64.deb
+        wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-5-1/aocc-compiler-5.1.0_1_amd64.deb
         sudo apt install -y ./aocc.deb
         clang -v
     - name: build qthreads
