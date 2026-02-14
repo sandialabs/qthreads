@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdalign.h>
+#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -44,7 +45,7 @@ _Thread_local uint32_t context_index;
 // Placeholder
 #define DEFAULT_CACHE_LINE_SIZE 64
 
-unsigned int get_cache_line_size() { return DEFAULT_CACHE_LINE_SIZE; }
+uint32_t get_cache_line_size() { return DEFAULT_CACHE_LINE_SIZE; }
 
 // Reserved pointer value to signal pool shutdown.
 #define POOL_END_SIGNAL ((void *)1u)
@@ -74,6 +75,8 @@ typedef struct {
 #error "no alternatives to futexes yet."
 #endif
 } pool_header;
+
+_Thread_local pool_header *delegated_pool;
 
 typedef struct {
   // 16 byte aligned to allow loading it in one atomic instruction
@@ -252,7 +255,6 @@ static int pooled_thread_func(void *void_arg) {
 API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
   if unlikely (!num_threads) return POOL_INIT_NO_THREADS_SPECIFIED;
   uint32_t old = 0u;
-  assert(num_threads < UINT32_MAX);
   if unlikely (!atomic_compare_exchange_strong_explicit(&hw_pool.num_threads,
                                                         &old,
                                                         num_threads,
@@ -281,35 +283,38 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
   while (i < num_threads) {
     pooled_thread_control *thread_control =
       (pooled_thread_control *)(buffer + alignment * (size_t)i);
-    // Initialize the thread control struct in two 128b atomic writes.
-    // TODO: It's possible to just do this in a single 256b atomic write on most
-    // x86 platforms. That may also require increasing the alignment constraints
-    // for the control_slice.
-    // TODO: also ifdef in an implementation for platforms that can't do
-    // lock-free 128b writes or that don't handle mixed-size atomic writes.
-    // TODO: making some kind of ifunc to handle this initialization is probably
-    // actually the right way to do it because it's hard to know enough about
-    // the CPU at compile-time.
     init_thread_control(thread_control, i, &hw_pool);
-    int status;
+    if (i) {
+      int status;
 #ifdef QPOOL_USE_PTHREADS
-    status = pthread_create(
-      &thread_control->thread, &attr, pooled_thread_func, thread_control);
-    if unlikely (status) goto cleanup_threads;
+      status = pthread_create(
+        &thread_control->thread, &attr, pooled_thread_func, thread_control);
+      if unlikely (status) goto cleanup_threads;
 #else
-    status =
-      thrd_create(&thread_control->thread, pooled_thread_func, thread_control);
-    if unlikely (status != thrd_success) goto cleanup_threads;
+      status = thrd_create(
+        &thread_control->thread, pooled_thread_func, thread_control);
+      if unlikely (status != thrd_success) goto cleanup_threads;
 #endif
+    }
+    // Leave the thread object uninitialized for thread 0.
+    // It needs to be there for the sake of alignment,
+    // but other than that it's unused.
     ++i;
   }
 #ifdef QPOOL_USE_PTHREADS
   pthread_attr_destroy(&attr);
 #endif
+  delegated_pool = &hw_pool;
   return POOL_INIT_SUCCESS;
 cleanup_threads:
   if (i) {
+    // Last thread failed to launch, so no need to clean it up.
+    // If an error was raised it would have been at an iteration
+    // higher than 0 for the thread create loop since no thread is
+    // created at 0.
     uint32_t j = --i;
+    // current thread does the work of worker zero so
+    // no need to signal or join for that one.
     while (i) {
       // TODO: fix deinit to match new layout and interrupt mechanism.
       pooled_thread_control *thread_control =
@@ -348,21 +353,22 @@ release_pool:
 }
 
 API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
+  delegated_pool = NULL;
   uint32_t num_threads =
     atomic_load_explicit(&hw_pool.num_threads, memory_order_relaxed);
   char *buffer = atomic_load_explicit(&hw_pool.threads, memory_order_relaxed);
   size_t alignment = QTHREAD_MAX((size_t)64u, get_cache_line_size());
-  uint32_t i = num_threads;
+  uint32_t i = num_threads - 1u;
+  // Current thread is thread 0 so no need to notify/join that one.
   while (i) {
-    --i;
     // TODO: fix deinit to match new layout and interrupt mechanism.
     pooled_thread_control *thread_control =
       (pooled_thread_control *)(buffer + alignment * (size_t)i);
     notify_worker_of_termination(thread_control);
-  }
-  i = num_threads;
-  while (i) {
     --i;
+  }
+  i = num_threads - 1u;
+  while (i) {
     pooled_thread_control *thread_control =
       (pooled_thread_control *)(buffer + alignment * (size_t)i);
     // TODO: crash informatively if join fails somehow.
@@ -371,6 +377,7 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
 #else
     thrd_join(thread_control->thread, NULL);
 #endif
+    --i;
   }
 
   atomic_store_explicit(&hw_pool.threads, NULL, memory_order_relaxed);
@@ -378,29 +385,148 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
 }
 
+API_FUNC uint32_t get_num_delegated_threads() {
+  if (delegated_pool) return delegated_pool->num_threads;
+  // Every thread at least has itself available for work.
+  return 1;
+}
+
+// Note: current thread fills the role of thread zero in the pool.
+
 API_FUNC void
 pool_run_on_all(pool_header *pool, qt_threadpool_func_type func, void *arg) {
   uint32_t num_threads =
     atomic_load_explicit(&pool->num_threads, memory_order_relaxed);
   assert(num_threads);
-  assert(num_threads < UINT32_MAX);
-  char *buffer =
-    (char *)atomic_load_explicit(&pool->threads, memory_order_relaxed);
-  atomic_store_explicit(
-    &pool->num_active_threads, num_threads, memory_order_relaxed);
-  init_main_sync(pool);
-  size_t alignment = QTHREAD_MAX((size_t)64u, get_cache_line_size());
-  for (uint32_t i = 0u;
-       i < atomic_load_explicit(&pool->num_threads, memory_order_relaxed);
-       i++) {
-    pooled_thread_control *thread_control =
-      (pooled_thread_control *)(buffer + alignment * (size_t)i);
-    launch_work_on_thread(thread_control, func, arg);
+  if (num_threads > 1u) {
+    char *buffer =
+      (char *)atomic_load_explicit(&pool->threads, memory_order_relaxed);
+    atomic_store_explicit(
+      &pool->num_active_threads, num_threads - 1u, memory_order_relaxed);
+    init_main_sync(pool);
+    size_t alignment = QTHREAD_MAX((size_t)64u, get_cache_line_size());
+    for (uint32_t i = 1u;
+         i < atomic_load_explicit(&pool->num_threads, memory_order_relaxed);
+         i++) {
+      pooled_thread_control *thread_control =
+        (pooled_thread_control *)(buffer + alignment * (size_t)i);
+      launch_work_on_thread(thread_control, func, arg);
+    }
   }
-  suspend_main_while_working(pool);
+  uint32_t outer_index = context_index;
+  context_index = 0u;
+  pool_header *outer_delegated_pool = delegated_pool;
+  delegated_pool = NULL;
+  func(arg);
+  delegated_pool = outer_delegated_pool;
+  context_index = outer_index;
+  if (num_threads > 1u) {
+    // some loops may have threads that take dramatically longer
+    // so we still suspend, but it's potentially for much less time.
+    suspend_main_while_working(pool);
+  }
+}
+
+API_FUNC void run_on_current_pool(qt_threadpool_func_type func, void *arg) {
+  if (delegated_pool) {
+    pool_run_on_all(delegated_pool, func, arg);
+  } else {
+    uint32_t outer_index = context_index;
+    context_index = 0;
+    func(arg);
+    context_index = outer_index;
+  }
 }
 
 API_FUNC void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg) {
   pool_run_on_all(&hw_pool, func, arg);
+}
+
+typedef struct {
+  uint32_t num_threads;
+  uint32_t flags; // reserved
+  qt_threadpool_func_type func;
+  void *arg;
+} thread_group_spec;
+
+thread_group_spec
+make_group_spec(uint32_t num_threads, qt_threadpool_func_type func, void *arg) {
+  thread_group_spec ret;
+  ret.num_threads = num_threads;
+  ret.flags = 0u;
+  ret.func = func;
+  ret.arg = arg;
+  return ret;
+}
+
+// Arguments:
+// uint32_t num_groups: number of groups
+// followed by num_groups of the thread_group_spec struct which carries the info
+// for:
+//   - the number of threads delegated to that group
+//   - the function to execute on that group of qt_threadpool_func_type
+//   - a void* argument to pass to that function when calling it.
+API_FUNC void divide_pool(uint32_t num_groups_i, thread_group_spec *groups) {
+  if (!delegated_pool) {
+    // Unclear what dividing a thread into multiple groups would even mean here.
+    // Maybe have it run all the groups itself? That could be added as a wrapper
+    // tho this interace though.
+    assert(num_groups_i == 1);
+    assert(groups[0].num_threads == 1);
+    uint32_t outer_index = context_index;
+    context_index = 0;
+    groups[0].func(groups[0].arg);
+    context_index = outer_index;
+    return;
+  }
+  assert(num_groups_i <= atomic_load_explicit(&delegated_pool->num_threads));
+  // Sanity check that the numbers of threads requested can actually be used.
+  // TODO: should we actually be able to group fewer threads than are available?
+  // Currently this is disallowed.
+  size_t num_delegated_threads =
+    atomic_load_explicit(&delegated_pool->num_threads, memory_order_relaxed);
+#ifndef NDEBUG
+  assert(num_groups <= num_delegated_threads);
+  uint32_t threads_counted_in_groups = 0u;
+  for (uint32_t i = 0u; i < num_threads; ++i) {
+    threads_counted_in_groups += groups[i].num_threads;
+  }
+  assert(threads_counted_in_groups == num_delegated_threads);
+#endif
+  size_t num_groups = num_groups_i;
+  size_t cache_line_size = get_cache_line_size();
+  // TODO: handle the case of a very small cache line size
+  // in case this gets run on a weird architecture.
+  assert(cache_line_size % alignof(pool_header) == 0);
+  assert(sizeof(pool_header) < cache_line_size);
+  alignas(
+    alignof(pool_header)) char subpool_headers[cache_line_size * num_groups];
+  assert(cache_line_size & alignof(pooled_thread_control) == 0);
+  assert(sizeof(pooled_thread_control) < cache_line_size);
+  alignas(alignof(pooled_thread_control)) char
+    thread_controls[cache_line_size * num_delegated_threads];
+  // TODO initialize the thread pool headers and thread control headers.
+  uint32_t j = 0;
+  for (uint32_t i = 0; i < num_groups; i++) {
+    // TODO: fill in implementation here.
+    ;
+  }
+}
+
+API_FUNC void divide_pool_va(uint32_t num_groups, ...) {
+  // TODO: for each group:
+  //   make a new threadpool header for the group
+  //   wake the leader thread and have it:
+  //     update its own thread-local thread pool and index
+  //     re-wake and launch a new iteration loop on its delegated worker
+  //     threads, having them:
+  //       update their thread-local indices then launch their own iteration
+  //       loops
+  //     wait for the other threads in the group to finish (busy or futex?)
+  //     restore its own thread-locals
+  //     signal completion to main via the atomic on the outer pool
+  // have the main thread act as leader for the first group
+  // wait for the groups to finish (busy or futex?)
+  ;
 }
 
