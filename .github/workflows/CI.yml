@@ -46,7 +46,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        clang_version: [14, 15, 17, 18, 19, 20] # skip 16, see below.
+        clang_version: [14, 15, 17, 18, 19, 20, 21] # skip 16, see below.
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         include:
@@ -64,6 +64,8 @@ jobs:
             gcc_version: 14
           - clang_version: 20
             gcc_version: 15
+          - clang_version: 21
+            gcc_version: 15
     env:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++-${{ matrix.clang_version }}
@@ -77,6 +79,10 @@ jobs:
         apt-get install -y sudo wget software-properties-common cmake
     - name: install gcc
       run: sudo apt-get install -y gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
+    - if: ${{ matrix.clang_version == '21' }}
+      run: |
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+        sudo apt-add-repository 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-21 main' && break || sleep 1
     - name: install clang
       run: sudo apt-get install -y clang-${{ matrix.clang_version }}
     - if: ${{ matrix.topology != 'no' }}
@@ -278,8 +284,8 @@ jobs:
           - sanitizer: thread
             topology: binders
     env:
-      CC: clang-21
-      CXX: clang++-21
+      CC: clang-22
+      CXX: clang++-22
       CFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
       CXXFLAGS: ${{ matrix.use_libcxx && format('-stdlib=libc++ -fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) || format('-fsanitize={0} -fno-sanitize-recover=all', matrix.sanitizer) }}
       LDFLAGS: "-fsanitize=${{ matrix.sanitizer }} -fno-sanitize-recover=all"
@@ -299,10 +305,10 @@ jobs:
     - name: install compiler
       run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-        sudo apt-add-repository 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-21 main' && break || sleep 1
-        sudo apt-get install -y clang-21
+        sudo apt-add-repository 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-22 main' && break || sleep 1
+        sudo apt-get install -y clang-22
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install -y libc++-21-dev libc++abi-21-dev
+      run: sudo apt-get install -y libc++-22-dev libc++abi-22-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install -y hwloc libhwloc-dev
@@ -335,8 +341,8 @@ jobs:
           - compiler: gcc
             use_libcxx: true
     env:
-      CC: ${{ matrix.compiler == 'gcc' && 'gcc-15' || 'clang-21' }}
-      CXX: ${{ matrix.compiler == 'gcc' && 'g++-15' || 'clang++-21' }}
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc-15' || 'clang-22' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++-15' || 'clang++-22' }}
       CXXFLAGS: ${{ matrix.use_libcxx && '-stdlib=libc++' || '' }}
       QTHREADS_ENABLE_ASSERTS: ${{ matrix.use_asserts && '--enable-asserts' || '' }}
     steps:
@@ -352,10 +358,10 @@ jobs:
     - if: ${{ matrix.compiler == 'clang' }}
       run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-        sudo apt-add-repository 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-21 main' && break || sleep 1
-        sudo apt-get install -y clang-21
+        sudo apt-add-repository 'deb https://apt.llvm.org/plucky/ llvm-toolchain-plucky-22 main' && break || sleep 1
+        sudo apt-get install -y clang-22
     - if: ${{ matrix.use_libcxx }}
-      run: sudo apt-get install -y libc++-21-dev libc++abi-21-dev
+      run: sudo apt-get install -y libc++-22-dev libc++abi-22-dev
     - if: ${{ matrix.topology != 'no' }}
       run: |
         sudo apt-get install -y hwloc libhwloc-dev
@@ -376,17 +382,16 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
     env:
-      CC: 'clang-21'
-      CXX: 'clang++-21'
+      CC: 'clang-22'
+      CXX: 'clang++-22'
     steps:
     - uses: actions/checkout@v4
     - run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && break || sleep 1
-        sudo apt-add-repository 'deb https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main' && break || sleep 1
-        sudo apt-get install clang-format-21
+        sudo apt-add-repository 'deb https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' && break || sleep 1
+        sudo apt-get install clang-format-22
     - name: check formatting
       run: |
-        clang-format --version
         sh clang-format.sh
         git --no-pager diff
         if [[ $(git --no-pager diff) ]]; then echo "need to rerun clang-format"; exit 1; fi
