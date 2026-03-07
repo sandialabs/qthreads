@@ -46,7 +46,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        clang_version: [14, 15, 17, 18, 19, 20, 21] # skip 16, see below.
+        clang_version: [14, 15, 16, 17, 18, 19, 20, 21] # skip 16, see below.
         scheduler: [nemesis, sherwood, distrib]
         topology: [hwloc, binders, no]
         include:
@@ -54,8 +54,8 @@ jobs:
             gcc_version: 11
           - clang_version: 15
             gcc_version: 12
-          #- clang_version: 16 # ubuntu 25.04 doesn't provide this package. We'd like to include it, but doing so has limited marginal benefit so don't bother for now.
-          #  gcc_version: 13
+          - clang_version: 16
+            gcc_version: 13
           - clang_version: 17
             gcc_version: 13
           - clang_version: 18
@@ -79,6 +79,10 @@ jobs:
         apt-get install -y sudo wget software-properties-common cmake
     - name: install gcc
       run: sudo apt-get install -y gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
+    - if: ${{ matrix.clang_version == '16' }}
+      run: |
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+        sudo apt-add-repository 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main' && break || sleep 1
     - if: ${{ matrix.clang_version == '21' }}
       run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
@@ -93,6 +97,9 @@ jobs:
       run: |
         mkdir build
         cd build
+        # apt gets confused when we bring an older package forward like this so
+        # we ultimately end up having to point clang to the right installation location.
+        if [ "${{ matrix.clang_version }}" = "16" ]; then export CXXFLAGS="--gcc-install-dir=/lib/gcc/x86_64-linux-gnu/${{ matrix.gcc_version }}"; fi
         cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
         make -j2 VERBOSE=1
     - name: run tests
