@@ -213,16 +213,19 @@ jobs:
       run: |
         wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-5-1/aocc-compiler-5.1.0_1_amd64.deb
         sudo apt install -y ./aocc.deb
+        source /opt/AMD/aocc-compiler-5.1.0/setenv_AOCC.sh
         clang -v
     - name: build qthreads
       run: |
         mkdir build
         cd build
+        source /opt/AMD/aocc-compiler-5.1.0/setenv_AOCC.sh
         cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER=${{ matrix.scheduler }} -DQTHREADS_TOPOLOGY=${{ matrix.topology }} ..
         make -j2 VERBOSE=1
     - name: run tests
       run: |
         cd build
+        source /opt/AMD/aocc-compiler-5.1.0/setenv_AOCC.sh
         CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 12m make test VERBOSE=1
       timeout-minutes: 13
 
