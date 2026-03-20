@@ -83,6 +83,14 @@ set(QTHREADS_SOURCES
   patterns/wavefront.c
 )
 
+set(QTHREADS_BENCHMARK_HELPERS
+  benchmarks/swapcontext.c
+)
+
+if(QTHREADS_BUILD_BENCHMARKS)
+  list(APPEND QTHREADS_SOURCES ${QTHREADS_BENCHMARK_HELPERS})
+endif()
+
 add_library(qthread ${QTHREADS_SOURCES})
 
 if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")

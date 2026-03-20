@@ -22,6 +22,8 @@ include(CMakePackageConfigHelpers)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+set(QTHREADS_BUILD_BENCHMARKS OFF CACHE BOOL "Whether or not to build the qthreads benchmarks.")
+
 add_subdirectory(src)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
