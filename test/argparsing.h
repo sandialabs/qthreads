@@ -7,6 +7,9 @@
 using std::atomic_load_explicit;
 using std::atomic_store_explicit;
 using std::memory_order_relaxed;
+#ifndef restrict
+#define restrict __restrict__
+#endif
 #else
 #include <stdatomic.h>
 #define ARGP_Atomic(T) _Atomic(T)
