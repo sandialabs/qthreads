@@ -1,2 +1,3 @@
+qthreads_test_cpp(os_thread_fork_join)
 qthreads_test(swapcontext)
 qthreads_test(syscall)
