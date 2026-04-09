@@ -2,8 +2,17 @@
 #define QT_ATOMIC_WAIT_H
 
 #include <assert.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+#include <atomic>
+#include <cassert>
+#include <cstdint>
+#else
+#include <assert.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#endif
 
 #include "qt_asserts.h"
 #include "qt_os.h"
@@ -16,16 +25,29 @@
 
 // Linux only has 32-bit futexes so that's the only size that's possible to
 // standardize.
+#ifdef __cplusplus
+#define qt_atomic_wait_t std::atomic<std::uint32_t>
+#define qt_atomic_wait_empty 0u
+#define qt_atomic_wait_full UINT32_MAX
+#define qt_atomic_wait_set_empty(a)                                            \
+  ((a)->store(qt_atomic_wait_empty, std::memory_order_relaxed))
+#define qt_atomic_wait_set_full(a)                                             \
+  ((a)->store(qt_atomic_wait_full, std::memory_order_relaxed))
+#define qt_atomic_wait_load(a) ((a)->load(std::memory_order_relaxed))
+#define qt_atomic_wait_store(a, v)                                             \
+  ((a)->store((v), std::memory_order_relaxed
+#else
 #define qt_atomic_wait_t _Atomic uint32_t
 #define qt_atomic_wait_empty 0u
 #define qt_atomic_wait_full UINT32_MAX
 #define qt_atomic_wait_set_empty(a)                                            \
-  atomic_store_explicit((a), 0u, memory_order_relaxed)
+  atomic_store_explicit((a), qt_atomic_wait_empty, memory_order_relaxed)
 #define qt_atomic_wait_set_full(a)                                             \
-  atomic_store_explicit((a), UINT32_MAX, memory_order_relaxed)
+  atomic_store_explicit((a), qt_atomic_wait_full, memory_order_relaxed)
 #define qt_atomic_wait_load(a) atomic_load_explicit((a), memory_order_relaxed)
 #define qt_atomic_wait_store(a, v)                                             \
   atomic_store_explicit((a), v, memory_order_relaxed)
+#endif
 
 // Futex-like atomic wait functionality that's guaranteed to use
 // the appropriate OS thread pausing functionality (e.g. futex).
