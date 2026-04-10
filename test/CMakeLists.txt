@@ -1,8 +1,7 @@
-set(CMAKE_CXX_STANDARD 11)
-
 set(QTHREADS_BUILD_TESTS ON CACHE BOOL "Whether or not to build the qthreads tests.")
 
 if (${QTHREADS_BUILD_TESTS} OR ${QTHREADS_BUILD_BENCHMARKS})
+  set(CMAKE_CXX_STANDARD 17)
 
   include_directories("." "utils/rng")
   add_subdirectory(utils/rng)
