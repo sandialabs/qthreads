@@ -2,6 +2,8 @@
 # In particular, qt_atomic_wait.h provides platform-generic wrappers around futexes.
 include_directories("../../include")
 
+set(CMAKE_CXX_STANDARD 26)
+
 qthreads_test_cpp(function_call)
 qthreads_test_cpp(function_call_unpredicted)
 qthreads_test_cpp(nemesis_many_to_one)
