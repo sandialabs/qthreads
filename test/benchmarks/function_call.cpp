@@ -10,9 +10,10 @@
 // Only for functions.
 // Call a function but force it not to be inlined.
 template <typename F, typename... As>
-auto invoke_noinline(F *volatile f,
+auto invoke_noinline(F *f,
                      As... as) noexcept(noexcept(f(std::forward<As>(as)...))) {
-  return f(std::forward<As>(as)...);
+  auto vf = reinterpret_cast<F *volatile>(f);
+  return vf(std::forward<As>(as)...);
 }
 
 template <typename T>
