@@ -5,6 +5,7 @@ include_directories("../../include")
 set(CMAKE_CXX_STANDARD 26)
 
 qthreads_test_cpp(atomic_accumulate)
+qthreads_test_cpp(atomic_exchange_contended)
 qthreads_test_cpp(atomic_fetch_min)
 qthreads_test_cpp(atomic_fetch_sub)
 qthreads_test_cpp(function_call)
