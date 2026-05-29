@@ -15,3 +15,5 @@ qthreads_test_cpp(os_thread_fork_join)
 qthreads_test_cpp(os_thread_futex_handoff)
 qthreads_test(swapcontext)
 qthreads_test(syscall)
+
+add_subdirectory(generic)
