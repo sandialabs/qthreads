@@ -24,7 +24,7 @@ void producer_thread(std::atomic<bool> *ready,
   }
 }
 
-uint64_t arithmetic_sum(std::size_t val) {
+std::size_t arithmetic_sum(std::size_t val) {
   if (val % 2ull) {
     return ((val - 1ull) / 2ull + 1ull) * val;
   } else {
@@ -33,30 +33,32 @@ uint64_t arithmetic_sum(std::size_t val) {
 }
 
 int main() {
-  std::size_t items_per_thread = 1000000ull;
+  std::size_t num_items = 1000000ull;
   std::size_t num_threads = 4u;
-  NUMARG(items_per_thread, "NUM_ITEMS_PER_THREAD");
+  NUMARG(num_items, "NUM_ITEMS");
   NUMARG(num_threads, "NUM_THREADS");
+  std::size_t num_items_per_thread = num_items / num_threads;
+  std::size_t remainder = num_items % num_threads;
   std::atomic<bool> ready{false};
   std::thread pool[num_threads];
   // Defer proper initialization to inside each worker thread.
-  item_t *items =
-    (item_t *)malloc(sizeof(item_t) * items_per_thread * num_threads);
+  item_t *items = (item_t *)malloc(sizeof(item_t) * num_items);
   queue_t queue;
   qtimer_t timer = qtimer_create();
   qtimer_start(timer);
+  std::size_t current = 0ull;
   for (std::size_t i = 0ull; i < num_threads; i++) {
-    pool[i] = std::thread(producer_thread,
-                          &ready,
-                          &queue,
-                          items_per_thread,
-                          items + i * items_per_thread);
+    std::size_t items_for_this_thread =
+      num_items_per_thread + std::size_t(i < remainder);
+    pool[i] = std::thread(
+      producer_thread, &ready, &queue, items_for_this_thread, items + current);
+    current += items_for_this_thread;
   }
   ready.store(true, std::memory_order_relaxed);
   qtimer_start(timer);
   std::size_t i = 0ull;
   std::size_t sum = 0ull;
-  while (i < items_per_thread * (num_threads)) {
+  while (i < num_items) {
     std::size_t fail_count = 0ull;
     item_t *item = queue.dequeue_single();
     if (item) {
@@ -71,12 +73,13 @@ int main() {
   double time = qtimer_secs(timer);
   printf("Time for running %lu work items from %lu distinct threads through a "
          "nemesis queue to a single consumer is: %f seconds\n",
-         items_per_thread * num_threads,
+         num_items,
          num_threads,
          time);
-  for (uint64_t i = 0ull; i < num_threads; i++) { pool[i].join(); }
+  for (std::size_t i = 0ull; i < num_threads; i++) { pool[i].join(); }
   free(items);
-  uint64_t expected = arithmetic_sum(items_per_thread) * (num_threads);
+  std::size_t expected = arithmetic_sum(num_items_per_thread) * (num_threads) +
+                         remainder * (num_items_per_thread + 1uz);
   if (expected != sum) std::abort();
 }
 
