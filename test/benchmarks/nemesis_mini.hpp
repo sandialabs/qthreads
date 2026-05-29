@@ -29,18 +29,7 @@ struct nemesis_queue {
     item_t(item_t const &) = delete;
     item_t(item_t &&) = delete;
 
-    item_t(value_t val) noexcept: next{nullptr}, value{val} {
-      // Slight redundancy here between init
-      // and then atomic writing the same value.
-      // Using the constructor is for
-      // standard conformity WRT initialization.
-      // The atomic write prevents any implied
-      // race because the default init
-      // doesn't guarantee atomicity.
-      // Trust the optimizer to clean up the duplication.
-      next.store(nullptr, std::memory_order_relaxed);
-      value.store(val, std::memory_order_relaxed);
-    }
+    item_t(value_t val) noexcept: next{nullptr}, value{val} {}
   };
 
   std::atomic<item_t *> head;
@@ -57,7 +46,12 @@ struct nemesis_queue {
   void enqueue_existing(item_t *item) noexcept {
     assert(!item->next.load(memory_order_relaxed) &&
            "Encountered null next pointer");
-    item_t *old_tail = tail.exchange(item, std::memory_order_relaxed);
+    // Acquire/release ordering needed here because the item
+    // may be recently initialized and we need those values to
+    // be committed to memory to ensure correct ordering of writes
+    // if another thread is going to immediately come and set
+    // the next pointer as well.
+    item_t *old_tail = tail.exchange(item, std::memory_order_acq_rel);
     if (old_tail) {
       old_tail->next.store(item, std::memory_order_relaxed);
     } else {
@@ -66,7 +60,10 @@ struct nemesis_queue {
   }
 
   item_t *dequeue_single() noexcept {
-    item_t *item = head.load(std::memory_order_relaxed);
+    // Acquire/release ordering here prevents picking up
+    // stale values in the item (e.g. from initializaton).
+    // This pairs with the fence on the main exchange operation.
+    item_t *item = head.load(std::memory_order_acquire);
     if (!item) return nullptr;
     item_t *next = item->next.load(std::memory_order_relaxed);
     if (next) {
