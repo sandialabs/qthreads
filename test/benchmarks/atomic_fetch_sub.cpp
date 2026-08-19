@@ -10,7 +10,12 @@ std::size_t decrement_and_reset(std::size_t val,
 
 std::size_t decrement_and_reset_na(std::size_t val,
                                    std::size_t volatile &entry) noexcept {
-  if (!(entry -= val)) entry = 5uz;
+  // Have to cast back to non-volatile to make the compiler happy.
+  // It's volatile in the signature just to force a cold read from memory.
+  // In this case, we have to use a fence instead.
+  __asm__ __volatile__("" ::: "memory");
+  std::size_t &entry_nv = const_cast<std::size_t &>(entry);
+  if (!(entry_nv -= val)) entry = 5uz;
   return 1uz;
 }
 
