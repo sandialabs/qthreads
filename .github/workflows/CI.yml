@@ -323,8 +323,6 @@ jobs:
         curl "https://developer.arm.com/packages/arm-toolchains:ubuntu-24/noble/Release.key" | sudo gpg --dearmor -o /usr/share/keyrings/obs-oss-arm-com.gpg
         echo "deb [signed-by=/usr/share/keyrings/obs-oss-arm-com.gpg] https://developer.arm.com/packages/arm-toolchains:ubuntu-24/noble/ ./" | sudo tee /etc/apt/sources.list.d/obs-oss-arm-com.list
         sudo apt update
-        sudo apt install arm-toolchains-transition
-        sudo apt update
         sudo apt install arm-toolchain-for-linux
         export PATH=$PATH:/opt/arm/arm-toolchain-for-linux/bin
         armclang --version
