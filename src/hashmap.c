@@ -267,54 +267,55 @@ int INTERNAL qt_hash_put_locked(qt_hash h, qt_key_t key, void *value) {
   ssize_t f;
   uint64_t const hw = qt_hash64((uintptr_t)key);
 
-restart: {
-  uint64_t const mask =
-    h->mask; // reread from hash, because it may have resized
-  uint64_t bucket = hw & mask;
+restart:
+  {
+    uint64_t const mask =
+      h->mask; // reread from hash, because it may have resized
+    uint64_t bucket = hw & mask;
 
-  z = h->entries; // reread from hash, because it may have resized
-  f = -1;
+    z = h->entries; // reread from hash, because it may have resized
+    f = -1;
 
-  /* find the key in the bucket
-   * - otherwise insert in the first DELETED or NULL bucket
-   * - otherwise the bucket is full (i.e. we're not done) */
-  for (uint_fast8_t i = 0; i < bucketsize; ++i) {
-    qt_key_t const zkey =
-      atomic_load_explicit(&z[bucket + i].key, memory_order_relaxed);
-    if (zkey == key) {
-      return PUT_COLLISION;
-    } else if (zkey == KEY_DELETED) {
-      if (f == -1) { f = bucket + i; }
-    } else if (zkey == KEY_NULL) {
-      if (f == -1) { f = bucket + i; }
-      break;
+    /* find the key in the bucket
+     * - otherwise insert in the first DELETED or NULL bucket
+     * - otherwise the bucket is full (i.e. we're not done) */
+    for (uint_fast8_t i = 0; i < bucketsize; ++i) {
+      qt_key_t const zkey =
+        atomic_load_explicit(&z[bucket + i].key, memory_order_relaxed);
+      if (zkey == key) {
+        return PUT_COLLISION;
+      } else if (zkey == KEY_DELETED) {
+        if (f == -1) { f = bucket + i; }
+      } else if (zkey == KEY_NULL) {
+        if (f == -1) { f = bucket + i; }
+        break;
+      }
+    }
+    if (f == -1) {
+      uint64_t const quit = bucket;
+      uint64_t const step = (((hw >> 16) | (hw << 16)) & mask) | bucketsize;
+      do {
+        bucket = (bucket + step) & mask;
+        for (uint_fast8_t i = 0; i < bucketsize; ++i) {
+          /* must search the entire cacheline (because otherwise we'd
+           * have to do more movement when deleting things from the
+           * cacheline)... should be cheap, though */
+          qt_key_t const zkey =
+            atomic_load_explicit(&z[bucket + i].key, memory_order_relaxed);
+          if (zkey == key) {
+            atomic_store_explicit(
+              &z[bucket + i].value, value, memory_order_relaxed);
+            return 1;
+          } else if (zkey == KEY_DELETED) {
+            if (f == -1) { f = bucket + i; }
+          } else if (zkey == KEY_NULL) {
+            if (f == -1) { f = bucket + i; }
+            break;
+          }
+        }
+      } while (f == -1 && bucket != quit);
     }
   }
-  if (f == -1) {
-    uint64_t const quit = bucket;
-    uint64_t const step = (((hw >> 16) | (hw << 16)) & mask) | bucketsize;
-    do {
-      bucket = (bucket + step) & mask;
-      for (uint_fast8_t i = 0; i < bucketsize; ++i) {
-        /* must search the entire cacheline (because otherwise we'd
-         * have to do more movement when deleting things from the
-         * cacheline)... should be cheap, though */
-        qt_key_t const zkey =
-          atomic_load_explicit(&z[bucket + i].key, memory_order_relaxed);
-        if (zkey == key) {
-          atomic_store_explicit(
-            &z[bucket + i].value, value, memory_order_relaxed);
-          return 1;
-        } else if (zkey == KEY_DELETED) {
-          if (f == -1) { f = bucket + i; }
-        } else if (zkey == KEY_NULL) {
-          if (f == -1) { f = bucket + i; }
-          break;
-        }
-      }
-    } while (f == -1 && bucket != quit);
-  }
-}
   assert(f != -1); // we MUST have found a place for it (otherwise the hash
                    // should have been resized bigger)
   qt_key_t zfkey = atomic_load_explicit(&z[f].key, memory_order_relaxed);

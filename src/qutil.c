@@ -629,18 +629,19 @@ static inline aligned_t qutil_qsort_partition(void *args_void) {
     if (rightwall <= leftwall) { break; }
     SWAP(double, a, leftwall, rightwall);
   }
-quickexit: {
-  aligned_t mine = leftwall + args->offset;
-  aligned_t cur = *args->furthest_leftwall;
-  aligned_t tmp;
-  if (mine < cur) {
-    tmp = cur;
-    do {
-      cur = tmp;
-      tmp = qthread_cas(args->furthest_leftwall, cur, mine);
-    } while (tmp != cur && mine < tmp);
+quickexit:
+  {
+    aligned_t mine = leftwall + args->offset;
+    aligned_t cur = *args->furthest_leftwall;
+    aligned_t tmp;
+    if (mine < cur) {
+      tmp = cur;
+      do {
+        cur = tmp;
+        tmp = qthread_cas(args->furthest_leftwall, cur, mine);
+      } while (tmp != cur && mine < tmp);
+    }
   }
-}
   {
     aligned_t mine = rightwall + args->offset;
     aligned_t cur = *args->furthest_rightwall;
@@ -859,18 +860,19 @@ static inline aligned_t qutil_aligned_qsort_partition(void *args_void) {
     if (rightwall <= leftwall) { break; }
     SWAP(aligned_t, a, leftwall, rightwall);
   }
-quickexit: {
-  aligned_t mine = leftwall + args->offset;
-  aligned_t cur = *args->furthest_leftwall;
-  aligned_t tmp;
-  if (mine < cur) {
-    tmp = cur;
-    do {
-      cur = tmp;
-      tmp = qthread_cas(args->furthest_leftwall, cur, mine);
-    } while (tmp != cur && mine < tmp);
+quickexit:
+  {
+    aligned_t mine = leftwall + args->offset;
+    aligned_t cur = *args->furthest_leftwall;
+    aligned_t tmp;
+    if (mine < cur) {
+      tmp = cur;
+      do {
+        cur = tmp;
+        tmp = qthread_cas(args->furthest_leftwall, cur, mine);
+      } while (tmp != cur && mine < tmp);
+    }
   }
-}
   {
     aligned_t mine = rightwall + args->offset;
     aligned_t cur = *args->furthest_rightwall;
