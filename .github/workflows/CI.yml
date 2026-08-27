@@ -431,7 +431,7 @@ jobs:
       name: riscv
       with:
         arch: riscv64
-        distro: ubuntu24.04
+        distro: ubuntu_latest
         run: |
           apt-get update
           apt-get install -y cmake libhwloc-dev
