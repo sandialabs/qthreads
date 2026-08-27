@@ -556,7 +556,7 @@ jobs:
       uses: vmactions/netbsd-vm@v1
       with:
         copyback: false
-        release: "10.1"
+        release: "11.0"
         run: |
           pkg_add coreutils cmake
           for sch in nemesis sherwood distrib
