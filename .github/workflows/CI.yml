@@ -283,13 +283,13 @@ jobs:
         sudo apt-get install gcc-14 g++-14
     - name: install aocc
       run: |
-        wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-5-1/aocc-compiler-5.1.0_1_amd64.deb
+        wget -nv -O aocc.deb https://download.amd.com/developer/eula/aocc/aocc-5-2/aocc-compiler-5.2.0_1_amd64.deb
         sudo apt install -y ./aocc.deb
-        source /opt/AMD/aocc-compiler-5.1.0/setenv_AOCC.sh
+        source /opt/AMD/aocc-compiler-5.2.0/setenv_AOCC.sh
         clang -v
     - name: build and test
       run: |
-        source /opt/AMD/aocc-compiler-5.1.0/setenv_AOCC.sh
+        source /opt/AMD/aocc-compiler-5.2.0/setenv_AOCC.sh
         for sch in nemesis sherwood distrib
         do
             for topo in hwloc binders no
