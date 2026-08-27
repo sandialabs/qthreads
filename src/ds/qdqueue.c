@@ -421,33 +421,34 @@ API_FUNC void *qdqueue_dequeue(qdqueue_t *q) {
   } else {
     /* this write MUST be atomic */
     myq->last_consumed = NULL;
-  checkads: {
-    qdqueue_adstruct_t ad;
+  checkads:
+    {
+      qdqueue_adstruct_t ad;
 
-    while ((ad = qdqueue_adheap_pop(&myq->ads)).shep != NULL) {
-      struct qdsubqueue_s *lc = (struct qdsubqueue_s *)ad.shep->last_consumed;
+      while ((ad = qdqueue_adheap_pop(&myq->ads)).shep != NULL) {
+        struct qdsubqueue_s *lc = (struct qdsubqueue_s *)ad.shep->last_consumed;
 
-      if (lc == ad.shep) {
-        /* it's working on its own queue */
-        aligned_t last_ad = ad.shep->last_ad_consumed;
+        if (lc == ad.shep) {
+          /* it's working on its own queue */
+          aligned_t last_ad = ad.shep->last_ad_consumed;
 
-        while (last_ad < ad.generation) {
-          last_ad =
-            qthread_cas(&(ad.shep->last_ad_consumed), last_ad, ad.generation);
+          while (last_ad < ad.generation) {
+            last_ad =
+              qthread_cas(&(ad.shep->last_ad_consumed), last_ad, ad.generation);
+          }
+          if ((ret = qlfqueue_dequeue(ad.shep->theQ)) != NULL) {
+            myq->last_consumed = ad.shep;
+            return ret;
+          }
+        } else if (lc != NULL) {
+          /* it got work from somewhere! */
+          qdqueue_adheap_push(&myq->ads, lc, 0);
+          /* reset the remote host's last_consumed counter, to avoid infinite
+           * loops */
+          (void)qthread_cas_ptr(&(ad.shep->last_consumed), (void *)lc, NULL);
         }
-        if ((ret = qlfqueue_dequeue(ad.shep->theQ)) != NULL) {
-          myq->last_consumed = ad.shep;
-          return ret;
-        }
-      } else if (lc != NULL) {
-        /* it got work from somewhere! */
-        qdqueue_adheap_push(&myq->ads, lc, 0);
-        /* reset the remote host's last_consumed counter, to avoid infinite
-         * loops */
-        (void)qthread_cas_ptr(&(ad.shep->last_consumed), (void *)lc, NULL);
       }
     }
-  }
     {
       qthread_shepherd_id_t shep;
 
