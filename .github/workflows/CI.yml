@@ -490,7 +490,7 @@ jobs:
       uses: vmactions/freebsd-vm@v1
       with:
         copyback: false
-        release: "15.0"
+        release: "15.1"
         sync: scp
         arch: ${{ matrix.arch }}
         run: |
