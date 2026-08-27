@@ -1,1 +1,1 @@
-find -iname *.h -or -iname *.c -or -iname *.hpp -or -iname *.cpp | xargs clang-format-22 -i
+find -iname *.h -or -iname *.c -or -iname *.hpp -or -iname *.cpp | xargs clang-format-23 -i
