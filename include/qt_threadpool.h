@@ -18,6 +18,7 @@ typedef enum {
 
 hw_pool_init_status hw_pool_init(uint32_t num_threads);
 void hw_pool_destroy();
-void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg);
+void run_on_current_pool(qt_threadpool_func_type func, void *arg);
+uint32_t get_num_delegated_threads();
 
 #endif
