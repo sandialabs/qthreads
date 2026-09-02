@@ -136,10 +136,14 @@ int INTERNAL qt_process_blocking_call(void) {
     }
     while (1) {
       ret = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
-      // Check that time actually elapsed and that it's not a spurious wakeup.
-      struct timespec ts2;
-      clock_gettime(CLOCK_MONOTONIC, &ts2);
-      if (ts.tv_sec <= ts2.tv_sec && ts.tv_nsec <= ts2.tv_nsec) { break; }
+      if (ret) {
+        // Check that time actually elapsed if there was a timeout wakeup.
+        struct timespec ts2;
+        clock_gettime(CLOCK_MONOTONIC, &ts2);
+        if (ts.tv_sec <= ts2.tv_sec && ts.tv_nsec <= ts2.tv_nsec) { break; }
+      } else {
+        break;
+      }
     }
     switch (ret) {
       case ETIMEDOUT:
