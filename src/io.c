@@ -57,8 +57,10 @@ TLS_DECL_INIT(qthread_t *, IO_task_struct);
 static void qt_blocking_subsystem_internal_stopwork(void) {
   atomic_store_explicit(&proxy_exit, 1, memory_order_relaxed);
   MACHINE_FENCE;
-  while (atomic_load_explicit(&io_worker_count, memory_order_relaxed))
+  while (atomic_load_explicit(&io_worker_count, memory_order_relaxed)) {
+    QTHREAD_COND_SIGNAL(theQueue.notempty);
     SPINLOCK_BODY();
+  }
   QTHREAD_LOCK(&theQueue.lock);
   QTHREAD_UNLOCK(&theQueue.lock);
 }
@@ -117,6 +119,10 @@ int INTERNAL qt_process_blocking_call(void) {
 
   QTHREAD_LOCK(&theQueue.lock);
   while (theQueue.head == NULL) {
+    if (atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
+      QTHREAD_UNLOCK(&theQueue.lock);
+      return 1;
+    }
     struct timespec ts;
     int ret;
 
@@ -130,10 +136,14 @@ int INTERNAL qt_process_blocking_call(void) {
     }
     while (1) {
       ret = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
-      // Check that time actually elapsed and that it's not a spurious wakeup.
-      struct timespec ts2;
-      clock_gettime(CLOCK_MONOTONIC, &ts2);
-      if (ts.tv_sec <= ts2.tv_sec && ts.tv_nsec <= ts2.tv_nsec) { break; }
+      if (ret) {
+        // Check that time actually elapsed if there was a timeout wakeup.
+        struct timespec ts2;
+        clock_gettime(CLOCK_MONOTONIC, &ts2);
+        if (ts.tv_sec <= ts2.tv_sec && ts.tv_nsec <= ts2.tv_nsec) { break; }
+      } else {
+        break;
+      }
     }
     switch (ret) {
       case ETIMEDOUT:
