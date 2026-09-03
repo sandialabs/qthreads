@@ -455,11 +455,17 @@ jobs:
     continue-on-error: true
     steps:
     - uses: actions/checkout@v6
-    - uses: uraimo/run-on-arch-action@v3
-      name: riscv
+    - name: setup
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ubuntu-helper-virt-hwe
+        sudo apt-get install -y qemu-efi-riscv64 qemu-system-riscv qemu-system-misc u-boot-qemu
+    - name: riscv
+      uses: vmactions/ubuntu-vm@v1
       with:
+        copyback: false
+        sync: scp
         arch: riscv64
-        distro: ubuntu_latest
         run: |
           apt-get update
           apt-get install -y cmake libhwloc-dev
@@ -484,11 +490,17 @@ jobs:
     continue-on-error: true
     steps:
     - uses: actions/checkout@v6
-    - uses: uraimo/run-on-arch-action@v3
-      name: riscv
+    - name: setup
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ubuntu-helper-virt-hwe
+        sudo apt-get install -y qemu-efi-riscv64 qemu-system-riscv qemu-system-misc u-boot-qemu
+    - name: alpine-riscv
+      uses: vmactions/alpine-vm@v1
       with:
+        copyback: false
+        sync: scp
         arch: riscv64
-        distro: alpine_edge
         run: |
           apk add --no-cache --no-progress bash make musl-dev hwloc-dev cmake gcc g++ linux-headers
           for sch in nemesis sherwood distrib

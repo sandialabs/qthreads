@@ -14,11 +14,11 @@ typedef struct uctxt uctxt_t;
 
 struct mctxt {
   /* Saved main processor registers. */
-  uint64_t regs[14]; /* callee saves RA, SP and other registers as required */
+  uint64_t regs[15]; /* callee saves RA, SP and other registers as required */
   uint64_t fpu_regs[12]; /* 12 x 64 bit FPU Registers */
   char first;
-  char const padding[3];
-  uint32_t const fcsr;
+  char padding[3];
+  uint32_t fcsr;
 };
 
 struct uctxt {
