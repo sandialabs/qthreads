@@ -72,10 +72,9 @@ static void qt_blocking_subsystem_internal_freemem(void) {
 }
 
 static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) {
-  while (!atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
+  while (true) {
     if (qt_process_blocking_call()) { break; }
   }
-  atomic_fetch_sub_explicit(&io_worker_count, 1, memory_order_relaxed);
   pthread_exit(NULL);
   return 0;
 }
@@ -120,6 +119,7 @@ int INTERNAL qt_process_blocking_call(void) {
   QTHREAD_LOCK(&theQueue.lock);
   while (theQueue.head == NULL) {
     if (atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
+      atomic_fetch_sub_explicit(&io_worker_count, 1, memory_order_relaxed);
       QTHREAD_UNLOCK(&theQueue.lock);
       return 1;
     }
@@ -148,6 +148,7 @@ int INTERNAL qt_process_blocking_call(void) {
     switch (ret) {
       case ETIMEDOUT:
         if (theQueue.head == NULL) {
+          atomic_fetch_sub_explicit(&io_worker_count, 1, memory_order_relaxed);
           QTHREAD_UNLOCK(&theQueue.lock);
           return 1;
         } else {
