@@ -72,7 +72,7 @@ static void qt_blocking_subsystem_internal_freemem(void) {
 }
 
 static void *qt_blocking_subsystem_proxy_thread(void *Q_UNUSED(arg)) {
-  while (!atomic_load_explicit(&proxy_exit, memory_order_relaxed)) {
+  while (true) {
     if (qt_process_blocking_call()) { break; }
   }
   pthread_exit(NULL);
