@@ -465,6 +465,19 @@ typedef union qt_spin_trylock_s {
     QT_Atomic(haligned_t) ticket;
     QT_Atomic(haligned_t) users;
   } s;
+
+#ifdef __cplusplus
+  // Tell the C++ compiler to not complain about constructors not getting
+  // called. These things are trivally initializable and mixed-precision
+  // accesses are allowed on all the architectures we currently care about.
+  qt_spin_trylock_s() noexcept {}
+
+  qt_spin_trylock_s &operator=(qt_spin_trylock_s const &other) noexcept {
+    u = other.u;
+    return *this;
+  }
+#endif
+
 } qt_spin_trylock_t;
 
 typedef struct {

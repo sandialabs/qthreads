@@ -1,6 +1,14 @@
 #ifndef TEST_ARGPARSING_H
 #define TEST_ARGPARSING_H
 
+#if defined(__cplusplus) && !defined(restrict)
+#if defined(__GNUC__)
+#define restrict __restrict
+#else
+#define restrict
+#endif
+#endif
+
 #if defined(__cplusplus) && __cplusplus < 202302L
 #include <atomic>
 #define ARGP_Atomic(T) std::atomic<T>
@@ -123,8 +131,7 @@ inline static void iprintf(char const *restrict format, ...) {
     va_end(ap);
   }
 }
-
-#endif // if defined(__CYGWIN32__)
+#endif
 
 #endif // ifndef TEST_ARGPARSING_H
 /* vim:set expandtab: */

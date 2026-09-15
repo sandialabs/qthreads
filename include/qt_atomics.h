@@ -4,9 +4,11 @@
 #ifndef QT_ATOMICS_H
 #define QT_ATOMICS_H
 
+// Rely on atomic types getting included from qthread/qthread.h
+// It does a little work to navigate <stdatomic.h> vs <atomic>
+
 #include <pthread.h>
 
-#include <stdatomic.h>
 #include <sys/time.h>
 
 #include <qthread/common.h>
@@ -53,9 +55,10 @@
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section
                                         ordering */
-  aligned_t _Atomic enter; /* and not call pthreads spin_lock -- hard to debug
-                            */
-  aligned_t _Atomic exit;  /* near the lock under gdb -- 4/1/11 akp */
+  QT_Atomic(
+    aligned_t) enter;        /* and not call pthreads spin_lock -- hard to debug
+                              */
+  QT_Atomic(aligned_t) exit; /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
@@ -98,7 +101,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
   {                                                                            \
     uint32_t val =                                                             \
       atomic_fetch_add_explicit(&(x)->s.users, 1, memory_order_relaxed);       \
-    while (val != atomic_load_explicit((_Atomic uint32_t *)&(x)->s.ticket,     \
+    while (val != atomic_load_explicit((QT_Atomic(uint32_t) *)&(x)->s.ticket,  \
                                        memory_order_acquire))                  \
       SPINLOCK_BODY();                                                         \
   }
@@ -112,7 +115,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
   qt_spin_trylock_t newcmp, cmp;
   uint64_t tmp =
-    atomic_load_explicit((_Atomic uint64_t *)x, memory_order_relaxed);
+    atomic_load_explicit((QT_Atomic(uint64_t) *)x, memory_order_relaxed);
   cmp = *(qt_spin_trylock_t *)&tmp;
 
   if (cmp.s.users != cmp.s.ticket) { return 0; }
@@ -294,7 +297,7 @@ qthread_internal_incr_mod_(aligned_t *operand,
 
 static inline void *qt_internal_atomic_swap_ptr(void **addr, void *newval) {
   void *oldval =
-    atomic_load_explicit((void *_Atomic *)addr, memory_order_relaxed);
+    atomic_load_explicit((QT_Atomic(void *) *)addr, memory_order_relaxed);
   void *tmp;
 
   while ((tmp = qthread_cas_ptr(addr, oldval, newval)) != oldval) {
