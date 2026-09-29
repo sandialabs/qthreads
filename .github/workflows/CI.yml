@@ -557,6 +557,7 @@ jobs:
                   done
               done
           else
+              export QTHREAD_STACK_SIZE=65536
               mkdir build
               cd build
               cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER="nemesis" -DQTHREADS_TOPOLOGY="binders" -DQTHREADS_CONTEXT_SWAP_IMPL=system ..
