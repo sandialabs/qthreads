@@ -335,7 +335,7 @@ jobs:
       timeout-minutes: 40
 
   arm_atfl:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     continue-on-error: true
     env:
       CC: armclang
@@ -347,11 +347,12 @@ jobs:
         hwloc-ls --version
     - name: install gcc
       run: |
-        sudo apt-get install gcc-14 g++-14
+        # install gcc before armclang, otherwise the package manager runs into issues.
+        sudo apt-get install gcc g++
     - name: install armclang
       run: |
-        curl "https://developer.arm.com/packages/arm-toolchains:ubuntu-24/noble/Release.key" | sudo gpg --dearmor -o /usr/share/keyrings/obs-oss-arm-com.gpg
-        echo "deb [signed-by=/usr/share/keyrings/obs-oss-arm-com.gpg] https://developer.arm.com/packages/arm-toolchains:ubuntu-24/noble/ ./" | sudo tee /etc/apt/sources.list.d/obs-oss-arm-com.list
+        curl -O https://developer.arm.com/packages/arm-toolchains/ubuntu/pool/arm-toolchains-repository_2-2~resolute_all.deb
+        sudo dpkg -i arm-toolchains-repository_2-2~resolute_all.deb
         sudo apt update
         sudo apt install arm-toolchain-for-linux
         export PATH=$PATH:/opt/arm/arm-toolchain-for-linux/bin
