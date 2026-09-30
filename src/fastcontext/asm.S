@@ -7,78 +7,62 @@
 
 #define _(x)
 
-#if defined(__FreeBSD__) &&  __FreeBSD__ < 5
-# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-#  define NEEDX86CONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
-# else
-#  error Unsupported version of FreeBSD
-# endif
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__) || defined(__DragonFly__) || defined(__MidnightBSD__)
+#define SET qt_setmctxt
+#define GET qt_getmctxt
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+#define NEEDX86_64CONTEXT 1
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
+#define NEEDARMA64CONTEXT 1
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
+#define NEEDRISCVCONTEXT 1
+#else
+#error Unsupported architecture on this OS.
+#endif
 #endif
 
 #if defined(__APPLE__)
+# define SET _qt_setmctxt
+# define GET _qt_getmctxt
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #  define NEEDX86CONTEXT 1
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #  define NEEDX86_64CONTEXT 1
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #  define r(x) r##x
 #  define f(x) f##x
 #  define NEEDPOWER64CONTEXT 1
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 #  define r(x) r##x
 #  define f(x) f##x
 #  define NEEDPOWERCONTEXT 1
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
 #  define NEEDARMA64CONTEXT 1
 #  define ISAPPLEMACHOASM 1
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
 # else
 #  error What kind of a Mac is this?
 # endif
 #elif defined(__linux__)
+# define SET qt_setmctxt
+# define GET qt_getmctxt
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
 #  define NEEDARMCONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
 #  define NEEDRISCVCONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
 #  define NEEDARMA64CONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #  define NEEDX86CONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #  define NEEDX86_64CONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #  define r(x) x
 #  define f(x) x
 #  define NEEDPOWER64CONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 #  define r(x) x
 #  define f(x) x
 #  define NEEDPOWERCONTEXT 1
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
 # else
 #  error What kind of a Linux machine is this?
 # endif
