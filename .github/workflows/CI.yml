@@ -823,6 +823,14 @@ jobs:
                 done
             done
         done
+        # Do one test run validating the system context swap too.
+        rm -rf build
+        mkdir build
+        cd build
+        cmake -DQTHREADS_CONTEXT_SWAP_IMPL="system" -DCMAKE_BUILD_TYPE=Debug ..
+        make -j2 VERBOSE=1
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
+        cd ..
       timeout-minutes: 60
 
   clang-format:
