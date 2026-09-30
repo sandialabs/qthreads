@@ -335,7 +335,7 @@ jobs:
       timeout-minutes: 40
 
   arm_atfl:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     continue-on-error: true
     env:
       CC: armclang
@@ -347,11 +347,12 @@ jobs:
         hwloc-ls --version
     - name: install gcc
       run: |
-        sudo apt-get install gcc-14 g++-14
+        # install gcc before armclang, otherwise the package manager runs into issues.
+        sudo apt-get install gcc g++
     - name: install armclang
       run: |
-        curl "https://developer.arm.com/packages/arm-toolchains:ubuntu-24/noble/Release.key" | sudo gpg --dearmor -o /usr/share/keyrings/obs-oss-arm-com.gpg
-        echo "deb [signed-by=/usr/share/keyrings/obs-oss-arm-com.gpg] https://developer.arm.com/packages/arm-toolchains:ubuntu-24/noble/ ./" | sudo tee /etc/apt/sources.list.d/obs-oss-arm-com.list
+        curl -O https://developer.arm.com/packages/arm-toolchains/ubuntu/pool/arm-toolchains-repository_2-2~resolute_all.deb
+        sudo dpkg -i arm-toolchains-repository_2-2~resolute_all.deb
         sudo apt update
         sudo apt install arm-toolchain-for-linux
         export PATH=$PATH:/opt/arm/arm-toolchain-for-linux/bin
@@ -384,6 +385,7 @@ jobs:
     env:
       CC: nvc
       CXX: nvc++
+      QTHREAD_STACK_SIZE: 65536
     steps:
     - uses: actions/checkout@v6
     - name: install deps
@@ -806,6 +808,8 @@ jobs:
             if [ "$compiler" = "clang" ]; then export CC=clang-23 && export CXX=clang++-23; fi
             for build_type in Release Debug
             do
+                if [ "$build_type" = "Release" ]; then export QTHREAD_STACK_SIZE=32768; fi
+                if [ "$build_type" = "Debug" ]; then export QTHREAD_STACK_SIZE=65536; fi
                 for sch in nemesis sherwood distrib
                 do
                     for topo in hwloc binders no
@@ -822,6 +826,16 @@ jobs:
                 done
             done
         done
+        # Do one test run validating the system context swap too.
+        echo "********** System Context Swap Build **********"
+        export QTHREAD_STACK_SIZE=65536
+        rm -rf build
+        mkdir build
+        cd build
+        cmake -DQTHREADS_CONTEXT_SWAP_IMPL="system" -DCMAKE_BUILD_TYPE=Debug ..
+        make -j2 VERBOSE=1
+        CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 18m make test VERBOSE=1
+        cd ..
       timeout-minutes: 60
 
   clang-format:
