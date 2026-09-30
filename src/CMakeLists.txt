@@ -4,7 +4,7 @@ set(QTHREADS_BARRIER feb CACHE STRING "Which barrier implementation to use for q
 set(QTHREADS_SINC donecount CACHE STRING "Which sinc implementation to use for qthreads. Valid options are donecount, donecoutn_cas, snzi, and original.")
 set(QTHREADS_ALLOC base CACHE STRING "Wich allocation implementation to use for qthreads. Valid options are base, and chapel.")
 set(QTHREADS_CACHELINE_SIZE_ESTIMATE 64 CACHE STRING "Estimate of the cacheline size of the target machine (used for optimizing data structure layouts).")
-set(QTHREADS_DEFAULT_STACK_SIZE 32768 CACHE STRING "Default qthread stack size.")
+set(QTHREADS_DEFAULT_STACK_SIZE 65536 CACHE STRING "Default qthread stack size.")
 set(QTHREADS_HASHMAP hashmap CACHE STRING "Which hashmap implementation to use. Valid values are \"hashmap\" and \"lf_hashmap\".")
 set(QTHREADS_DICT_TYPE shavit CACHE STRING "Which dictionary implementation to use. Valid values are \"shavit\", \"trie\", and \"simple\".")
 set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to use. Valid values are \"clock_gettime\", \"mach\", \"gettimeofday\", and \"gethrtime\".")

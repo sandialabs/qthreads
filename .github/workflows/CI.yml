@@ -385,7 +385,6 @@ jobs:
     env:
       CC: nvc
       CXX: nvc++
-      QTHREAD_STACK_SIZE: 65536
     steps:
     - uses: actions/checkout@v6
     - name: install deps
@@ -559,7 +558,6 @@ jobs:
                   done
               done
           else
-              export QTHREAD_STACK_SIZE=65536
               mkdir build
               cd build
               cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER="nemesis" -DQTHREADS_TOPOLOGY="binders" ..
@@ -808,8 +806,6 @@ jobs:
             if [ "$compiler" = "clang" ]; then export CC=clang-23 && export CXX=clang++-23; fi
             for build_type in Release Debug
             do
-                if [ "$build_type" = "Release" ]; then export QTHREAD_STACK_SIZE=32768; fi
-                if [ "$build_type" = "Debug" ]; then export QTHREAD_STACK_SIZE=65536; fi
                 for sch in nemesis sherwood distrib
                 do
                     for topo in hwloc binders no
@@ -828,7 +824,6 @@ jobs:
         done
         # Do one test run validating the system context swap too.
         echo "********** System Context Swap Build **********"
-        export QTHREAD_STACK_SIZE=65536
         rm -rf build
         mkdir build
         cd build
