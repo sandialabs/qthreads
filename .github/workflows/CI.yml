@@ -385,6 +385,7 @@ jobs:
     env:
       CC: nvc
       CXX: nvc++
+      QTHREAD_STACK_SIZE: 65536
     steps:
     - uses: actions/checkout@v6
     - name: install deps
