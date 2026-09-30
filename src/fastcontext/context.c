@@ -16,7 +16,8 @@
 #include "qt_prefetch.h"
 #include "qt_visibility.h"
 
-#ifdef NEEDPOWERMAKECONTEXT
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32 ||                              \
+  QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   unsigned long *sp, *tos;
   va_list arg;
@@ -35,7 +36,8 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   va_end(arg);
 }
 
-#elif defined(NEEDX86MAKECONTEXT)
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 ||                                 \
+  QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   uintptr_t *sp;
 
@@ -59,18 +61,6 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
    * several 64-bit architectures expect that args will be in the correct
    * registers! */
   ucp->mc.mc_edi = *(uintptr_t *)sp;
-#if 0
-    for (i = 0; i < argc; i++) {
-        switch (i) {
-            case 0: ucp->mc.mc_edi = va_arg(argp, uintptr_t); break;
-                /*case 1: ucp->mc.mc_esi = va_arg(argp, uintptr_t); break;
-                 * case 2: ucp->mc.mc_edx = va_arg(argp, uintptr_t); break;
-                 * case 3: ucp->mc.mc_ecx = va_arg(argp, uintptr_t); break;
-                 * case 4: ucp->mc.mc_r8 = va_arg(argp, uintptr_t); break;
-                 * case 5: ucp->mc.mc_r9 = va_arg(argp, uintptr_t); break;*/
-        }
-    }
-#endif
 #endif
 
   *--sp = 0; /* return address */
@@ -78,7 +68,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   ucp->mc.mc_esp = (long)sp;
 }
 
-#elif defined(NEEDARMMAKECONTEXT)
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM
 /* This function is entirely copyright Sandia National Laboratories */
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   va_list arg;
@@ -96,7 +86,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   ucp->mc.regs[13] = (uintptr_t)top_of_stack; // SP
 }
 
-#elif defined(NEEDARMA64MAKECONTEXT)
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64
 /* This function is entirely copyright Sandia National Laboratories */
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   va_list arg;
@@ -116,7 +106,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   ucp->mc.regs[1] = (uintptr_t)top_of_stack; // SP
   ucp->mc.regs[3] = (uintptr_t)func; // LR so that swapcontext returns into it
 }
-#elif defined(NEEDRISCVMAKECONTEXT)
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV
 
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   va_list arg;
@@ -139,7 +129,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   ucp->mc.regs[14U] = (uintptr_t)top_of_stack; // SP
 }
 
-#endif /* ifdef NEEDPOWERMAKECONTEXT */
+#endif
 
 // Macro for excluding a function from thread sanitizer.
 // Currently this is just used for qt_swapctxt.
@@ -156,7 +146,6 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
 #define QT_SKIP_THREAD_SANITIZER
 #endif
 
-#ifdef NEEDSWAPCONTEXT
 QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp) {
   /* note that my getcontext implementation has only two possible return
    * values: 1 and 0. If it's 0, then I successfully got the context. If it's
@@ -176,7 +165,5 @@ QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp) {
   }
   return 0;
 }
-
-#endif /* ifdef NEEDSWAPCONTEXT */
 
 /* vim:set expandtab: */
