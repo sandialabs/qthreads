@@ -451,6 +451,40 @@ jobs:
         done
       timeout-minutes: 40
 
+  ppc64le:
+    runs-on: ubuntu-26.04
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v6
+    - name: setup
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ubuntu-helper-virt-hwe
+        sudo apt-get install -y qemu-system-ppc u-boot-qemu
+    - name: ppc64le
+      uses: vmactions/ubuntu-vm@v1
+      with:
+        copyback: false
+        sync: scp
+        arch: ppc64le
+        run: |
+          apt-get update
+          apt-get install -y cmake libhwloc-dev
+          apt-get install -y gcc g++
+          # Emulation for this plaform is slow,
+          # so only test with the binders topology.
+          for sch in nemesis sherwood distrib
+          do
+              echo "********** Scheduler: $sch **********"
+              rm -rf build
+              mkdir build
+              cd build
+              cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER="$sch" -DQTHREADS_TOPOLOGY=binders ..
+              make -j2 VERBOSE=1
+              CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 30m make test VERBOSE=1
+              cd ..
+          done
+
   riscv:
     runs-on: ubuntu-26.04
     continue-on-error: true
