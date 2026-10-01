@@ -21,7 +21,7 @@ jobs:
       CC: gcc-${{ matrix.gcc_version }}
       CXX: g++-${{ matrix.gcc_version }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: install compiler
       run: |
         sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
@@ -55,7 +55,7 @@ jobs:
       CC: gcc-${{ matrix.gcc_version }}
       CXX: g++-${{ matrix.gcc_version }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: install compiler
       run: |
         sudo apt-get install gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
@@ -98,7 +98,7 @@ jobs:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++-${{ matrix.clang_version }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     #- name: container prerequisites
     #  run: |
     #    # some additional setup steps are only needed when running in a container.
@@ -153,7 +153,7 @@ jobs:
       CC: clang-${{ matrix.clang_version }}
       CXX: clang++-${{ matrix.clang_version }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     #- name: container prerequisites
     #  run: |
     #    # some additional setup steps are only needed when running in a container.
@@ -191,7 +191,7 @@ jobs:
     container: rockylinux:8
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - run: |
         dnf install -y gcc gcc-c++ cmake
         dnf install -y --enablerepo=devel hwloc-devel
@@ -220,7 +220,7 @@ jobs:
       CC: icx
       CXX: icpx
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
@@ -262,7 +262,7 @@ jobs:
       CFLAGS: "-diag-disable=10441"
       CXXFLAGS: "-diag-disable=10441"
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
@@ -302,7 +302,7 @@ jobs:
       CC: clang
       CXX: clang++
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
@@ -341,7 +341,7 @@ jobs:
       CC: armclang
       CXX: armclang++
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - run: |
         sudo apt-get install hwloc libhwloc-dev
         hwloc-ls --version
@@ -386,7 +386,7 @@ jobs:
       CC: nvc
       CXX: nvc++
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: install deps
       run: |
         curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
@@ -424,7 +424,7 @@ jobs:
     container: alpine:latest
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: install deps
       run: |
         apk add --no-cache --no-progress bash make musl-dev hwloc-dev cmake gcc g++ clang linux-headers
@@ -455,7 +455,7 @@ jobs:
     runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: setup
       run: |
         sudo apt-get update
@@ -489,7 +489,7 @@ jobs:
     runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: setup
       run: |
         sudo apt-get update
@@ -524,7 +524,7 @@ jobs:
     runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: setup
       run: |
         sudo apt-get update
@@ -562,7 +562,7 @@ jobs:
       matrix:
         arch: [x86_64, aarch64]
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: freebsd
       uses: vmactions/freebsd-vm@v1
       with:
@@ -604,7 +604,7 @@ jobs:
   #  runs-on: ubuntu-26.04
   #  continue-on-error: true
   #  steps:
-  #  - uses: actions/checkout@v6
+  #  - uses: actions/checkout@v7
   #  - name: openbsd
   #    uses: vmactions/openbsd-vm@v1
   #    with:
@@ -628,7 +628,7 @@ jobs:
     runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: netbsd
       uses: vmactions/netbsd-vm@v1
       with:
@@ -652,7 +652,7 @@ jobs:
     runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: dragonflybsd
       uses: vmactions/dragonflybsd-vm@v1
       with:
@@ -685,7 +685,7 @@ jobs:
         image: [macos-26, macos-15, macos-15-intel] # Test on both ARM and X86 (through fall 2027)
     runs-on: ${{ matrix.image }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: install deps
       run: |
         brew install coreutils # coreutils is to get gtimeout for CI and is not universally required by qthreads.
@@ -737,7 +737,7 @@ jobs:
       QTHREAD_STACK_SIZE: 2097152
       ASAN_OPTIONS: "check_initialization_order=1"
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     #- name: container prerequisites
     #  run: |
     #    # some additional setup steps are only needed when running in a container.
@@ -815,7 +815,7 @@ jobs:
     runs-on: ${{ matrix.image }}
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     #- name: container prerequisites
     #  run: |
     #    # some additional setup steps are only needed when running in a container.
@@ -874,7 +874,7 @@ jobs:
       CC: 'clang-23'
       CXX: 'clang++-23'
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
         sudo apt-add-repository 'deb https://apt.llvm.org/resolute/ llvm-toolchain-resolute-23 main' && break || sleep 1
