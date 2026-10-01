@@ -63,4 +63,6 @@
 #error "Unsupported architecture"
 #endif
 
+#define QTHREAD_STACK_ALIGNMENT 16u
+
 #endif

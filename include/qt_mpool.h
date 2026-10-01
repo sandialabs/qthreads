@@ -12,6 +12,7 @@ void qt_mpool_free(qt_mpool pool, void *mem);
 #define qt_mpool_create(item_size) qt_mpool_create_aligned((item_size), 0)
 
 qt_mpool qt_mpool_create_aligned(size_t item_size, size_t const alignment);
+qt_mpool qt_mpool_create_stack_pool(size_t item_size);
 void qt_mpool_destroy(qt_mpool pool);
 
 void qt_mpool_subsystem_init(void);

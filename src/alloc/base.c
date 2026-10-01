@@ -2,7 +2,8 @@
 #include <stdlib.h>
 
 /* System Headers */
-#include <unistd.h> /* for getpagesize() */
+#include <sys/mman.h> // mmap
+#include <unistd.h>   /* for getpagesize() */
 
 /* Internal Headers */
 #include "qt_alloc.h"
@@ -35,6 +36,30 @@ void *qt_internal_aligned_alloc(size_t alloc_size,
 
 void qt_internal_aligned_free(void *ptr, uint_fast16_t alignment) {
   qt_free(ptr);
+}
+
+void *qt_internal_stack_alloc(size_t alloc_size) {
+  // mmap returns a page-aligned address.
+  // We're assumign that will always be larger than the stack alignment.
+  return mmap(NULL,
+              alloc_size,
+              PROT_READ | PROT_WRITE,
+#ifdef MAP_STACK
+              MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
+#else
+              MAP_PRIVATE | MAP_ANONYMOUS,
+#endif
+              -1,
+              0);
+}
+
+void qt_internal_stack_free(void *ptr, size_t alloc_size) {
+#ifdef NDEBUG
+  munmap(ptr, alloc_size);
+#else
+  int ret = munmap(ptr, alloc_size);
+  assert(!ret);
+#endif
 }
 
 /* vim:set expandtab: */

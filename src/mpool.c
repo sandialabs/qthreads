@@ -64,6 +64,7 @@ struct qt_mpool_s {
   QTHREAD_FASTLOCK_TYPE pool_lock;
   void **alloc_list;
   size_t _Atomic alloc_list_pos;
+  bool is_stack_pool;
 };
 
 typedef struct qt_mpool_cache_entry_s {
@@ -110,9 +111,23 @@ static inline void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
   return ret;
 }
 
+static inline void *qt_mpool_internal_stack_alloc(size_t alloc_size,
+                                                  size_t alignment) {
+  assert(alignment == QTHREAD_STACK_ALIGNMENT);
+  void *ret = qt_internal_stack_alloc(alloc_size);
+  VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
+  return ret;
+}
+
 static inline void qt_mpool_internal_aligned_free(void *freeme,
                                                   size_t alignment) {
   qt_internal_aligned_free(freeme, alignment);
+}
+
+static inline void
+qt_mpool_internal_stack_free(void *freeme, size_t size, size_t alignment) {
+  assert(alignment == QTHREAD_STACK_ALIGNMENT);
+  qt_internal_stack_free(freeme, size);
 }
 
 // sync means lock-protected
@@ -148,6 +163,7 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size, size_t alignment) {
   }
   if (item_size * 2 >= max_alloc_size) { max_alloc_size = item_size * 2; }
 
+  pool->is_stack_pool = false;
   pool->item_size = item_size;
   pool->alignment = alignment;
   /* next, we find the least-common-multiple in sizes between item_size and
@@ -206,6 +222,12 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size, size_t alignment) {
   qgoto(errexit);
   if (pool) { FREE(pool, sizeof(struct qt_mpool_s)); }
   return NULL;
+}
+
+qt_mpool INTERNAL qt_mpool_create_stack_pool(size_t item_size) {
+  qt_mpool ret = qt_mpool_create_aligned(item_size, QTHREAD_STACK_ALIGNMENT);
+  ret->is_stack_pool = true;
+  return ret;
 }
 
 static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool) {
@@ -327,7 +349,11 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool) {
 
       /* need to allocate a new block and record that I did so in the central
        * pool */
-      p = qt_mpool_internal_aligned_alloc(pool->alloc_size, pool->alignment);
+      if (!pool->is_stack_pool) {
+        p = qt_mpool_internal_aligned_alloc(pool->alloc_size, pool->alignment);
+      } else {
+        p = qt_mpool_internal_stack_alloc(pool->alloc_size, pool->alignment);
+      }
       qassert_ret((p != NULL), NULL);
       assert(pool->alignment == 0 ||
              (((uintptr_t)p) & (pool->alignment - 1)) == 0);
@@ -424,7 +450,11 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool) {
     void *p = pool->alloc_list[0];
 
     while (p && i < (pagesize / sizeof(void *) - 1)) {
-      qt_mpool_internal_aligned_free(p, pool->alignment);
+      if (!pool->is_stack_pool) {
+        qt_mpool_internal_aligned_free(p, pool->alignment);
+      } else {
+        qt_mpool_internal_stack_free(p, pool->alloc_size, pool->alignment);
+      }
       i++;
       p = pool->alloc_list[i];
     }
