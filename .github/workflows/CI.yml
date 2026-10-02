@@ -600,29 +600,29 @@ jobs:
               cd ..
           fi
 
-  #openbsd:
-  #  runs-on: ubuntu-26.04
-  #  continue-on-error: true
-  #  steps:
-  #  - uses: actions/checkout@v7
-  #  - name: openbsd
-  #    uses: vmactions/openbsd-vm@v1
-  #    with:
-  #      copyback: false
-  #      release: "7.8"
-  #      run: |
-  #        pkg_add coreutils cmake
-  #        for sch in nemesis sherwood distrib
-  #        do
-  #            echo "********** Scheduler: $sch **********"
-  #            rm -rf build
-  #            mkdir build
-  #            cd build
-  #            cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER="$sch" -DQTHREADS_CONTEXT_SWAP_IMPL=system ..
-  #            make -j2 VERBOSE=1
-  #            CTEST_OUTPUT_ON_FAILURE=1 gtimeout --foreground -k 20s 4m make test VERBOSE=1
-  #            cd ..
-  #        done
+  openbsd:
+    runs-on: ubuntu-26.04
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v7
+    - name: openbsd
+      uses: vmactions/openbsd-vm@v1
+      with:
+        copyback: false
+        release: "7.8"
+        run: |
+          pkg_add coreutils cmake
+          for sch in nemesis sherwood distrib
+          do
+              echo "********** Scheduler: $sch **********"
+              rm -rf build
+              mkdir build
+              cd build
+              cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER="$sch" ..
+              make -j2 VERBOSE=1
+              CTEST_OUTPUT_ON_FAILURE=1 gtimeout --foreground -k 20s 4m make test VERBOSE=1
+              cd ..
+          done
 
   netbsd:
     runs-on: ubuntu-26.04
