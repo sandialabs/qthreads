@@ -165,15 +165,22 @@ extern int __ulock_wake(uint32_t operation, void *addr, uint64_t wake_value);
 #ifndef NDEBUG
 #define qt_wait_on_address(a, expected)                                        \
   do {                                                                         \
-    int status =                                                               \
-      futex((a), FUTEX_WAIT | FUTEX_PRIVATE_FLAG, (expected), NULL, NULL);     \
+    int status = futex((uint32_t volatile *)(a),                               \
+                       FUTEX_WAIT | FUTEX_PRIVATE_FLAG,                        \
+                       (expected),                                             \
+                       NULL,                                                   \
+                       NULL);                                                  \
     assert(!status || (status == -1 && errno == EAGAIN));
 }
 while (0)
 #else
 #define qt_wait_on_address(a, expected)                                        \
   do {                                                                         \
-    futex((a), FUTEX_WAIT | FUTEX_PRIVATE_FLAG, (expected), NULL, NULL);       \
+    futex((uint32_t volatile *)(a),                                            \
+          FUTEX_WAIT | FUTEX_PRIVATE_FLAG,                                     \
+          (expected),                                                          \
+          NULL,                                                                \
+          NULL);                                                               \
   } while (0)
 #endif
 
@@ -181,7 +188,11 @@ while (0)
   do {                                                                         \
     /* For whatever reason they used a signed integer for the val parameter so \
      * use INT32_MAX.*/                                                        \
-    futex((a), FUTEX_WAKE | FUTEX_PRIVATE_FLAG, INT32_MAX, NULL, NULL);        \
+    futex((uint32_t volatile *)(a),                                            \
+          FUTEX_WAKE | FUTEX_PRIVATE_FLAG,                                     \
+          INT32_MAX,                                                           \
+          NULL,                                                                \
+          NULL);                                                               \
   } while (0)
 
 #define qt_wake_one(a)                                                         \
