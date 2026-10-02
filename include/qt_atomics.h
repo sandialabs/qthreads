@@ -127,28 +127,16 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
 #define QTHREAD_COND_DECL(c)                                                   \
   pthread_cond_t c;                                                            \
   pthread_mutex_t c##_lock
-// NetBSD is missing this part of the pthreads APIs, so bypass that bit.
-#ifdef __NetBSD__
-#define QT_MUTEXATTR_SETPSHARED_PRIVATE(attr)
-#define QT_CONDATTR_SETPSHARED_PRIVATE(attr)
-#else
-#define QT_MUTEXATTR_SETPSHARED_PRIVATE(attr)                                  \
-  qassert(pthread_mutexattr_setpshared((attr), PTHREAD_PROCESS_PRIVATE), 0)
-#define QT_CONDATTR_SETPSHARED_PRIVATE(attr)                                   \
-  qassert(pthread_condattr_setpshared((attr), PTHREAD_PROCESS_PRIVATE), 0)
-#endif
 
 #define QTHREAD_COND_INIT_SOLO(c)                                              \
   do {                                                                         \
     {                                                                          \
       pthread_mutexattr_t tmp_attr;                                            \
       qassert(pthread_mutexattr_init(&tmp_attr), 0);                           \
-      QT_MUTEXATTR_SETPSHARED_PRIVATE(&tmp_attr);                              \
       qassert(pthread_mutexattr_destroy(&tmp_attr), 0);                        \
     }                                                                          \
     {                                                                          \
       pthread_condattr_t tmp_attr;                                             \
-      QT_CONDATTR_SETPSHARED_PRIVATE(&tmp_attr);                               \
       qassert(pthread_cond_init(&(c), &tmp_attr), 0);                          \
       qassert(pthread_condattr_destroy(&tmp_attr), 0);                         \
     }                                                                          \
@@ -158,12 +146,10 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     {                                                                          \
       pthread_mutexattr_t tmp_attr;                                            \
       qassert(pthread_mutexattr_init(&tmp_attr), 0);                           \
-      QT_MUTEXATTR_SETPSHARED_PRIVATE(&tmp_attr);                              \
       qassert(pthread_mutexattr_destroy(&tmp_attr), 0);                        \
     }                                                                          \
     {                                                                          \
       pthread_condattr_t tmp_attr;                                             \
-      QT_CONDATTR_SETPSHARED_PRIVATE(&tmp_attr);                               \
       qassert(pthread_cond_init((c), &tmp_attr), 0);                           \
       qassert(pthread_condattr_destroy(&tmp_attr), 0);                         \
     }                                                                          \
@@ -173,14 +159,12 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x) {
     {                                                                          \
       pthread_mutexattr_t tmp_attr;                                            \
       qassert(pthread_mutexattr_init(&tmp_attr), 0);                           \
-      QT_MUTEXATTR_SETPSHARED_PRIVATE(&tmp_attr);                              \
       qassert(pthread_mutex_init(&(c##_lock), &tmp_attr), 0);                  \
       qassert(pthread_mutexattr_destroy(&tmp_attr), 0);                        \
     }                                                                          \
     {                                                                          \
       pthread_condattr_t tmp_attr;                                             \
       pthread_condattr_init(&tmp_attr);                                        \
-      QT_CONDATTR_SETPSHARED_PRIVATE(&tmp_attr);                               \
       qassert(pthread_cond_init(&(c), &tmp_attr), 0);                          \
       qassert(pthread_condattr_destroy(&tmp_attr), 0);                         \
     }                                                                          \
