@@ -23,6 +23,10 @@ void INTERNAL qt_internal_aligned_free(void *ptr, uint_fast16_t alignment);
 
 void INTERNAL qt_internal_alignment_init(void);
 
+void INTERNAL *qt_internal_stack_alloc(size_t alloc_size);
+
+void INTERNAL qt_internal_stack_free(void *, size_t);
+
 #ifdef __INTEL_COMPILER
 #pragma warning(disable : 191)
 #endif

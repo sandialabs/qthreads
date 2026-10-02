@@ -72,8 +72,6 @@
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
 
-#define QTHREAD_STACK_ALIGNMENT 16u
-
 /* Shared Globals */
 qlib_t qlib = NULL;
 int qaffinity = 1;
@@ -681,9 +679,8 @@ int API_FUNC qthread_initialize(void) {
         (2 * getpagesize()),
       getpagesize());
   } else {
-    generic_stack_pool = qt_mpool_create_aligned(
-      qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s),
-      QTHREAD_STACK_ALIGNMENT);
+    generic_stack_pool = qt_mpool_create_stack_pool(
+      qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s));
   }
   generic_rdata_pool = qt_mpool_create(sizeof(struct qthread_runtime_data_s));
   initialize_hazardptrs();
@@ -720,8 +717,7 @@ int API_FUNC qthread_initialize(void) {
   qlib->mccoy_thread = qthread_thread_new(NULL, NULL, 0, NULL, NULL, 0);
   qassert_ret(qlib->mccoy_thread, QTHREAD_MALLOC_ERROR);
 
-  qlib->master_stack =
-    qt_internal_aligned_alloc(qlib->master_stack_size, QTHREAD_STACK_ALIGNMENT);
+  qlib->master_stack = qt_internal_stack_alloc(qlib->master_stack_size);
   qassert_ret(qlib->master_stack, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_USE_VALGRIND
   qlib->valgrind_masterstack_id =
@@ -1118,7 +1114,7 @@ void API_FUNC qthread_finalize(void) {
   }
   FREE(qlib->mccoy_thread->rdata, sizeof(struct qthread_runtime_data_s));
   FREE_QTHREAD(qlib->mccoy_thread);
-  FREE(qlib->master_stack, qlib->master_stack_size);
+  qt_internal_stack_free(qlib->master_stack, qlib->master_stack_size);
   while (qt_cleanup_late_funcs != NULL) {
     struct qt_cleanup_funcs_s *tmp = qt_cleanup_late_funcs;
     qt_cleanup_late_funcs = tmp->next;
