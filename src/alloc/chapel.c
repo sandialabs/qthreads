@@ -3,6 +3,8 @@
 
 #include <unistd.h>
 
+#include "qthread/common.h"
+
 #include "chpl-linefile-support.h"
 #include "chpl-mem.h"
 
@@ -38,4 +40,12 @@ void *qt_internal_aligned_alloc(size_t alloc_size, uint_fast16_t alignment) {
 
 void qt_internal_aligned_free(void *ptr, uint_fast16_t alignment) {
   chpl_mem_free(ptr, 0, CHPL_FILE_IDX_INTERNAL);
+}
+
+void *qt_internal_stack_alloc(size_t alloc_size) {
+  return qt_internal_aligned_alloc(alloc_size, QTHREAD_STACK_ALIGNMENT);
+}
+
+void qt_internal_stack_free(void *ptr, size_t) {
+  qt_internal_aligned_free(ptr, QTHREAD_STACK_ALIGNMENT);
 }

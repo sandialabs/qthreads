@@ -2,11 +2,16 @@
 #include <stdlib.h>
 
 /* System Headers */
-#include <unistd.h> /* for getpagesize() */
+#include <sys/mman.h> // mmap
+#include <unistd.h>   /* for getpagesize() */
 
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
+
+#ifdef __FreeBSD__
+#define OS_USES_GUARD_PAGES
+#endif
 
 /* local constants */
 size_t _pagesize = 0;
@@ -35,6 +40,44 @@ void *qt_internal_aligned_alloc(size_t alloc_size,
 
 void qt_internal_aligned_free(void *ptr, uint_fast16_t alignment) {
   qt_free(ptr);
+}
+
+void *qt_internal_stack_alloc(size_t alloc_size) {
+  // mmap returns a page-aligned address.
+  // We're assumign that will always be larger than the stack alignment.
+  void *r = mmap(NULL,
+#ifdef OS_USES_GUARD_PAGES
+                 alloc_size + _pagesize,
+#else
+                 alloc_size,
+#endif
+                 PROT_READ | PROT_WRITE,
+#ifdef MAP_STACK
+                 MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
+#else
+                 MAP_PRIVATE | MAP_ANONYMOUS,
+#endif
+                 -1,
+                 0);
+  assert(r != MAP_FAILED);
+#ifdef OS_USES_GUARD_PAGES
+  return r + _pagesize;
+#else
+  return r;
+#endif
+}
+
+void qt_internal_stack_free(void *ptr, size_t alloc_size) {
+#ifdef OS_USES_GUARD_PAGES
+  ptr -= _pagesize;
+  alloc_size += _pagesize;
+#endif
+#ifdef NDEBUG
+  munmap(ptr, alloc_size);
+#else
+  int ret = munmap(ptr, alloc_size);
+  assert(!ret);
+#endif
 }
 
 /* vim:set expandtab: */
