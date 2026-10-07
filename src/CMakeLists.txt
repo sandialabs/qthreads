@@ -107,7 +107,8 @@ target_link_libraries(qthread PUBLIC Threads::Threads)
 # The c11 threading library has to be linked
 # via a separate library on FreeBSD-derived OSs.
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD" OR
-    "${CMAKE_SYSTEM_NAME}" STREQUAL "kFreeBSD")
+    "${CMAKE_SYSTEM_NAME}" STREQUAL "kFreeBSD" OR
+    "${CMAKE_SYSTEM_NAME}" STREQUAL "MidnightBSD")
   target_link_libraries(qthread PUBLIC "stdthreads")
 endif()
 
