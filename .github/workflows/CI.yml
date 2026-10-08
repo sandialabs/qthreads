@@ -600,6 +600,36 @@ jobs:
               cd ..
           fi
 
+  midnightbsd:
+    runs-on: ubuntu-26.04
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v7
+    - name: midnightbsd
+      uses: vmactions/midnightbsd-vm@v1
+      with:
+        copyback: false
+        release: "4.0"
+        sync: scp
+        arch: ${{ matrix.arch }}
+        run: |
+          mport install cmake hwloc2
+          mport install coreutils # to get gtimeout for CI. The built-in timeout sometimes fails to kill the process.
+          for sch in nemesis sherwood distrib
+          do
+              for topo in hwloc binders no
+              do
+                  echo "********** Scheduler: $sch, Topology: $topo **********"
+                  rm -rf build
+                  mkdir build
+                  cd build
+                  cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_SCHEDULER="$sch" -DQTHREADS_TOPOLOGY="$topo" ..
+                  make -j2 VERBOSE=1
+                  CTEST_OUTPUT_ON_FAILURE=1 gtimeout --foreground -k 20s 4m make test VERBOSE=1
+                  cd ..
+              done
+          done
+
   openbsd:
     runs-on: ubuntu-26.04
     continue-on-error: true
