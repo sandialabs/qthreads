@@ -3,9 +3,10 @@
 
 // Work around OSX currently refusing to support threads.h
 // OpenBSD and DragonflyBSD also run into this.
+// Finding threads.h when using gcc on Windows is also unreliable.
 #if 201112L <= __STDC_VERSION__ && __STDC_VERSION__ < 202311L
 #if defined(__STDC_NO_THREADS__) || defined(__OpenBSD__) ||                    \
-  defined(__DragonFly__)
+  defined(__DragonFly__) || (defined(_WIN32) && defined(__GNUC__))
 #define thread_local _Thread_local
 #else
 #include <threads.h>
