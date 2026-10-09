@@ -1,7 +1,7 @@
 #include "qthread/qthread.h"
+#include "qthread/visibility.h"
 
 #include "qt_shepherd_innards.h"
-#include "qt_visibility.h"
 
 #ifndef QTHREAD_SHEPHERD_TYPEDEF
 #define QTHREAD_SHEPHERD_TYPEDEF

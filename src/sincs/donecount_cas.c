@@ -7,6 +7,7 @@
 #include "qthread/cacheline.h"
 #include "qthread/qthread.h"
 #include "qthread/sinc.h"
+#include "qthread/visibility.h"
 
 /* Internal Headers */
 #include "qt_alloc.h"
@@ -14,7 +15,6 @@
 #include "qt_expect.h"
 #include "qt_int_ceil.h"
 #include "qt_shepherd_innards.h"
-#include "qt_visibility.h"
 
 typedef aligned_t qt_sinc_count_t;
 

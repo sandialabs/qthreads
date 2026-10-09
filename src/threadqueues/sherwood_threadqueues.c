@@ -7,6 +7,7 @@
 /* Public Headers */
 #include "qthread/cacheline.h"
 #include "qthread/qthread.h"
+#include "qthread/visibility.h"
 
 /* Internal Headers */
 #include "qt_alloc.h"
@@ -20,7 +21,6 @@
 #include "qt_subsystems.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
-#include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
 
 typedef struct qt_threadqueue_node_s qt_threadqueue_node_t;

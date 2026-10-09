@@ -4,6 +4,7 @@
 
 /* The API */
 #include <qthread/qthread.h>
+#include <qthread/visibility.h>
 
 /* Internal Headers */
 #include "qt_asserts.h"
@@ -12,7 +13,6 @@
 #include "qt_qthread_mgmt.h"
 #include "qt_qthread_struct.h"
 #include "qt_shepherd_innards.h"
-#include "qt_visibility.h"
 #include "qthread_innards.h"
 
 /* Shared Globals */

@@ -3,9 +3,10 @@
 #include <string.h>
 #include <strings.h> /* for strcasecmp() */
 
+#include "qthread/visibility.h"
+
 #include "qt_asserts.h"
 #include "qt_envariables.h"
-#include "qt_visibility.h"
 
 static int info = -1;
 
@@ -129,13 +130,21 @@ int INTERNAL qt_internal_unset_envstr(char const *envariable) {
   str = getenv(mod_envariable);
   if (str && *str) {
     if (info) { printf("%s = %s\n", mod_envariable, str); }
+#ifdef _WIN32
+    return _putenv_s(mod_envariable, "");
+#else
     return unsetenv(mod_envariable);
+#endif
   } else {
     snprintf(mod_envariable, 100, "QTHREAD_%s", envariable);
     str = getenv(mod_envariable);
     if (str && *str) {
       if (info) { printf("%s = %s\n", mod_envariable, str); }
+#ifdef _WIN32
+      return _putenv_s(mod_envariable, "");
+#else
       return unsetenv(mod_envariable);
+#endif
     }
   }
   if (info) { printf("[QT|QTHREAD]_%s = (unset)\n", envariable); }

@@ -1,7 +1,7 @@
 #ifndef QT_ENVARIABLES_H
 #define QT_ENVARIABLES_H
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 char const INTERNAL *qt_internal_get_env_str(char const *envariable,
                                              char const *dflt);

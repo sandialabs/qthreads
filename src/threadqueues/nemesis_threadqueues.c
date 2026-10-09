@@ -7,6 +7,7 @@
 
 /* API Headers */
 #include "qthread/qthread.h"
+#include "qthread/visibility.h"
 
 /* Internal Headers */
 #include "qt_asserts.h"
@@ -18,7 +19,6 @@
 #include "qt_subsystems.h"
 #include "qt_threadqueue_scheduler.h"
 #include "qt_threadqueues.h"
-#include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from

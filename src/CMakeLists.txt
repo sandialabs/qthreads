@@ -14,19 +14,22 @@ set(QTHREADS_TIMER_TYPE gettimeofday CACHE STRING "Which timer implementation to
 # due to an unresolved bug in our fastcontext code.
 if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64" OR
+    "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm64" OR
+    "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ARM64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "arm" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "riscv64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i486" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i586" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686" OR
+    "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc")
   set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
 else()
-  message(WARNING "No fast context swap available on this system, falling back to the system-provided one.")
+  message(WARNING "No fast context swap available on this architecture (${CMAKE_SYSTEM_PROCESSOR}), falling back to the system-provided one.")
   set(QTHREADS_CONTEXT_SWAP_IMPL system CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
 endif()
 set(QTHREADS_HWLOC_GET_TOPOLOGY_FUNCTION "" CACHE STRING "function to get hwloc topology (otherwise uses hwloc_topology_init and hwloc_topology_load)")
@@ -110,6 +113,11 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD" OR
     "${CMAKE_SYSTEM_NAME}" STREQUAL "kFreeBSD" OR
     "${CMAKE_SYSTEM_NAME}" STREQUAL "MidnightBSD")
   target_link_libraries(qthread PUBLIC "stdthreads")
+endif()
+
+# Windows symbol visibility
+if (WIN32)
+  target_compile_definitions(qthread PRIVATE QTHREADS_BUILDING_DLL)
 endif()
 
 if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "binders")

@@ -10,11 +10,11 @@
 #include "fastcontext/taskimpl.h"
 
 #include "qthread/common.h"
+#include "qthread/visibility.h"
 
 #include "qt_asserts.h"
 #include "qt_macros.h"
 #include "qt_prefetch.h"
-#include "qt_visibility.h"
 
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32 ||                              \
   QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64

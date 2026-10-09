@@ -4,10 +4,11 @@
 
 #include <sys/types.h> /* for ssize_t (according to P90) */
 
+#include "qthread/visibility.h"
+
 #include "qt_filters.h"
 #include "qt_mpool.h"
 #include "qt_qthread_t.h" /* for qthread_t */
-#include "qt_visibility.h"
 
 typedef filter_code (*qt_threadqueue_filter_f)(qthread_t *);
 

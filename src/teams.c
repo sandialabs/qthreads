@@ -4,6 +4,9 @@
 /* System Headers */
 #include <stdio.h>
 
+/* Public Headers */
+#include "qthread/visibility.h"
+
 /* Internal Headers */
 #include "qt_asserts.h"
 #include "qt_expect.h"
@@ -13,7 +16,6 @@
 #include "qt_qthread_struct.h"
 #include "qt_subsystems.h"
 #include "qt_teams.h"
-#include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
 
 /* Memory management macros */

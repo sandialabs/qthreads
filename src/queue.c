@@ -1,4 +1,5 @@
 #include "qthread/qthread.h"
+#include "qthread/visibility.h"
 
 #include "qt_alloc.h"
 #include "qt_asserts.h"
@@ -7,7 +8,6 @@
 #include "qt_qthread_struct.h" /* to pass data back to worker */
 #include "qt_subsystems.h"     /* for qthread_internal_cleanup() */
 #include "qt_threadstate.h"
-#include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
 
 #include "qt_queue.h"

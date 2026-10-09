@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 void INTERNAL *qt_malloc(size_t size);
 

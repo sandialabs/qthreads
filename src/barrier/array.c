@@ -10,7 +10,6 @@
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_barrier.h"
-#include "qt_visibility.h"
 
 #if 0
 #define WTYPE syncvar_t

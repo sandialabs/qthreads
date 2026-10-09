@@ -12,7 +12,6 @@
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_mpool.h"
-#include "qt_visibility.h"
 
 /* The Datatype */
 struct qt_barrier_s {

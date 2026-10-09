@@ -1,10 +1,11 @@
 #ifndef QTHREAD_INTERNAL_FEB_H
 #define QTHREAD_INTERNAL_FEB_H
 
+#include "qthread/visibility.h"
+
 #include "qt_filters.h" /* for filter_code */
 #include "qt_hash.h"    /* for qt_key_t */
 #include "qt_qthread_t.h"
-#include "qt_visibility.h"
 
 typedef void (*qt_feb_callback_f)(qt_key_t addr,
                                   qthread_f f,
