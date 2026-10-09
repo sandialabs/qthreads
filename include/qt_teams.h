@@ -1,9 +1,10 @@
 #ifndef QT_TEAMS_H
 #define QT_TEAMS_H
 
-#include "qt_qthread_t.h"
-#include "qt_visibility.h"
 #include "qthread/sinc.h"
+#include "qthread/visibility.h"
+
+#include "qt_qthread_t.h"
 
 /* flags for teams (must be different bits) */
 #define QTHREAD_TEAM_DEAD (1 << 0)

@@ -112,6 +112,11 @@ if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD" OR
   target_link_libraries(qthread PUBLIC "stdthreads")
 endif()
 
+# Windows symbol visibility
+if (WIN32)
+  target_compile_definitions(qthread PRIVATE QTHREADS_BUILDING_DLL)
+endif()
+
 if ("${QTHREADS_TOPOLOGY}" STREQUAL "hwloc" OR "${QTHREADS_TOPOLOGY}" STREQUAL "binders")
   find_package(hwloc REQUIRED)
   target_include_directories(qthread PRIVATE "${hwloc_INCLUDE_DIR}")

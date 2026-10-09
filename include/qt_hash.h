@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,6 +1,6 @@
 #include <stdarg.h> /* for the qt_makectxt prototype */
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 #define setcontext(u) qt_setmctxt(&(u)->mc)
 #define getcontext(u) qt_getmctxt(&(u)->mc)

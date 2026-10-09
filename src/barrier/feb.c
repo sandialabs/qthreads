@@ -6,6 +6,7 @@
 /* Public Headers */
 #include "qthread/barrier.h"
 #include "qthread/qthread.h"
+#include "qthread/visibility.h"
 
 /* Internal Headers */
 #include "qt_asserts.h"
@@ -15,7 +16,6 @@
 #include "qt_macros.h"
 #include "qt_mpool.h"
 #include "qt_subsystems.h"
-#include "qt_visibility.h"
 
 struct qt_barrier_s {
   aligned_t in_gate;

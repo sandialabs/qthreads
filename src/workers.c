@@ -1,16 +1,14 @@
 /* The API */
 #include "qthread/qthread.h"
 
-/* System Headers */
+/* Public Headers */
+#include "qthread/visibility.h"
 
 /* Internal Headers */
 #include "qt_asserts.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_shepherd_innards.h"
-#include "qt_visibility.h"
 #include "qthread_innards.h" /* for qlib */
-
-// #include "qt_qthread_struct.h"
 
 int API_FUNC qthread_disable_worker(qthread_worker_id_t const w) {
   assert(qthread_library_initialized);

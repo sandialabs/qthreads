@@ -19,6 +19,9 @@
 #define VALGRIND_MEMPOOL_FREE(a, b)
 #endif
 
+/* Public Headers */
+#include "qthread/visibility.h"
+
 /* Internal Includes */
 #include "qt_alloc.h"
 #include "qt_asserts.h"
@@ -29,7 +32,6 @@
 #include "qt_macros.h"
 #include "qt_mpool.h"
 #include "qt_subsystems.h"
-#include "qt_visibility.h"
 
 /* Seems SLIGHTLY faster without TLS, and a whole lot safer and cleaner */
 #ifdef TLS

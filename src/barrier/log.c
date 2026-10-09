@@ -11,14 +11,13 @@
 /* Public Headers */
 #include "qthread/barrier.h"
 #include "qthread/qthread.h"
+#include "qthread/visibility.h"
 
 /* Internal Headers */
 #include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_barrier.h"
 #include "qt_initialized.h" /* for qthread_library_initialized */
-#include "qt_visibility.h"
-#include "qthread/qthread.h"
 
 struct qt_barrier_s {
   int count;            // size of barrier

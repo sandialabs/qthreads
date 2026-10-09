@@ -1,7 +1,7 @@
 #ifndef QT_BARRIER_H
 #define QT_BARRIER_H
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 /* these two calls assume that we're using a/the global barrier */
 void qt_global_barrier(void);

@@ -11,6 +11,7 @@
 
 /* Public Headers */
 #include "qthread/qarray.h"
+#include "qthread/visibility.h"
 
 /* Local Headers */
 #include "qt_affinity.h"
@@ -19,7 +20,6 @@
 #include "qt_gcd.h" /* for qt_lcm() */
 #include "qt_int_ceil.h"
 #include "qt_shepherd_innards.h" /* for shep_to_node */
-#include "qt_visibility.h"
 
 static unsigned short pageshift = 0;
 static aligned_t *chunk_distribution_tracker = NULL;

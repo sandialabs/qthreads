@@ -7,12 +7,12 @@
 #include <qthread/cacheline.h>
 #include <qthread/qthread.h>
 #include <qthread/qutil.h>
+#include <qthread/visibility.h>
 
 /* Internal Headers */
 #include "qt_alloc.h"
 #include "qt_asserts.h" /* for assert() toggling */
 #include "qt_int_log.h"
-#include "qt_visibility.h"
 
 #ifndef MT_LOOP_CHUNK
 #define MT_LOOP_CHUNK 10000

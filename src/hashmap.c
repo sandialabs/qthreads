@@ -3,7 +3,9 @@
 #include <sys/types.h>
 
 /* Qthread Headers */
+#include <qthread/cacheline.h>
 #include <qthread/hash.h>
+#include <qthread/visibility.h>
 
 /* Internal Headers */
 #include "qt_alloc.h"
@@ -11,8 +13,6 @@
 #include "qt_atomics.h"
 #include "qt_hash.h"
 #include "qt_prefetch.h"
-#include "qt_visibility.h"
-#include "qthread/cacheline.h"
 
 #ifndef QT_HASH_CAST
 #define QT_HASH_CAST qt_key_t

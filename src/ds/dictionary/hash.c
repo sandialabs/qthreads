@@ -1,9 +1,7 @@
 /* Qthreads Headers */
 #include <qthread/hash.h>
 #include <qthread/qthread.h>
-
-/* Internal Headers */
-#include "qt_visibility.h"
+#include <qthread/visibility.h>
 
 /* these functions are based on http://burtleburtle.net/bob/hash/evahash.html */
 #define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))

@@ -1,7 +1,7 @@
 #ifndef QT_HAZARDPTRS_H
 #define QT_HAZARDPTRS_H
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 #define HAZARD_PTRS_PER_SHEP 2
 

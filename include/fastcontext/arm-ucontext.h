@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "qt_visibility.h"
+#include "qthread/visibility.h"
 
 #define setcontext(u) qt_setmctxt(&(u)->mc)
 #define getcontext(u) qt_getmctxt(&(u)->mc)

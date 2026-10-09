@@ -17,6 +17,7 @@
 #endif
 
 #include <qthread/common.h>
+#include <qthread/visibility.h>
 
 #include "qt_arithmetic.h"
 #include "qt_asserts.h"
@@ -24,7 +25,6 @@
 #include "qt_branching.h"
 #include "qt_macros.h"
 #include "qt_threadpool.h"
-#include "qt_visibility.h"
 
 // 3d-bit thread indices are good enough.
 // At least for the forseeable future we never

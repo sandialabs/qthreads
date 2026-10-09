@@ -6,6 +6,9 @@
 
 #include <pthread.h>
 
+/* External Headers */
+#include "qthread/visibility.h"
+
 /* Internal Headers */
 #include "qt_asserts.h"
 #include "qt_atomics.h"
@@ -13,7 +16,6 @@
 #include "qt_hash.h"
 #include "qt_qthread_t.h"
 #include "qt_threadqueues.h"
-#include "qt_visibility.h"
 
 typedef struct qlib_s {
   unsigned int nshepherds;

@@ -1,14 +1,13 @@
-#ifndef QT_VISIBILITY_H
-#define QT_VISIBILITY_H
+#ifndef QTHREAD_VISIBILITY_H
+#define QTHREAD_VISIBILITY_H
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-#warning Building on windows has never been tested
-#ifdef BUILDING_DLL
+#ifdef QTHREADS_BUILDING_DLL
 #ifdef __GNUC__
 #define API_FUNC __attribute__((dllexport))
 #else
 #define API_FUNC                                                               \
-  __declspec(dllexport) // Note: actually gcc seems to also supports this
+  __declspec(dllexport) // Note: actually gcc seems to also support this
                         // syntax.
 #endif
 #else
@@ -16,10 +15,10 @@
 #define API_FUNC __attribute__((dllimport))
 #else
 #define API_FUNC                                                               \
-  __declspec(dllimport) // Note: actually gcc seems to also supports this
+  __declspec(dllimport) // Note: actually gcc seems to also support this
                         // syntax.
 #endif
-#endif /* ifdef BUILDING_DLL */
+#endif /* ifdef QTHREADS_BUILDING_DLL */
 #define INTERNAL
 #else /* if defined(_WIN32) || defined(__CYGWIN__) */
 #if __GNUC__ >= 4
@@ -31,5 +30,5 @@
 #endif
 #endif /* if defined(_WIN32) || defined(__CYGWIN__) */
 
-#endif /* ifndef QT_VISIBILITY_H */
+#endif /* ifndef QTHREAD_VISIBILITY_H */
 /* vim:set expandtab: */

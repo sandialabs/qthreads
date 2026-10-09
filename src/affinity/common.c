@@ -1,11 +1,12 @@
 #include <stdlib.h>
 
+#include "qthread/qthread.h"
+#include "qthread/visibility.h"
+
 #include "qt_affinity.h"
 #include "qt_envariables.h"
 #include "qt_output_macros.h"
 #include "qt_shepherd_innards.h"
-#include "qt_visibility.h"
-#include "qthread/qthread.h"
 
 #ifndef QTHREAD_SHEPHERD_TYPEDEF
 #define QTHREAD_SHEPHERD_TYPEDEF

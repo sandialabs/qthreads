@@ -1,8 +1,9 @@
 #ifndef QT_QUEUE_H
 #define QT_QUEUE_H
 
+#include "qthread/visibility.h"
+
 #include "qt_qthread_t.h"
-#include "qt_visibility.h"
 
 /* This queue can use the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf

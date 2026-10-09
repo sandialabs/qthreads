@@ -1,11 +1,10 @@
 /* Portions of this file are Copyright (c) 2025 Tactical Computing Labs, LLC;
  * see COPYING */
 #include "qthread/common.h"
+#include "qthread/visibility.h"
 
 #include <stddef.h>
 #include <stdint.h>
-
-#include "qt_visibility.h"
 
 #define setcontext(u) qt_setmctxt(&(u)->mc)
 #define getcontext(u) qt_getmctxt(&(u)->mc)

@@ -4,6 +4,7 @@
 /* The API */
 #include "qthread/qthread.h"
 #include <qthread/hash.h>
+#include <qthread/visibility.h>
 
 /* Internal Headers */
 #include "qt_alloc.h"
@@ -11,7 +12,6 @@
 #include "qt_feb.h"
 #include "qt_hash.h"
 #include "qt_locks.h"
-#include "qt_visibility.h"
 
 #define SPINLOCK_IS_RECURSIVE (-1)
 #define SPINLOCK_IS_NOT_RECURSIVE (-2)

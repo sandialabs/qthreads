@@ -5,10 +5,9 @@
 #include <stdio.h>
 #endif
 
-#include "qt_visibility.h"
-
-#include <qthread/cacheline.h>
-#include <qthread/common.h>
+#include "qthread/cacheline.h"
+#include "qthread/common.h"
+#include "qthread/visibility.h"
 
 #define HAVE_GCC_INLINE_ASSEMBLY
 

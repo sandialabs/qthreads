@@ -3,9 +3,10 @@
 #include <string.h>
 #include <strings.h> /* for strcasecmp() */
 
+#include "qthread/visibility.h"
+
 #include "qt_asserts.h"
 #include "qt_envariables.h"
-#include "qt_visibility.h"
 
 static int info = -1;
 
