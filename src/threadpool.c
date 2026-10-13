@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #if defined(__STDC_NO_THREADS__) || defined(__OpenBSD__) ||                    \
-  defined(__DragonFly__)
+  defined(__DragonFly__) || (defined(_WIN32) && defined(__GNUC__))
 #define QPOOL_USE_PTHREADS
 #endif
 
