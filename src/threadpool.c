@@ -19,6 +19,7 @@
 #include <qthread/common.h>
 #include <qthread/visibility.h>
 
+#include "qt_aligned_alloc.h"
 #include "qt_arithmetic.h"
 #include "qt_asserts.h"
 #include "qt_atomic_wait.h"
@@ -261,7 +262,7 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
     return POOL_INIT_ALREADY_INITIALIZED;
   size_t alignment = QTHREAD_MAX((size_t)64u, get_cache_line_size());
   size_t size = (size_t)num_threads * alignment;
-  char *buffer = aligned_alloc(alignment, size);
+  char *buffer = QT_ALIGNED_ALLOC(alignment, size);
   hw_pool_init_status retval;
   uint32_t i = 0u;
   if unlikely (!buffer) {
@@ -341,7 +342,7 @@ cleanup_threads:
 release_buffer:
 #endif
   atomic_store_explicit(&hw_pool.threads, NULL, memory_order_relaxed);
-  free(buffer);
+  QT_ALIGNED_FREE(buffer);
 release_pool:
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
   return retval;
@@ -374,7 +375,7 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   }
 
   atomic_store_explicit(&hw_pool.threads, NULL, memory_order_relaxed);
-  free(buffer);
+  QT_ALIGNED_FREE(buffer);
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
 }
 
