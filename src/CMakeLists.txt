@@ -107,6 +107,11 @@ set_target_properties(
 # Link pthreads.
 target_link_libraries(qthread PUBLIC Threads::Threads)
 
+if(WIN32)
+  # Need to link "synchronization" for futexes on Windows.
+  target_link_libraries(qthread PRIVATE synchronization)
+endif()
+
 # The c11 threading library has to be linked
 # via a separate library on FreeBSD-derived OSs.
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD" OR
