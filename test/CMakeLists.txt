@@ -14,6 +14,11 @@ if (${QTHREADS_BUILD_TESTS})
     target_link_libraries(${name} m)
     add_test(NAME ${name} COMMAND ${name} ${ARGN})
     set_property(TEST ${name} PROPERTY ENVIRONMENT "QT_NUM_SHEPHERDS=2;QT_NUM_WORKERS_PER_SHEPHERD=1")
+    if(WIN32)
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>"
+        "PATH=path_list_append:$<TARGET_FILE_DIR:qthreads_test_rng>")
+    endif()
     set_property(TEST ${name} PROPERTY C_STANDARD "C11")
   endfunction()
 
@@ -24,6 +29,11 @@ if (${QTHREADS_BUILD_TESTS})
     target_link_libraries(${name} m)
     add_test(NAME ${name} COMMAND ${name} ${ARGN})
     set_property(TEST ${name} PROPERTY ENVIRONMENT "QT_NUM_SHEPHERDS=2;QT_NUM_WORKERS_PER_SHEPHERD=1")
+    if(WIN32)
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>"
+        "PATH=path_list_append:$<TARGET_FILE_DIR:qthreads_test_rng>")
+    endif()
     set_property(TEST ${name} PROPERTY C_STANDARD "C11")
   endfunction()
 
