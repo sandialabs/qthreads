@@ -64,8 +64,8 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
 #endif
 
   *--sp = 0; /* return address */
-  ucp->mc.mc_eip = (long)func;
-  ucp->mc.mc_esp = (long)sp;
+  ucp->mc.mc_eip = (uintptr_t)func;
+  ucp->mc.mc_esp = (uintptr_t)sp;
 }
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM
