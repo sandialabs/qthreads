@@ -29,3 +29,4 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   add_subdirectory(test)
 endif()
 
+set(QTHREADS_MINIMUM_PORTABLE OFF CACHE BOOL "Build a heavily restricted subset of Qthreads, useful debugging/developing support for new platforms.")

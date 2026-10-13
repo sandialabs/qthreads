@@ -86,8 +86,17 @@ set(QTHREADS_SOURCES
   patterns/wavefront.c
 )
 
-add_library(qthread ${QTHREADS_SOURCES})
+set(QTHREADS_MINIMAL_SOURCES
+  threadpool.c
+)
 
+if(QTHREADS_MINIMUM_PORTABLE)
+  add_library(qthread ${QTHREADS_MINIMAL_SOURCES})
+else()
+  add_library(qthread ${QTHREADS_SOURCES} ${QTHREADS_MINIMAL_SOURCES})
+endif()
+
+# Note: fastcontext is included in the minimal sources too.
 if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
   target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
 elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
