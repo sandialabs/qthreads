@@ -726,6 +726,22 @@ jobs:
         ctest -C Release --output-on-failure || exit /b
       shell: cmd
 
+  windows_gcc:
+    continue-on-error: true
+    strategy:
+      matrix:
+        image: [windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.image }}
+    steps:
+    - uses: actions/checkout@v7
+    - run: |
+        mkdir build
+        cd build
+        cmake -G "MinGW Makefiles" -DQTHREADS_MINIMUM_PORTABLE=ON ..
+        mingw32-make -j2
+        mingw32-make test
+      shell: bash
+
   mac:
     continue-on-error: true
     strategy:
