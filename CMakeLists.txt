@@ -22,6 +22,10 @@ include(CMakePackageConfigHelpers)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+if(MSVC)
+  add_compile_options(/experimental:c11atomics)
+endif()
+
 add_subdirectory(src)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
