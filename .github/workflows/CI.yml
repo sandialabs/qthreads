@@ -708,6 +708,24 @@ jobs:
               done
           done
 
+  windows_msvc:
+    continue-on-error: true
+    strategy:
+      matrix:
+        image: [windows-2025-vs2026, windows-11-vs2026-arm]
+    runs-on: ${{ matrix.image }}
+    steps:
+    - uses: actions/checkout@v7
+    - uses: ilammy/msvc-dev-cmd@v1
+    - run: |
+        mkdir build
+        cd build
+        :: Manually specify the asm compiler since otherwise it picks up the gnu assembler for some reason.
+        cmake -G "Visual Studio 18 2026" -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON -DCMAKE_ASM_COMPILER=ml64 .. || exit /b
+        cmake --build . --verbose --config Release --parallel 2 || exit /b
+        ctest -C Release --output-on-failure || exit /b
+      shell: cmd
+
   mac:
     continue-on-error: true
     strategy:
