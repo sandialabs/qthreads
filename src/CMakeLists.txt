@@ -96,13 +96,15 @@ else()
   add_library(qthread ${QTHREADS_SOURCES} ${QTHREADS_MINIMAL_SOURCES})
 endif()
 
-# Note: fastcontext is included in the minimal sources too.
-if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
-  target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
-elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
-  target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
-else()
-  message(FATAL_ERROR "The specified context swap implementation does not match any known implementations.")
+# Note: fastcontext is included in the minimal sources for gcc and clang on Windows.
+if(NOT QTHREADS_MINIMUM_PORTABLE OR NOT MSVC)
+  if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
+    target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
+  elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
+    target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
+  else()
+    message(FATAL_ERROR "The specified context swap implementation does not match any known implementations.")
+  endif()
 endif()
 
 target_include_directories(qthread
