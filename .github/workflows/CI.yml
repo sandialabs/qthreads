@@ -712,7 +712,13 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        image: [windows-2025-vs2026, windows-11-vs2026-arm]
+        include:
+          - image: windows-2025-vs2026
+            env:
+              ASM: ml64
+          - image: windows-11-vs2026-arm
+            env:
+              ASM: armasm64
     runs-on: ${{ matrix.image }}
     steps:
     - uses: actions/checkout@v7
@@ -721,7 +727,7 @@ jobs:
         mkdir build
         cd build
         :: Manually specify the asm compiler since otherwise it picks up the gnu assembler for some reason.
-        cmake -G "Visual Studio 18 2026" -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON -DCMAKE_ASM_COMPILER=ml64 .. || exit /b
+        cmake -G "Visual Studio 18 2026" -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON -DCMAKE_ASM_COMPILER=%ASM% .. || exit /b
         cmake --build . --verbose --config Release --parallel 2 || exit /b
         ctest -C Release --output-on-failure || exit /b
       shell: cmd
