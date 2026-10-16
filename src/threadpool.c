@@ -174,7 +174,7 @@ static pooled_thread_work worker_wait_for_work(pooled_thread_control *control) {
     qt_wait_on_address(&control->waiting_flag, qt_atomic_wait_empty);
     if likely (qt_atomic_wait_load(&control->waiting_flag) !=
                qt_atomic_wait_empty) {
-      atomic_store_explicit(&control->waiting_flag, 0u, memory_order_relaxed);
+      qt_atomic_wait_store(&control->waiting_flag, 0u);
       return load_work(control);
     }
     // TODO: pause instruction here? May not be necessary since we're already
