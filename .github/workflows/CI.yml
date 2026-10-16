@@ -744,7 +744,7 @@ jobs:
     - run: |
         mkdir build
         cd build
-        :: Manually specify the asm compiler since otherwise it picks up the gnu assembler for some reason.
+        :: No need to specify the assembler since clang does the assembly itself.
         cmake -G "Visual Studio 18 2026" -T ClangCL -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON .. || exit /b
         cmake --build . --verbose --config Release --parallel 2 || exit /b
         ctest -C Release --output-on-failure || exit /b
