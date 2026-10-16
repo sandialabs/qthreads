@@ -11,9 +11,20 @@ if (${QTHREADS_BUILD_TESTS})
     add_executable(${name} "${name}.c")
     target_link_libraries(${name} qthread)
     target_link_libraries(${name} qthreads_test_rng)
-    target_link_libraries(${name} m)
+    if(NOT MSVC)
+      target_link_libraries(${name} m)
+    endif()
     add_test(NAME ${name} COMMAND ${name} ${ARGN})
     set_property(TEST ${name} PROPERTY ENVIRONMENT "QT_NUM_SHEPHERDS=2;QT_NUM_WORKERS_PER_SHEPHERD=1")
+    if(WIN32)
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>"
+        "PATH=path_list_append:$<TARGET_FILE_DIR:qthreads_test_rng>")
+    else()
+      # Prioritize the built libqthread.so for testing over any previous installed one.
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIVICATION
+        "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>")
+    endif()
     set_property(TEST ${name} PROPERTY C_STANDARD "C11")
   endfunction()
 
@@ -21,10 +32,21 @@ if (${QTHREADS_BUILD_TESTS})
     add_executable(${name} "${name}.cpp")
     target_link_libraries(${name} qthread)
     target_link_libraries(${name} qthreads_test_rng)
-    target_link_libraries(${name} m)
+    if(NOT MSVC)
+      target_link_libraries(${name} m)
+    endif()
     add_test(NAME ${name} COMMAND ${name} ${ARGN})
     set_property(TEST ${name} PROPERTY ENVIRONMENT "QT_NUM_SHEPHERDS=2;QT_NUM_WORKERS_PER_SHEPHERD=1")
-    set_property(TEST ${name} PROPERTY C_STANDARD "C11")
+    if(WIN32)
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>"
+        "PATH=path_list_append:$<TARGET_FILE_DIR:qthreads_test_rng>")
+    else()
+      # Prioritize the built libqthread.so for testing over any previous installed one.
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIVICATION
+        "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>")
+    endif()
+    set_property(TEST ${name} PROPERTY CXX_STANDARD "17")
   endfunction()
 
   add_subdirectory(basics)

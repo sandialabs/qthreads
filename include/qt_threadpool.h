@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include <qthread/common.h>
+#include <qthread/visibility.h>
 
 typedef int (*qt_threadpool_func_type)(void *);
 
@@ -16,8 +17,8 @@ typedef enum {
   POOL_INIT_ERROR
 } hw_pool_init_status;
 
-hw_pool_init_status hw_pool_init(uint32_t num_threads);
-void hw_pool_destroy();
-void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg);
+API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads);
+API_FUNC void hw_pool_destroy();
+API_FUNC void hw_pool_run_on_all(qt_threadpool_func_type func, void *arg);
 
 #endif

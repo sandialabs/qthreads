@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #if defined(__STDC_NO_THREADS__) || defined(__OpenBSD__) ||                    \
-  defined(__DragonFly__)
+  defined(__DragonFly__) || (defined(_WIN32) && defined(__GNUC__))
 #define QPOOL_USE_PTHREADS
 #endif
 
@@ -19,6 +19,7 @@
 #include <qthread/common.h>
 #include <qthread/visibility.h>
 
+#include "qt_aligned_alloc.h"
 #include "qt_arithmetic.h"
 #include "qt_asserts.h"
 #include "qt_atomic_wait.h"
@@ -174,7 +175,7 @@ static pooled_thread_work worker_wait_for_work(pooled_thread_control *control) {
     qt_wait_on_address(&control->waiting_flag, qt_atomic_wait_empty);
     if likely (qt_atomic_wait_load(&control->waiting_flag) !=
                qt_atomic_wait_empty) {
-      atomic_store_explicit(&control->waiting_flag, 0u, memory_order_relaxed);
+      qt_atomic_wait_store(&control->waiting_flag, 0u);
       return load_work(control);
     }
     // TODO: pause instruction here? May not be necessary since we're already
@@ -261,8 +262,8 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
     return POOL_INIT_ALREADY_INITIALIZED;
   size_t alignment = QTHREAD_MAX((size_t)64u, get_cache_line_size());
   size_t size = (size_t)num_threads * alignment;
-  char *buffer = aligned_alloc(alignment, size);
-  hw_pool_init_status retval;
+  char *buffer = QT_ALIGNED_ALLOC(alignment, size);
+  hw_pool_init_status retval = POOL_INIT_ERROR;
   uint32_t i = 0u;
   if unlikely (!buffer) {
     retval = POOL_INIT_OUT_OF_MEMORY;
@@ -273,10 +274,7 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
   int status;
   pthread_attr_t attr;
   status = pthread_attr_init(&attr);
-  if unlikely (status) {
-    retval = POOL_INIT_ERROR;
-    goto release_buffer;
-  }
+  if unlikely (status) { goto release_buffer; }
 #endif
   while (i < num_threads) {
     pooled_thread_control *thread_control =
@@ -341,7 +339,7 @@ cleanup_threads:
 release_buffer:
 #endif
   atomic_store_explicit(&hw_pool.threads, NULL, memory_order_relaxed);
-  free(buffer);
+  QT_ALIGNED_FREE(buffer);
 release_pool:
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
   return retval;
@@ -374,7 +372,7 @@ API_FUNC QTHREAD_SUPPRESS_MSAN void hw_pool_destroy() {
   }
 
   atomic_store_explicit(&hw_pool.threads, NULL, memory_order_relaxed);
-  free(buffer);
+  QT_ALIGNED_FREE(buffer);
   atomic_store_explicit(&hw_pool.num_threads, 0, memory_order_release);
 }
 

@@ -86,14 +86,25 @@ set(QTHREADS_SOURCES
   patterns/wavefront.c
 )
 
-add_library(qthread ${QTHREADS_SOURCES})
+set(QTHREADS_MINIMAL_SOURCES
+  threadpool.c
+)
 
-if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
-  target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
-elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
-  target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
+if(QTHREADS_MINIMUM_PORTABLE)
+  add_library(qthread ${QTHREADS_MINIMAL_SOURCES})
 else()
-  message(FATAL_ERROR "The specified context swap implementation does not match any known implementations.")
+  add_library(qthread ${QTHREADS_SOURCES} ${QTHREADS_MINIMAL_SOURCES})
+endif()
+
+# Note: fastcontext is included in the minimal sources for gcc and clang on Windows.
+if(NOT QTHREADS_MINIMUM_PORTABLE OR NOT MSVC)
+  if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
+    target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
+  elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
+    target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
+  else()
+    message(FATAL_ERROR "The specified context swap implementation does not match any known implementations.")
+  endif()
 endif()
 
 target_include_directories(qthread
@@ -106,6 +117,13 @@ set_target_properties(
              SOVERSION ${PROJECT_VERSION_MAJOR})
 # Link pthreads.
 target_link_libraries(qthread PUBLIC Threads::Threads)
+
+if(WIN32)
+  # Need to link "synchronization" for futexes on Windows.
+  target_link_libraries(qthread PRIVATE synchronization)
+  # Make the windows.h include for their futex equivalent less massive.
+  target_compile_definitions(qthread PRIVATE WIN32_LEAN_AND_MEAN)
+endif()
 
 # The c11 threading library has to be linked
 # via a separate library on FreeBSD-derived OSs.

@@ -270,16 +270,24 @@ while (0)
   do { qassert(umtx_wakeup((a), 1), 0); } while (0)
 
 #elif defined(QTHREADS_WINDOWS)
+// Needs to be included before synchapi.h when using MSVC.
+// We define WIN32_LEAN_AND_MEAN in the build system
+// so this include isn't as massive.
+#include <windows.h>
 // use WaitOnAddress/WakeByAddressSingle/WakeByAddressAll
 #include <synchapi.h>
+
 #define qt_wait_on_address(a, expected)                                        \
-  do { qassert(WaitOnAddress((a), (expected), 4, INFINITE), TRUE); } while (0)
+  do {                                                                         \
+    uint32_t e = (expected);                                                   \
+    qassert(WaitOnAddress((void *volatile)(a), &e, 4, 0xFFFFFFFF), TRUE);      \
+  } while (0)
 
 #define qt_wake_all(a)                                                         \
-  do { WakeByAddressAll(a); } while (0)
+  do { WakeByAddressAll((void *volatile)(a)); } while (0)
 
 #define qt_wake_one(a)                                                         \
-  do { WakeByAddressSingle(a); } while (0)
+  do { WakeByAddressSingle((void *volatile)(a)); } while (0)
 
 #elif defined(__sun)
 // Solaris supposedly provides something futex-like via "user-level adaptive
