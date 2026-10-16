@@ -270,6 +270,10 @@ while (0)
   do { qassert(umtx_wakeup((a), 1), 0); } while (0)
 
 #elif defined(QTHREADS_WINDOWS)
+// Needs to be included before synchapi.h when using MSVC.
+// We define WIN32_LEAN_AND_MEAN in the build system
+// so this include isn't as massive.
+#include <windows.h>
 // use WaitOnAddress/WakeByAddressSingle/WakeByAddressAll
 #include <synchapi.h>
 

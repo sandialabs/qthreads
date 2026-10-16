@@ -110,6 +110,8 @@ target_link_libraries(qthread PUBLIC Threads::Threads)
 if(WIN32)
   # Need to link "synchronization" for futexes on Windows.
   target_link_libraries(qthread PRIVATE synchronization)
+  # Make the windows.h include for their futex equivalent less massive.
+  target_compile_definitions(qthread PRIVATE WIN32_LEAN_AND_MEAN)
 endif()
 
 # The c11 threading library has to be linked
