@@ -20,6 +20,10 @@ if (${QTHREADS_BUILD_TESTS})
       set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>"
         "PATH=path_list_append:$<TARGET_FILE_DIR:qthreads_test_rng>")
+    else()
+      # Prioritize the built libqthread.so for testing over any previous installed one.
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIVICATION
+        "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>")
     endif()
     set_property(TEST ${name} PROPERTY C_STANDARD "C11")
   endfunction()
@@ -37,6 +41,10 @@ if (${QTHREADS_BUILD_TESTS})
       set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIFICATION
         "PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>"
         "PATH=path_list_append:$<TARGET_FILE_DIR:qthreads_test_rng>")
+    else()
+      # Prioritize the built libqthread.so for testing over any previous installed one.
+      set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIVICATION
+        "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>")
     endif()
     set_property(TEST ${name} PROPERTY C_STANDARD "C11")
   endfunction()
