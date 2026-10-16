@@ -263,7 +263,7 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
   size_t alignment = QTHREAD_MAX((size_t)64u, get_cache_line_size());
   size_t size = (size_t)num_threads * alignment;
   char *buffer = QT_ALIGNED_ALLOC(alignment, size);
-  hw_pool_init_status retval;
+  hw_pool_init_status retval = POOL_INIT_ERROR;
   uint32_t i = 0u;
   if unlikely (!buffer) {
     retval = POOL_INIT_OUT_OF_MEMORY;
@@ -274,10 +274,7 @@ API_FUNC hw_pool_init_status hw_pool_init(uint32_t num_threads) {
   int status;
   pthread_attr_t attr;
   status = pthread_attr_init(&attr);
-  if unlikely (status) {
-    retval = POOL_INIT_ERROR;
-    goto release_buffer;
-  }
+  if unlikely (status) { goto release_buffer; }
 #endif
   while (i < num_threads) {
     pooled_thread_control *thread_control =
