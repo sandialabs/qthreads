@@ -46,7 +46,7 @@ if (${QTHREADS_BUILD_TESTS})
       set_property(TEST ${name} PROPERTY ENVIRONMENT_MODIVICATION
         "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:qthread>")
     endif()
-    set_property(TEST ${name} PROPERTY C_STANDARD "C11")
+    set_property(TEST ${name} PROPERTY CXX_STANDARD "17")
   endfunction()
 
   add_subdirectory(basics)
