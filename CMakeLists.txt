@@ -22,7 +22,7 @@ include(CMakePackageConfigHelpers)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-if(MSVC)
+if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_compile_options(/experimental:c11atomics)
 endif()
 
