@@ -118,15 +118,17 @@ else()
               /TC
               /P
               /EP
-	      "/Fi${CMAKE_CURRENT_BINARY_DIR}\\asm.S"
-	      "${CMAKE_CURRENT_SOURCE_DIR}\\fastcontext\\asm.S"
+	      /showIncludes
+	      /I"${CMAKE_CURRENT_SOURCE_DIR}/../include"
+	      "/Fi${CMAKE_CURRENT_BINARY_DIR}/asm.asm"
+	      "${CMAKE_CURRENT_SOURCE_DIR}/fastcontext/asm.S"
       COMMENT "Running the C preprocessor on the context swap assembly file."
       VERBATIM
-      BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/asm.S")
+      BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/asm.asm")
     # Make sure there's still a dependency (indirectly) on the asm.S file for the qthread target.
     set_property(SOURCE fastcontext/context.c APPEND PROPERTY
                  OBJECT_DEPENDS fastcontext/asm.S)
-    target_sources(qthread PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/asm.S" fastcontext/context.c)
+    target_sources(qthread PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/asm.asm" fastcontext/context.c)
   else()
     message(FATAL_ERROR "Qthreads does not currently support using Windows fibers as a backend for context swaps.")
   endif()

@@ -10,6 +10,10 @@
 #ifndef QTHREAD_COMMON_H
 #define QTHREAD_COMMON_H
 
+// NOTE! This header has to be safe to include from asm as well,
+// so header includes that might interfere with that need to check
+// QTHREAD_PREPROCESSING_ASM first.
+
 #ifndef __powerpc
 #define BITFIELD_ORDER_REVERSE
 #else
@@ -31,8 +35,10 @@
 #ifdef __GNUC__
 #define QTHREAD_TRAP() __builtin_trap()
 #else
+#ifndef QTHREAD_PREPROCESSING_ASM
 #include "signal.h"
 #define QTHREAD_TRAP() raise(SIGABRT)
+#endif
 #endif
 
 /* Architecture defines */
