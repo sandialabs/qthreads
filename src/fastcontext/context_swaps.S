@@ -2,7 +2,8 @@
 // Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT
 // Portions of this file are Copyright Sandia National Laboratories
 
-#include "qthread/common.h"
+#define QTHREAD_PREPROCESSING_ASM
+#include "../../include/qthread/common.h"
 
 // Some operating systems mangle symbols like this.
 #if defined(__APPLE__) || defined(__CYGWIN32__)
@@ -78,54 +79,88 @@ GET:
  *  x87 SW              status word
  *  x87 CW              control word                                 PRESERVED
  */
+
+// Make these blocks compatible with nasm too.
+#ifdef __NASM_MAJOR__
+#define ptr
+#endif
+
+#ifdef _MSC_VER
+.code
+PUBLIC SET
+PUBLIC GET
+#endif
+
+#ifndef _MSC_VER
+.intel_syntax noprefix
+#endif
+
+#ifdef _MSC_VER
+SET PROC
+#else
 .globl SET
 SET:
+#endif
     // the argument is %rdi, so we do not need to load it from the stack */
 
-    movq    (1*8)(%rdi), %rbp // frame pointer
-    movq    (2*8)(%rdi), %rbx // base pointer
+    mov     rbp, [rdi+8]  // frame pointer
+    mov     rbx, [rdi+16] // base pointer
 
     // extra caller-saved registers in AMD
-    movq    (3*8)(%rdi), %r12
-    movq    (4*8)(%rdi), %r13
-    movq    (5*8)(%rdi), %r14
-    movq    (6*8)(%rdi), %r15
-    ldmxcsr (9*8)(%rdi)       // restore SSE2 control and status word
-    fldcw   ((9*8)+4)(%rdi)   // restore x87 control word
-    movq    (7*8)(%rdi), %rsp // stack pointer
-    pushq   (8*8)(%rdi)       // push new $pc onto stack for `ret`
-    movq    (0*8)(%rdi), %rdi // 1st int arg (arg passing); only necessary for first context swap into a new qthread
+    mov     r12, [rdi+24]
+    mov     r13, [rdi+32]
+    mov     r14, [rdi+40]
+    mov     r15, [rdi+48]
+    ldmxcsr [rdi+72]        // restore SSE2 control and status word
+    fldcw   [rdi+76]        // restore x87 control word
+    mov     rsp, [rdi+56]   // stack pointer
+    push qword ptr [rdi+64] // push new pc onto stack for ret
+    mov     rdi, [rdi]      // 1st int arg (arg passing); only necessary for first context swap into a new qthread
 
-    movq    $1,          %rax // return value (allows us to escape the swapcontext loop)
+    mov     rax, 1 // return value (allows us to escape the swapcontext loop)
     ret
+#ifdef _MSC_VER
+SET ENDP
+#endif
 
+
+#ifdef _MSC_VER
+GET PROC
+#else
 .globl GET
 GET:
-    // arg0 is in %rdi, DO NOT load from stack
-    movq    %rdi, (0*8)(%rdi) // set rdi properly (???)
+#endif
+    mov     [rdi], rdi // Done differently for passing the initial argument.
 
-    movq    %rbp, (1*8)(%rdi) // frame pointer
-    movq    %rbx, (2*8)(%rdi) // base pointer
+    mov     [rdi+8],  rbp // frame pointer
+    mov     [rdi+16], rbx // base pointer
 
     // extra registers in AMD - callee saved
-    movq    %r12, (3*8)(%rdi) // in the __spare__ area
-    movq    %r13, (4*8)(%rdi)
-    movq    %r14, (5*8)(%rdi)
-    movq    %r15, (6*8)(%rdi)
-    stmxcsr (9*8)(%rdi)       // save SSE2 control and status word
-    fnstcw  ((9*8)+4)(%rdi)   // save x86 control word
+    mov     [rdi+24], r12 // in the __spare__ area
+    mov     [rdi+32], r13
+    mov     [rdi+40], r14
+    mov     [rdi+48], r15
+    stmxcsr [rdi+72]      // save SSE2 control and status word
+    fnstcw  [rdi+76]      // save x87 control word
 
     // the following is broken into two instructions
     // because we can only dereference one memory op at a time
-    movq    (%rsp), %rcx
-    movq    %rcx, (8*8)(%rdi)
+    mov     rcx,      [rsp]
+    mov     [rdi+64], rcx
 
     // I don't entirely understand why this is correct
-    leaq    8(%rsp), %rcx     // %rsp
-    movq    %rcx, (7*8)(%rdi)
+    lea     rcx, [rsp+8] // rsp
+    mov     [rdi+56], rcx
 
-    mov     $0, %rax // set return value - success!
+    mov     rax, 0 // set return value - success!
     ret
+#ifdef _MSC_VER
+GET ENDP
+#endif
+
+#ifdef _MSC_VER
+END
+#endif
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 // get FPR and VR use flags with sc 0x7FF3
@@ -381,15 +416,35 @@ SET:
 // X0 - holds pointer to context
 // X1 - X30 - GP registers
 
+// clang-cl's preprocessor doesn't currently work
+// well together with armasm64.
+// Fall back to COFF format, which clang-cl can handle itself.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define QTHREAD_USE_MARMASM
+#endif
+
+#ifdef QTHREAD_USE_MARMASM
+    AREA context_swaps, CODE, READONLY
+    EXPORT SET
+    EXPORT GET
+#endif
+
+#if !defined(__APPLE__) && !(defined(_MSC_VER) && defined(__clang__))
+#define QTHREAD_USE_TYPE_DIRECTIVES
+#endif
+
+#ifdef QTHREAD_USE_MARMASM
+GET PROC
+#else
 .globl GET
 .global GET
-#ifndef __APPLE__
+#ifdef QTHREAD_USE_TYPE_DIRECTIVES
  .type GET, %function
 #else
 .p2align 4
 #endif
-
 GET:
+#endif
     // Store 1 as X0-to-restore
     mov X1, #1
     mov X2, SP
@@ -412,15 +467,22 @@ GET:
     // return 0
     mov X0, #0
     ret
+#ifdef QTHREAD_USE_MARMASM
+GET ENDP
+#endif
 
+#ifdef QTHREAD_USE_MARMASM
+SET PROC
+#else
 .globl SET
 .global SET
-#ifndef __APPLE__
+#ifdef QTHREAD_USE_TYPE_DIRECTIVES
  .type SET, %function
 #else
 .p2align 4
 #endif
 SET:
+#endif
     ldp X1, X2, [X0]
     mov SP, X2
     ldp X29, X30, [X0,#16]
@@ -436,6 +498,13 @@ SET:
 
     mov X0, X1
     ret
+#ifdef QTHREAD_USE_MARMASM
+SET ENDP
+#endif
+
+#ifdef QTHREAD_USE_MARMASM
+    END
+#endif
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM
 /* Register Usage:
