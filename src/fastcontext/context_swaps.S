@@ -459,10 +459,10 @@ GET:
     // Since the context swap call signature doesn't use
     // SVE registers for passing arguments, this is
     // sufficient in that setting too.
-    stp Q8, Q9, [X0,#112]
-    stp Q10, Q11, [X0,#144]
-    stp Q12, Q13, [X0,#176]
-    stp Q14, Q15, [X0,#208]
+    stp D8, D9, [X0,#112]
+    stp D10, D11, [X0,#128]
+    stp D12, D13, [X0,#144]
+    stp D14, D15, [X0,#160]
 
     // return 0
     mov X0, #0
@@ -491,10 +491,10 @@ SET:
     ldp X23, X24, [X0,#64]
     ldp X25, X26, [X0,#80]
     ldp X27, X28, [X0,#96]
-    ldp Q8, Q9, [X0,#112]
-    ldp Q10, Q11, [X0,#144]
-    ldp Q12, Q13, [X0,#176]
-    ldp Q14, Q15, [X0,#208]
+    ldp D8, D9, [X0,#112]
+    ldp D10, D11, [X0,#128]
+    ldp D12, D13, [X0,#144]
+    ldp D14, D15, [X0,#160]
 
     mov X0, X1
     ret
