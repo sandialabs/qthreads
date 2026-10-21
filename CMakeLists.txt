@@ -5,15 +5,30 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_C_STANDARD 11)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build using shared libraries.")
 
-if(CMAKE_VERSION VERSION_LESS "3.9.0")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9.0")
   project(qthreads
     VERSION 1.23
     DESCRIPTION "A user-level threading library"
-    LANGUAGES C ASM CXX)
+    LANGUAGES C CXX)
 else()
   project(qthreads
     VERSION 1.23
-    LANGUAGES C ASM CXX)
+    LANGUAGES C CXX)
+endif()
+
+# Have to detect the C Compiler first to determine which flavor of asm to use.
+if(MSVC)
+  # This is an imperfect way of getting insight into the target architecture,
+  # but it's good enough for the case of distinguishing between AMD64 and ARM64 on Windows.
+  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64")
+    enable_language(ASM_MASM)
+  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+    enable_language(ASM_MARMASM)
+  else()
+    message(FATAL_ERROR "Unknown Windows Architecture.")
+  endif()
+else()
+  enable_language(ASM)
 endif()
 
 include(GNUInstallDirs)
