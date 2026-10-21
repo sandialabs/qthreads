@@ -85,9 +85,22 @@ GET:
 #define ptr
 #endif
 
+#ifdef _MSC_VER
+.code
+PUBLIC SET
+PUBLIC GET
+#endif
+
+#ifndef _MSC_VER
 .intel_syntax noprefix
+#endif
+
+#ifdef _MSC_VER
+SET PROC
+#else
 .globl SET
 SET:
+#endif
     // the argument is %rdi, so we do not need to load it from the stack */
 
     mov     rbp, [rdi+8]  // frame pointer
@@ -106,9 +119,17 @@ SET:
 
     mov     rax, 1 // return value (allows us to escape the swapcontext loop)
     ret
+#ifdef _MSC_VER
+SET ENDP
+#endif
 
+
+#ifdef _MSC_VER
+GET PROC
+#else
 .globl GET
 GET:
+#endif
     mov     [rdi], rdi // Done differently for passing the initial argument.
 
     mov     [rdi+8],  rbp // frame pointer
@@ -133,6 +154,13 @@ GET:
 
     mov     rax, 0 // set return value - success!
     ret
+#ifdef _MSC_VER
+GET ENDP
+#endif
+
+#ifdef _MSC_VER
+END
+#endif
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32
 // get FPR and VR use flags with sc 0x7FF3
@@ -388,6 +416,15 @@ SET:
 // X0 - holds pointer to context
 // X1 - X30 - GP registers
 
+#ifdef _MSC_VER
+    AREA context_swaps, CODE, READONLY
+    EXPORT SET
+    EXPORT GET
+#endif
+
+#ifdef _MSC_VER
+GET PROC
+#else
 .globl GET
 .global GET
 #ifndef __APPLE__
@@ -395,8 +432,8 @@ SET:
 #else
 .p2align 4
 #endif
-
 GET:
+#endif
     // Store 1 as X0-to-restore
     mov X1, #1
     mov X2, SP
@@ -419,7 +456,13 @@ GET:
     // return 0
     mov X0, #0
     ret
+#ifdef _MSC_VER
+GET ENDP
+#endif
 
+#ifdef _MSC_VER
+SET PROC
+#else
 .globl SET
 .global SET
 #ifndef __APPLE__
@@ -428,6 +471,7 @@ GET:
 .p2align 4
 #endif
 SET:
+#endif
     ldp X1, X2, [X0]
     mov SP, X2
     ldp X29, X30, [X0,#16]
@@ -443,6 +487,13 @@ SET:
 
     mov X0, X1
     ret
+#ifdef _MSC_VER
+SET ENDP
+#endif
+
+#ifdef _MSC_VER
+    END
+#endif
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM
 /* Register Usage:
