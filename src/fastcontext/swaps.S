@@ -111,8 +111,6 @@ SET:
     mov     r13, [rdi+32]
     mov     r14, [rdi+40]
     mov     r15, [rdi+48]
-    ldmxcsr [rdi+72]        // restore SSE2 control and status word
-    fldcw   [rdi+76]        // restore x87 control word
     mov     rsp, [rdi+56]   // stack pointer
     push qword ptr [rdi+64] // push new pc onto stack for ret
     mov     rdi, [rdi]      // 1st int arg (arg passing); only necessary for first context swap into a new qthread
@@ -140,8 +138,6 @@ GET:
     mov     [rdi+32], r13
     mov     [rdi+40], r14
     mov     [rdi+48], r15
-    stmxcsr [rdi+72]      // save SSE2 control and status word
-    fnstcw  [rdi+76]      // save x87 control word
 
     // the following is broken into two instructions
     // because we can only dereference one memory op at a time

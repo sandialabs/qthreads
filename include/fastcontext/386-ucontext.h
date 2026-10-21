@@ -32,8 +32,6 @@ struct mctxt {
 #endif
   qt_register_t mc_esp; /* 7/4: machine state; stack pointer */
   qt_register_t mc_eip; /* 8/5: function pointer */
-  uint32_t mc_xcsr;     /* 9/6: SSE2 control and status word */
-  uint32_t mc_cw;       /* 9+4/6+4: x87 control word */
 };
 
 struct uctxt {
