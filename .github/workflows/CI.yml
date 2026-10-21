@@ -712,33 +712,39 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        image: [windows-2025-vs2026, windows-11-vs2026-arm]
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            build_arch: x64
+            image: windows-2025-vs2026
+          - arch: arm64
+            build_arch: ARM64
+            image: windows-11-vs2026-arm
     runs-on: ${{ matrix.image }}
     steps:
     - uses: actions/checkout@v7
     - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.arch }}
     - run: |
         mkdir build
         cd build
-        :: Manually specify the asm compiler since otherwise it picks up the gnu assembler for some reason.
-        cmake -G "Visual Studio 18 2026" -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON -DCMAKE_ASM_COMPILER=ml64 .. || exit /b
-        cmake --build . --verbose --config Release --parallel 2 || exit /b
+        cmake -G "Visual Studio 18 2026" -A ${{ matrix.build_arch }} -DQTHREADS_MINIMUM_PORTABLE=ON .. || exit /b
+        cmake --build . --verbose --config Release --parallel 2
         ctest -C Release --output-on-failure || exit /b
       shell: cmd
 
   windows_clang_cl:
     continue-on-error: true
-    strategy:
-      matrix:
-        image: [windows-2025-vs2026, windows-11-vs2026-arm]
-    runs-on: ${{ matrix.image }}
+    # clang-cl does not currently work with armasm64 inside msbuild.
+    # For now only test on x86_64 with this compiler.
+    runs-on: windows-2025-vs2026
     steps:
     - uses: actions/checkout@v7
     - uses: ilammy/msvc-dev-cmd@v1
     - run: |
         mkdir build
         cd build
-        :: Manually specify the asm compiler since otherwise it picks up the gnu assembler for some reason.
         cmake -G "Visual Studio 18 2026" -T ClangCL -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON .. || exit /b
         cmake --build . --verbose --config Release --parallel 2 || exit /b
         ctest -C Release --output-on-failure || exit /b
