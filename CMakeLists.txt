@@ -22,8 +22,8 @@ include(CMakePackageConfigHelpers)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-if(MSVC AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  add_compile_options(/experimental:c11atomics)
+if(MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:/experimental:c11atomics>)
 endif()
 
 add_subdirectory(src)
