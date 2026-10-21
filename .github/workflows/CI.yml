@@ -748,6 +748,21 @@ jobs:
         ctest -C Release --output-on-failure || exit /b
       shell: cmd
 
+  # Make sure the ninja generator is okay with our custom preprocessing step for the asm file.
+  windows_clang_cl_ninja:
+    continue-on-error: true
+    runs-on: windows-2025-vs2026
+    steps:
+    - uses: actions/checkout@v7
+    - uses: ilammy/msvc-dev-cmd@v1
+    - run: |
+        mkdir build
+        cd build
+        cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DQTHREADS_MINIMUM_PORTABLE=ON .. || exit /b
+        cmake --build . --verbose --parallel 2 || exit /b
+        ctest -C Release --output-on-failure || exit /b
+      shell: cmd
+
   windows_clang_cl_arm:
     # clang-cl currently has some compatibility issues with armasm64,
     # but it can compile .S files itself directly, so we use that instead.
