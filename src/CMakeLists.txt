@@ -101,7 +101,7 @@ if((NOT "${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext") AND (NOT "${QTHR
 endif()
 
 # Note: fastcontext is included in the minimal sources.
-if(NOT MSVC)
+if(NOT MSVC OR (CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64" AND CMAKE_C_COMPILER_ID STREQUAL "Clang"))
   if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
     target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
   else()

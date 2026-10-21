@@ -416,18 +416,29 @@ SET:
 // X0 - holds pointer to context
 // X1 - X30 - GP registers
 
-#ifdef _MSC_VER
+// clang-cl's preprocessor doesn't currently work
+// well together with armasm64.
+// Fall back to COFF format, which clang-cl can handle itself.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define QTHREAD_USE_MARMASM
+#endif
+
+#ifdef QTHREAD_USE_MARMASM
     AREA context_swaps, CODE, READONLY
     EXPORT SET
     EXPORT GET
 #endif
 
-#ifdef _MSC_VER
+#if !defined(__APPLE__) && !(defined(_MSC_VER) && defined(__clang__))
+#define QTHREAD_USE_TYPE_DIRECTIVES
+#endif
+
+#ifdef QTHREAD_USE_MARMASM
 GET PROC
 #else
 .globl GET
 .global GET
-#ifndef __APPLE__
+#ifdef QTHREAD_USE_TYPE_DIRECTIVES
  .type GET, %function
 #else
 .p2align 4
@@ -456,16 +467,16 @@ GET:
     // return 0
     mov X0, #0
     ret
-#ifdef _MSC_VER
+#ifdef QTHREAD_USE_MARMASM
 GET ENDP
 #endif
 
-#ifdef _MSC_VER
+#ifdef QTHREAD_USE_MARMASM
 SET PROC
 #else
 .globl SET
 .global SET
-#ifndef __APPLE__
+#ifdef QTHREAD_USE_TYPE_DIRECTIVES
  .type SET, %function
 #else
 .p2align 4
@@ -487,11 +498,11 @@ SET:
 
     mov X0, X1
     ret
-#ifdef _MSC_VER
+#ifdef QTHREAD_USE_MARMASM
 SET ENDP
 #endif
 
-#ifdef _MSC_VER
+#ifdef QTHREAD_USE_MARMASM
     END
 #endif
 

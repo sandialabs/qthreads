@@ -736,8 +736,6 @@ jobs:
 
   windows_clang_cl:
     continue-on-error: true
-    # clang-cl does not currently work with armasm64 inside msbuild.
-    # For now only test on x86_64 with this compiler.
     runs-on: windows-2025-vs2026
     steps:
     - uses: actions/checkout@v7
@@ -747,6 +745,26 @@ jobs:
         cd build
         cmake -G "Visual Studio 18 2026" -T ClangCL -A x64 -DQTHREADS_MINIMUM_PORTABLE=ON .. || exit /b
         cmake --build . --verbose --config Release --parallel 2 || exit /b
+        ctest -C Release --output-on-failure || exit /b
+      shell: cmd
+
+  windows_clang_cl_arm:
+    # clang-cl currently has some compatibility issues with armasm64,
+    # but it can compile .S files itself directly, so we use that instead.
+    # Msbuild also doesn't easily connect with alternative assemblers,
+    # so we use the Ninja generator.
+    continue-on-error: true
+    runs-on: windows-11-vs2026-arm
+    steps:
+    - uses: actions/checkout@v7
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: arm64
+    - run: |
+        mkdir build
+        cd build
+        cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_ASM_COMPILER=clang-cl -DQTHREADS_MINIMUM_PORTABLE=ON .. || exit /b
+        cmake --build . --verbose --parallel 2 || exit /b
         ctest -C Release --output-on-failure || exit /b
       shell: cmd
 
