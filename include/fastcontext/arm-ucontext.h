@@ -16,7 +16,7 @@ typedef struct uctxt uctxt_t;
 struct mctxt {
   /* Saved main processor registers. */
 #ifdef NEEDARMA64CONTEXT
-  uint64_t regs[30];
+  uint64_t regs[22];
 #else
   uint32_t regs[16]; /* callee saves r0-r15 */
 #endif
