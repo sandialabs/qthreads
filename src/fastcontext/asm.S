@@ -2,6 +2,7 @@
 // Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT
 // Portions of this file are Copyright Sandia National Laboratories
 
+#define QTHREAD_PREPROCESSING_ASM
 #include "../../include/qthread/common.h"
 
 // Some operating systems mangle symbols like this.
