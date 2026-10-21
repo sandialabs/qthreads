@@ -96,14 +96,30 @@ else()
   add_library(qthread ${QTHREADS_SOURCES} ${QTHREADS_MINIMAL_SOURCES})
 endif()
 
-# Note: fastcontext is included in the minimal sources for gcc and clang on Windows.
-if(NOT QTHREADS_MINIMUM_PORTABLE OR NOT MSVC)
+if((NOT "${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext") AND (NOT "${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system"))
+  message(FATAL_ERROR "The specified context swap implementation is not recognized.")
+endif()
+
+# Note: fastcontext is included in the minimal sources.
+if(NOT MSVC)
   if ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
     target_sources(qthread PRIVATE fastcontext/asm.S fastcontext/context.c)
-  elseif ("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "system")
-    target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
   else()
-    message(FATAL_ERROR "The specified context swap implementation does not match any known implementations.")
+    target_compile_definitions(qthread PRIVATE USE_SYSTEM_SWAPCONTEXT)
+  endif()
+else()
+  # Manually preprocess the asm file on MSVC or MSVC-like compilers.
+  if("${QTHREADS_CONTEXT_SWAP_IMPL}" STREQUAL "fastcontext")
+    add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}\\asm.asm"
+      COMMAND "${CMAKE_C_COMPILER}" /nologo /TC /P /EP
+              "/Fi${CMAKE_CURRENT_BINARY_DIR}\\asm.asm"
+              "${CMAKE_CURRENT_SOURCE_DIR}\\fastcontext\\asm.S"
+      COMMENT "Running the C preprocessor on the context swap assembly file."
+      VERBATIM)
+    target_sources(qthread PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/asm.asm" fastcontext/context.c)
+  else()
+    message(FATAL_ERROR "Qthreads does not currently support using Windows fibers as a backend for context swaps.")
   endif()
 endif()
 
