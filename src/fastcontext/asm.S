@@ -2,7 +2,7 @@
 // Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT
 // Portions of this file are Copyright Sandia National Laboratories
 
-#include "qthread/common.h"
+#include "../../include/qthread/common.h"
 
 // Some operating systems mangle symbols like this.
 #if defined(__APPLE__) || defined(__CYGWIN32__)
