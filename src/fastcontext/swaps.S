@@ -115,7 +115,7 @@ SET:
     push qword ptr [rdi+64] // push new pc onto stack for ret
     mov     rdi, [rdi]      // 1st int arg (arg passing); only necessary for first context swap into a new qthread
 
-    mov     rax, 1 // return value (allows us to escape the swapcontext loop)
+    mov     eax, 1 // return value (allows us to escape the swapcontext loop)
     ret
 #ifdef _MSC_VER
 SET ENDP
@@ -146,7 +146,7 @@ GET:
     lea     rcx, [rsp+8] // rsp
     mov     [rdi+56], rcx
 
-    mov     rax, 0 // set return value - success!
+    xor     eax, eax // set return value - success!
     ret
 #ifdef _MSC_VER
 GET ENDP
