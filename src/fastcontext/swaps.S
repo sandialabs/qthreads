@@ -106,7 +106,7 @@ SET:
     mov     rbp, [rdi+8]  // frame pointer
     mov     rbx, [rdi+16] // base pointer
 
-    // extra caller-saved registers in AMD
+    // extra callee-saved registers in AMD
     mov     r12, [rdi+24]
     mov     r13, [rdi+32]
     mov     r14, [rdi+40]
