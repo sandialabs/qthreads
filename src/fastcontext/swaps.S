@@ -137,14 +137,14 @@ GET:
     mov     [rdi+40], r14
     mov     [rdi+48], r15
 
+    // Idiom for saving rsp properly.
+    lea     rcx, [rsp+8]
+    mov     [rdi+56], rcx
+
     // the following is broken into two instructions
     // because we can only dereference one memory op at a time
     mov     rcx,      [rsp]
     mov     [rdi+64], rcx
-
-    // I don't entirely understand why this is correct
-    lea     rcx, [rsp+8] // rsp
-    mov     [rdi+56], rcx
 
     xor     eax, eax // set return value - success!
     ret
