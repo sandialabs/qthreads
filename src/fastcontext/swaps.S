@@ -128,8 +128,6 @@ GET PROC
 .globl GET
 GET:
 #endif
-    mov     [rdi], rdi // Done differently for passing the initial argument.
-
     mov     [rdi+8],  rbp // frame pointer
     mov     [rdi+16], rbx // base pointer
 
