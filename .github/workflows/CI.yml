@@ -553,6 +553,37 @@ jobs:
               done
           done
 
+  # s390x build
+  # We don't actually support this architecture, but it's useful to test:
+  # - That falling back to the system-provided context swaps actually works.
+  # - That things work as expected on a big-endian system.
+  s390x_system_swaps:
+    runs-on: ubuntu-26.04
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v7
+    - name: setup
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ubuntu-helper-virt-hwe
+        sudo apt-get install -y qemu-system-s390x u-boot-qemu
+    - name: s390x
+      uses: vmactions/ubuntu-vm@v1
+      with:
+        copyback: false
+        sync: scp
+        arch: s390x
+        run: |
+          apt-get update
+          apt-get install -y cmake libhwloc-dev
+          apt-get install -y gcc g++
+          # Only test nemesis/binders here. That's good enough.
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DQTHREADS_CONTEXT_SWAP_IMPL=system -DQTHREADS_SCHEDULER=nemesis -DQTHREADS_TOPOLOGY=binders ..
+          make -j2 VERBOSE=1
+          CTEST_OUTPUT_ON_FAILURE=1 timeout -k 10s --foreground 30m make test VERBOSE=1
+
   # QEMU fails to start for the aarch64 if we use the ubuntu 26.04 CI image as host.
   # Revisit later. Hopefully it self-resolves with updates from upstream.
   freebsd:
