@@ -66,7 +66,7 @@
 #elif defined(__riscv)
 #define QTHREAD_ASSEMBLY_ARCH QTHREAD_RISCV
 #else
-#error "Unsupported architecture"
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_UNSUPPORTED
 #endif
 
 #define QTHREAD_STACK_ALIGNMENT 16u
