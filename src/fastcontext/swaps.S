@@ -106,18 +106,16 @@ SET:
     mov     rbp, [rdi+8]  // frame pointer
     mov     rbx, [rdi+16] // base pointer
 
-    // extra caller-saved registers in AMD
+    // extra callee-saved registers in AMD
     mov     r12, [rdi+24]
     mov     r13, [rdi+32]
     mov     r14, [rdi+40]
     mov     r15, [rdi+48]
-    ldmxcsr [rdi+72]        // restore SSE2 control and status word
-    fldcw   [rdi+76]        // restore x87 control word
     mov     rsp, [rdi+56]   // stack pointer
     push qword ptr [rdi+64] // push new pc onto stack for ret
     mov     rdi, [rdi]      // 1st int arg (arg passing); only necessary for first context swap into a new qthread
 
-    mov     rax, 1 // return value (allows us to escape the swapcontext loop)
+    mov     eax, 1 // return value (allows us to escape the swapcontext loop)
     ret
 #ifdef _MSC_VER
 SET ENDP
@@ -130,8 +128,6 @@ GET PROC
 .globl GET
 GET:
 #endif
-    mov     [rdi], rdi // Done differently for passing the initial argument.
-
     mov     [rdi+8],  rbp // frame pointer
     mov     [rdi+16], rbx // base pointer
 
@@ -140,19 +136,17 @@ GET:
     mov     [rdi+32], r13
     mov     [rdi+40], r14
     mov     [rdi+48], r15
-    stmxcsr [rdi+72]      // save SSE2 control and status word
-    fnstcw  [rdi+76]      // save x87 control word
+
+    // Idiom for saving rsp properly.
+    lea     rcx, [rsp+8]
+    mov     [rdi+56], rcx
 
     // the following is broken into two instructions
     // because we can only dereference one memory op at a time
     mov     rcx,      [rsp]
     mov     [rdi+64], rcx
 
-    // I don't entirely understand why this is correct
-    lea     rcx, [rsp+8] // rsp
-    mov     [rdi+56], rcx
-
-    mov     rax, 0 // set return value - success!
+    xor     eax, eax // set return value - success!
     ret
 #ifdef _MSC_VER
 GET ENDP
