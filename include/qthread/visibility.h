@@ -2,7 +2,8 @@
 #define QTHREAD_VISIBILITY_H
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-#ifdef QTHREADS_BUILDING_DLL
+// CMake sets this define for us when building a dll.
+#ifdef qthread_EXPORTS
 #ifdef __GNUC__
 #define API_FUNC __attribute__((dllexport))
 #else
@@ -18,7 +19,7 @@
   __declspec(dllimport) // Note: actually gcc seems to also support this
                         // syntax.
 #endif
-#endif /* ifdef QTHREADS_BUILDING_DLL */
+#endif /* ifdef qthread_EXPORTS */
 #define INTERNAL
 #else /* if defined(_WIN32) || defined(__CYGWIN__) */
 #if __GNUC__ >= 4
