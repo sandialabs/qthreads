@@ -26,7 +26,8 @@ if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i686" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR
     "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64" OR
-    "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc")
+    "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc" OR
+    "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le")
   set(QTHREADS_CONTEXT_SWAP_IMPL fastcontext CACHE STRING "Which context swap implementation to use. Valid values are \"system\" and \"fastcontext\".")
 else()
   message(WARNING "No fast context swap available on this architecture (${CMAKE_SYSTEM_PROCESSOR}), falling back to the system-provided one.")
