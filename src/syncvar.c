@@ -75,7 +75,10 @@ extern aligned_t *febs_stripes;
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 /* Internal Macros */
-#define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
+#define BUILD_UNLOCKED_SYNCVAR(data, state)                                    \
+  ((uint64_t)(data) & SYNCVAR_DATA_MASK |                                      \
+   (uint64_t)(state) << 60ull & SYNCVAR_STATE_MASK)
+
 #define QTHREAD_CHOOSE_STRIPE(addr)                                            \
   (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
@@ -86,12 +89,12 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
-      (_Atomic uint64_t *)&(addr)->u.w, (unlocked), memory_order_relaxed);     \
+      (_Atomic uint64_t *)&(*(addr)), (unlocked), memory_order_relaxed);       \
   } while (0)
 #define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state)                         \
   do {                                                                         \
     MACHINE_FENCE;                                                             \
-    atomic_store_explicit((_Atomic uint64_t *)&(addr)->u.w,                    \
+    atomic_store_explicit((_Atomic uint64_t *)&(*(addr)),                      \
                           BUILD_UNLOCKED_SYNCVAR(val, state),                  \
                           memory_order_relaxed);                               \
   } while (0)
@@ -101,12 +104,12 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
-      (_Atomic uint64_t *)&(addr)->u.w, (unlocked), memory_order_relaxed);     \
+      (_Atomic uint64_t *)&(*(addr)), (unlocked), memory_order_relaxed);       \
   } while (0)
 #define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state)                         \
   do {                                                                         \
     MACHINE_FENCE;                                                             \
-    atomic_store_explicit((_Atomic uint64_t *)&(addr)->u.w,                    \
+    atomic_store_explicit((_Atomic uint64_t *)&(*(addr)),                      \
                           BUILD_UNLOCKED_SYNCVAR(val, state),                  \
                           memory_order_relaxed);                               \
   } while (0)
@@ -115,13 +118,12 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     /* this has its own pthread mutex, so does not need memory synch */        \
-    qthread_cas64(&((addr)->u.w), (addr)->u.w, (unlocked));                    \
+    qthread_cas64((addr), *(addr), (unlocked));                                \
   } while (0)
 #define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state)                         \
   do {                                                                         \
     /* this has its own pthread mutex, so does not need memory synch */        \
-    qthread_cas64(                                                             \
-      &((addr)->u.w), (addr)->u.w, BUILD_UNLOCKED_SYNCVAR(val, state));        \
+    qthread_cas64((addr), *(addr), BUILD_UNLOCKED_SYNCVAR(val, state));        \
   } while (0)
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH  \
           == QTHREAD_ARM || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
@@ -164,48 +166,48 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
       }
       if (timeout-- <= 0) { goto errexit; }
     } while (1);
-    locked.u.w = addr->u.w; // I locked it, so I can read it
-#else  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
+    locked = *addr; // I locked it, so I can read it
+#else               /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
     {
       syncvar_t tmp;
     loop_start:
-      tmp.u.w =
+      tmp =
         atomic_load_explicit((_Atomic uint64_t *)addr, memory_order_relaxed);
       do {
         unlocked = tmp; // may be locked or unlocked, we don't know
-        if (unlocked.u.s.lock == 1) {
+        if (SYNCVAR_GET_LOCK_RAW(unlocked)) {
           if (timeout-- <= 0) { goto errexit; }
           SPINLOCK_BODY();
           goto loop_start;
         }
         locked = unlocked;
-        locked.u.s.lock = 1; // create the locked version
-        if ((tmp.u.w = qthread_cas64(
-               (uint64_t *)addr, unlocked.u.w, locked.u.w)) == unlocked.u.w) {
+        SYNCVAR_SET_LOCKED(locked);
+        if ((tmp = qthread_cas64((uint64_t *)addr, unlocked, locked)) ==
+            unlocked) {
           break;
         }
         if (timeout-- <= 0) { goto errexit; }
       } while (1);
     }
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
+#endif              /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
     /***************************************************
      * now locked == unlocked, and the lock bit is set *
      ***************************************************/
-    if (statemask & (1 << locked.u.s.state)) {
+    if (statemask & (1 << SYNCVAR_GET_STATE(locked))) {
       /* this is a state of interest, so fill the err struct */
       e.cf = 0u;
-      e.sf = (unsigned char)(locked.u.s.state & 1u);
-      e.pf = (unsigned char)((locked.u.s.state >> 1u) & 1u);
-      e.of = (unsigned char)((locked.u.s.state >> 2u) & 1u);
+      e.sf = (unsigned char)(SYNCVAR_GET_STATE(locked) & 1u);
+      e.pf = (unsigned char)((SYNCVAR_GET_STATE(locked) >> 1u) & 1u);
+      e.of = (unsigned char)((SYNCVAR_GET_STATE(locked) >> 2u) & 1u);
       *err = e;
-      return locked.u.s.data;
+      return SYNCVAR_GET_DATA(locked);
     } else {
       /* this is NOT a state of interest, so unlock the locked bit */
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
       MACHINE_FENCE;
       addrptr[1] = low_unlocked;
 #else
-      UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked.u.w);
+      UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked);
 #endif
     }
   } while (timeout-- > 0);
@@ -241,22 +243,22 @@ int API_FUNC qthread_syncvar_status(syncvar_t *const v) {
    * that state and do not need to do a locked atomic operation of any
    * kind (e.g. cas) */
   syncvar_t local_copy_of_v;
-  local_copy_of_v.u.w =
+  local_copy_of_v =
     atomic_load_explicit((_Atomic uint64_t *)v, memory_order_relaxed);
-  if (local_copy_of_v.u.s.lock == 0) {
+  if (SYNCVAR_GET_LOCK_RAW(local_copy_of_v) == 0) {
     /* short-circuit */
-    return (local_copy_of_v.u.s.state & 0x2) ? 0 : 1;
+    return (SYNCVAR_GET_STATE(local_copy_of_v) & 0x2) ? 0 : 1;
   }
   (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
   qassert_ret(e.cf == 0u,
               QTHREAD_TIMEOUT); /* there better not have been a timeout */
-  local_copy_of_v.u.w =
+  local_copy_of_v =
     atomic_load_explicit((_Atomic uint64_t *)v, memory_order_relaxed);
-  realret = local_copy_of_v.u.s.state;
+  realret = SYNCVAR_GET_STATE(local_copy_of_v);
   UNLOCK_THIS_UNMODIFIED_SYNCVAR(
     v,
-    BUILD_UNLOCKED_SYNCVAR(local_copy_of_v.u.s.data,
-                           local_copy_of_v.u.s.state));
+    BUILD_UNLOCKED_SYNCVAR(SYNCVAR_GET_DATA(local_copy_of_v),
+                           SYNCVAR_GET_STATE(local_copy_of_v)));
   return (realret & 0x2) ? 0 : 1;
 }
 
@@ -370,12 +372,13 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
      * that state and do not need to do a locked atomic operation of any
      * kind (e.g. cas) */
     syncvar_t local_copy_of_src;
-    local_copy_of_src.u.w =
+    local_copy_of_src =
       atomic_load_explicit((_Atomic uint64_t *)src, memory_order_relaxed);
-    if ((local_copy_of_src.u.s.lock == 0) &&
-        ((local_copy_of_src.u.s.state & 2) == 0)) { /* full and unlocked */
+    if ((SYNCVAR_GET_LOCK_RAW(local_copy_of_src) == 0) &&
+        ((SYNCVAR_GET_STATE(local_copy_of_src) & 2) ==
+         0)) { /* full and unlocked */
       /* short-circuit */
-      if (dest) { *dest = local_copy_of_src.u.s.data; }
+      if (dest) { *dest = SYNCVAR_GET_DATA(local_copy_of_src); }
       return QTHREAD_SUCCESS;
     }
   }
@@ -480,10 +483,11 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
      * that state and do not need to do a locked atomic operation of any
      * kind (e.g. cas) */
     syncvar_t local_copy_of_src = *src;
-    if ((local_copy_of_src.u.s.lock == 0) &&
-        ((local_copy_of_src.u.s.state & 2) == 0)) { /* full and unlocked */
+    if ((SYNCVAR_GET_LOCK_RAW(local_copy_of_src) == 0) &&
+        ((SYNCVAR_GET_STATE(local_copy_of_src) & 2) ==
+         0)) { /* full and unlocked */
       /* short-circuit */
-      if (dest) { *dest = local_copy_of_src.u.s.data; }
+      if (dest) { *dest = SYNCVAR_GET_DATA(local_copy_of_src); }
       return QTHREAD_SUCCESS;
     }
   }
@@ -631,7 +635,7 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict addr) {
       assert(m->EFQ); // otherwise there weren't really any waiters
       assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
       if (m->EFQ->next) { e.sf = 1u; }
-      // addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by
+      // *addr = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by
       // gotlock_empty so we know what value to write
       qthread_syncvar_gotlock_empty(shep, m, addr, e.sf);
     } else {
@@ -780,7 +784,7 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict dest,
     if (m->EFQ->next) { // there will be a waiter still waiting
       e.sf = 1u;
     }
-    // src->u.w = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by
+    // *src = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by
     // gotlock_empty so we know what value to write
     qthread_syncvar_gotlock_empty(me->rdata->shepherd_ptr, m, src, e.sf);
   } else {
@@ -855,7 +859,7 @@ int API_FUNC qthread_syncvar_readFE_nb(uint64_t *restrict dest,
     if (m->EFQ->next) { // there will be a waiter still waiting
       e.sf = 1u;
     }
-    // src->u.w = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by
+    // *src = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by
     // gotlock_empty so we know what value to write
     qthread_syncvar_gotlock_empty(me->rdata->shepherd_ptr, m, src, e.sf);
   } else {
@@ -1359,13 +1363,13 @@ uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict operand,
         e.sf = 1u; // only one will be dequeued, so it'll still have waiters
       }
     }
-    newv = operand->u.s.data + inc;
+    newv = SYNCVAR_GET_DATA(operand) + inc;
     UNLOCK_THIS_MODIFIED_SYNCVAR(operand, newv, (e.pf << 1u) | e.sf);
     assert(m->FFQ || m->EFQ); // otherwise there weren't really any waiters
     assert(m->FEQ == NULL);   // someone snuck in!
     qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, operand, newv);
   } else {
-    newv = operand->u.s.data + inc;
+    newv = SYNCVAR_GET_DATA(operand) + inc;
     UNLOCK_THIS_MODIFIED_SYNCVAR(operand, newv, (e.pf << 1u) | e.sf);
   }
 

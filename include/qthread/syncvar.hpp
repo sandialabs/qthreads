@@ -9,22 +9,12 @@ class syncvar;
 
 class syncvar {
 public:
-  inline syncvar(void) noexcept {
-    // Doing it this way because extended initializers (e.g.
-    // SYNCVAR_STATIC_INITIALIZER) are not (yet) supported by C++
-    the_syncvar_t.u.w = 0;
-  }
+  inline syncvar(void) noexcept { the_syncvar_t = SYNCVAR_INITIALIZER; }
 
   inline syncvar(uint64_t const &val) noexcept {
     assert(!(val & 0xf000000000000000ull));
-    the_syncvar_t.u.s.data = val;
+    SYNCVAR_SET_DATA(the_syncvar_t, val);
   }
-
-  inline syncvar(syncvar const &val) noexcept {
-    the_syncvar_t.u.w = val.the_syncvar_t.u.w;
-  }
-
-  inline syncvar(syncvar_t const &val) { the_syncvar_t.u.w = val.u.w; }
 
   int empty(void) { return qthread_syncvar_empty(&the_syncvar_t); }
 
@@ -77,11 +67,11 @@ public:
 
   int status() { return qthread_syncvar_status(&the_syncvar_t); }
 
-  uint64_t read() const { return the_syncvar_t.u.s.data; }
+  uint64_t read() const { return SYNCVAR_GET_DATA(the_syncvar_t); }
 
   void write(uint64_t const src) {
     assert(!(src & 0xf000000000000000ull));
-    the_syncvar_t.u.s.data = src;
+    SYNCVAR_SET_DATA(the_syncvar_t, src);
   }
 protected:
   syncvar_t the_syncvar_t;
