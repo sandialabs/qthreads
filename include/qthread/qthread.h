@@ -125,37 +125,39 @@ typedef int64_t saligned_t;
 
 #define QALIGN(d, s) (s) = (d)
 
-typedef struct _syncvar_s {
-  union {
-    uint64_t w;
+typedef uint64_t syncvar_t;
 
-    struct {
-#ifdef BITFIELD_ORDER_FORWARD
-      uint64_t data : 60;
-      unsigned state : 3;
-      unsigned lock : 1;
-#else
-      unsigned lock : 1;
-      unsigned state : 3;
-      uint64_t data : 60;
-#endif
-    } s;
-  } u;
-} syncvar_t;
+#define SYNCVAR_DATA_MASK 0x0fffffffffffffffull
+#define SYNCVAR_STATE_MASK 0x7000000000000000ull
+#define SYNCVAR_LOCK_MASK 0x8000000000000000ull
+#define SYNCVAR_GET_DATA(s) (SYNCVAR_DATA_MASK & (uint64_t)(s))
+#define SYNCVAR_SET_DATA(s, val)                                               \
+  ((s) = (uint64_t)(s) & ~SYNCVAR_DATA_MASK | SYNCVAR_GET_DATA(val))
+#define SYNCVAR_GET_STATE_RAW(s) (SYNCVAR_STATE_MASK & (uint64_t)(s))
+#define SYNCVAR_SET_STATE_RAW(s, val)                                          \
+  ((s) = (uint64_t)(s) & ~SYNCVAR_STATE_MASK | SYNCVAR_GET_STATE_RAW(val))
+#define SYNCVAR_GET_STATE(s) (SYNCVAR_GET_STATE_RAW(s) >> 60ull)
+#define SYNCVAR_SET_STATE(s, val) (SYNCVAR_SET_STATE_RAW((s), (val) << 60ull))
+#define SYNCVAR_GET_LOCK_RAW(s) (SYNCVAR_LOCK_MASK & (uint64_t)(s))
+#define SYNCVAR_SET_LOCK_RAW(s, val)                                           \
+  ((s) = (uint64_t)(s) & ~SYNCVAR_LOCK_MASK | SYNCVAR_GET_LOCK_RAW(val))
+#define SYNCVAR_GET_LOCK(s) (SYNCVAR_GET_LOCK_RAW(s) >> 63ull)
+#define SYNCVAR_SET_LOCK(s, val) (SYNCVAR_SET_LOCK_RAW((s), (val) << 63ull))
+#define SYNCVAR_SET_LOCKED(s) (SYNCVAR_SET_LOCK_RAW((s), SYNCVAR_LOCK_MASK))
+#define SYNCVAR_SET_UNLOCKED(s) (SYNCVAR_SET_LOCK_RAW((s), 0ull))
 
-#define SYNCVAR_STATIC_INITIALIZER {{0}}
-#define SYNCVAR_STATIC_EMPTY_INITIALIZER                                       \
-  {.u.s = {.data = 0, .state = 2, .lock = 0}}
-#define SYNCVAR_STATIC_INITIALIZE_TO(value)                                    \
-  {.u.s = {.data = value, .state = 0, .lock = 0}}
-#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value)                              \
-  {.u.s = {.data = value, .state = 2, .lock = 0}}
-#define SYNCVAR_INITIALIZER ((syncvar_t)SYNCVAR_STATIC_INITIALIZER)
-#define SYNCVAR_EMPTY_INITIALIZER ((syncvar_t)SYNCVAR_STATIC_EMPTY_INITIALIZER)
-#define SYNCVAR_INITIALIZE_TO(value)                                           \
-  ((syncvar_t)SYNCVAR_STATIC_INITIALIZE_TO(value))
+#define SYNCVAR_INITIALIZER ((uint64_t)0ull)
+#define SYNCVAR_EMPTY_INITIALIZER ((uint64_t)0x2000000000000000ull)
+#define SYNCVAR_INITIALIZE_TO(value) (SYNCVAR_DATA_MASK & (uint64_t)(value))
 #define SYNCVAR_EMPTY_INITIALIZE_TO(value)                                     \
-  ((syncvar_t)SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value))
+  (SYNCVAR_EMPTY_INITIALIZER | SYNCVAR_STATIC_INITIALIZE_TO(value))
+
+// For backcompat
+#define SYNCVAR_STATIC_INITIALIZER SYNCVAR_INITIALIZER
+#define SYNCVAR_STATIC_EMPTY_INITIALIZER SYNCVAR_EMPTY_INITIALIZER
+#define SYNCVAR_STATIC_INITIALIZE_TO(value) (SYNCVAR_INITIALIZE_TO(value))
+#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value)                              \
+  (SYNCVAR_EMPTY_INITIALIZE_TO(value))
 
 #define INT64TOINT60(x) ((uint64_t)((x) & (uint64_t)0xfffffffffffffffULL))
 #define INT60TOINT64(x)                                                        \

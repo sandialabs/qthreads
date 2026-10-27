@@ -67,11 +67,11 @@ int main(int argc, char *argv[]) {
   t[1] = calloc(pairs, sizeof(aligned_t));
 
   iprintf("%i threads...\n", qthread_num_shepherds());
-  iprintf("Initial value of x: %lu\n", (unsigned long)x.u.w);
+  iprintf("Initial value of x: %llu\n", (uint64_t)x);
 
   qthread_syncvar_empty(&id);
   qthread_syncvar_writeF_const(&id, 1);
-  iprintf("id = 0x%lx\n", (unsigned long)id.u.w);
+  iprintf("id = 0x%llu\n", (uint64_t)id);
   {
     uint64_t tmp = 0;
     qthread_syncvar_readFF(&tmp, &id);

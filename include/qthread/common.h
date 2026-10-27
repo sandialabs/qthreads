@@ -14,13 +14,10 @@
 // so header includes that might interfere with that need to check
 // QTHREAD_PREPROCESSING_ASM first.
 
-#ifndef __powerpc
+#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) &&             \
+  (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define BITFIELD_ORDER_REVERSE
 #else
-// ARM processors can technically change modes between
-// big-endian and little-endian which also reverses the
-// bitfield order. The overwhelming majority of the time
-// they're run in little-endian mode though.
 #define BITFIELD_ORDER_FORWARD
 #endif
 
@@ -66,7 +63,7 @@
 #elif defined(__riscv)
 #define QTHREAD_ASSEMBLY_ARCH QTHREAD_RISCV
 #else
-#error "Unsupported architecture"
+#define QTHREAD_ASSEMBLY_ARCH QTHREAD_UNSUPPORTED
 #endif
 
 #define QTHREAD_STACK_ALIGNMENT 16u
