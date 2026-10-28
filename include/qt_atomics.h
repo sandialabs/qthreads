@@ -246,18 +246,6 @@ qthread_internal_incr_mod_(aligned_t *operand,
                            unsigned int const max QTHREAD_OPTIONAL_LOCKARG) {
   aligned_t retval;
 
-#if QTHREAD_BITS == 32
-  uint32_t oldval, newval;
-
-  newval = *operand;
-  do {
-    retval = oldval = newval;
-    newval = oldval + 1;
-    newval *= (newval < max);
-
-    newval = __sync_val_compare_and_swap((uint32_t *)operand, oldval, newval);
-  } while (oldval != newval);
-#elif QTHREAD_BITS == 64
   uint64_t oldval, newval;
 
   newval = *operand;
@@ -268,9 +256,6 @@ qthread_internal_incr_mod_(aligned_t *operand,
 
     newval = __sync_val_compare_and_swap((uint64_t *)operand, oldval, newval);
   } while (oldval != newval);
-#else /* if QTHREAD_BITS == 32 */
-#error "Unrecognized bit-ness"
-#endif /* if QTHREAD_BITS == 32 */
 
   return retval;
 }

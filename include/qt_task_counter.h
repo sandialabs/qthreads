@@ -3,21 +3,8 @@
 
 #include <qthread/qthread.h>
 
-#if QTHREAD_BITS == 32
-
-#define QT_TCOUNT_OFFSET (31)
-#define QT_TCOUNT_BASE (1u)
-
-#elif QTHREAD_BITS == 64
-
 #define QT_TCOUNT_OFFSET (63)
 #define QT_TCOUNT_BASE (1ul)
-
-#else
-
-#error "Don't know type for sizeof aligned_t"
-
-#endif
 
 static aligned_t const tcount_waiting_mask =
   (QT_TCOUNT_BASE << QT_TCOUNT_OFFSET);

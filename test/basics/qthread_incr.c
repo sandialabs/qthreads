@@ -43,7 +43,6 @@ int main(int argc, char *argv[]) {
   test_check(master == 150);
   iprintf("30 concurrent threads successfully incremented by 5\n");
 
-#if (QTHREAD_BITS == 64)
   master = 0xFFFFFFFF;
   qthread_incr(&master, 1);
   if (master != 0x100000000ULL) {
@@ -61,7 +60,6 @@ int main(int argc, char *argv[]) {
     test_check(master == 0x100000000);
   }
   iprintf("64-bit add appears to work\n");
-#endif
 
   return 0;
 }

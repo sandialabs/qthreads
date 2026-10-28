@@ -102,25 +102,9 @@ Q_STARTCXX
  * On all supported platforms sizeof(aligned_t) == alignof(aligned_t)
  * anyway so we're fine. */
 
-#if UINTPTR_MAX == UINT32_MAX
-#define QTHREAD_BITS 32
-#elif UINTPTR_MAX == UINT64_MAX
-#define QTHREAD_BITS 64
-#else
-#error Unrecognized bit-ness
-#endif
-
-#if QTHREAD_BITS == 32
-typedef uint32_t aligned_t;
-typedef uint16_t haligned_t;
-typedef int32_t saligned_t;
-#elif QTHREAD_BITS == 64
 typedef uint64_t aligned_t;
 typedef uint32_t haligned_t;
 typedef int64_t saligned_t;
-#else
-#error "Don't know type for sizeof aligned_t"
-#endif
 
 #define QTHREAD_ALIGNMENT_ALIGNED_T (sizeof(aligned_t))
 
@@ -695,7 +679,7 @@ uint64_t qthread_syncvar_incrF(syncvar_t *restrict operand, uint64_t inc);
   (void *)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 #endif
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #ifndef __cplusplus
 
