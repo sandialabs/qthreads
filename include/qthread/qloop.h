@@ -3,11 +3,9 @@
 
 #include "qthread.h"
 
-Q_STARTCXX /* */
-  /* for convenient arguments to qt_loop */
-  typedef void (*qt_loop_f)(size_t const startat,
-                            size_t const stopat,
-                            void *arg);
+Q_STARTCXX
+/* for convenient arguments to qt_loop */
+typedef void (*qt_loop_f)(size_t const startat, size_t const stopat, void *arg);
 typedef void (*qt_loop_step_f)(void *arg);
 typedef void (*qt_loopr_f)(size_t const startat,
                            size_t const stopat,
@@ -169,6 +167,6 @@ static inline void qt_uint_min_acc(void *restrict a, void const *restrict b) {
 
 void qt_qsort(double *array, size_t const length);
 
-Q_ENDCXX /* */
-#endif   // ifndef QTHREAD_QLOOP
-  /* vim:set expandtab: */
+Q_ENDCXX
+#endif // ifndef QTHREAD_QLOOP
+/* vim:set expandtab: */

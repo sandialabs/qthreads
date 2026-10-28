@@ -3,9 +3,9 @@
 
 #include "macros.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-  typedef struct qlfqueue_s qlfqueue_t;
+typedef struct qlfqueue_s qlfqueue_t;
 
 /* Create a new qlfqueue */
 qlfqueue_t *qlfqueue_create(void);
@@ -22,7 +22,7 @@ void *qlfqueue_dequeue(qlfqueue_t *q);
 /* returns 1 if the queue is empty, 0 otherwise */
 int qlfqueue_empty(qlfqueue_t *q);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef QTHREAD_QLFQUEUE_H
-  /* vim:set expandtab: */
+/* vim:set expandtab: */

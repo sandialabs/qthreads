@@ -3,7 +3,7 @@
 
 #include "qthread.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
 /* Flags */
 #define SPR_SPMD (1 << 0) /* Launch in SPMD mode (much like MPI_Init()) */
@@ -14,7 +14,7 @@ Q_STARTCXX /* */
 #define SPR_IGN -2     /* The call was ignored. */
 #define SPR_NOINIT -3  /* SPR environment was not initialized. */
 
-  int spr_init(unsigned int flags, qthread_f *regs);
+int spr_init(unsigned int flags, qthread_f *regs);
 int spr_fini(void);
 int spr_register_actions(qthread_f *actions, size_t count, size_t base);
 int spr_unify(void);
@@ -58,7 +58,7 @@ int spr_put_wait(spr_put_handle_t *const hand);
 
 int spr_locale_barrier(void);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef SPR_H
-  /* vim:set expandtab: */
+/* vim:set expandtab: */

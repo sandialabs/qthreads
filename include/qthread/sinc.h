@@ -6,9 +6,9 @@
 #include "macros.h"
 #include "qthread.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-  typedef void (*qt_sinc_op_f)(void *tgt, void const *src);
+typedef void (*qt_sinc_op_f)(void *tgt, void const *src);
 
 typedef struct qt_opaque_sinc_s {
   alignas(QTHREAD_ALIGNMENT_ALIGNED_T) uint8_t opaque_data[24];
@@ -31,7 +31,7 @@ void *qt_sinc_tmpdata(qt_sinc_t *sinc);
 void qt_sinc_submit(qt_sinc_t *restrict sinc, void const *restrict value);
 void qt_sinc_wait(qt_sinc_t *restrict sinc, void *restrict target);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef QT_SINC_H
-  /* vim:set expandtab: */
+/* vim:set expandtab: */

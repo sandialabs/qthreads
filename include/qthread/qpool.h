@@ -5,9 +5,9 @@
 
 #include "macros.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-  typedef struct qt_mpool_s qpool;
+typedef struct qt_mpool_s qpool;
 
 void *qpool_alloc(qpool *pool);
 
@@ -18,7 +18,7 @@ qpool *qpool_create_aligned(size_t const item_size, size_t const alignment);
 
 void qpool_destroy(qpool *pool);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef QPOOL_H
-  /* vim:set expandtab: */
+/* vim:set expandtab: */

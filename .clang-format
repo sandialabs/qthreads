@@ -25,4 +25,5 @@ SortIncludes: CaseInsensitive
 SpaceBeforeCtorInitializerColon: false
 SpaceBeforeRangeBasedForLoopColon: false
 SpacesInContainerLiterals: false
+StatementMacros: ['Q_STARTCXX', 'Q_ENDCXX']
 
