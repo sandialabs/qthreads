@@ -2273,4 +2273,3 @@ qt_barrier_t *qt_get_barrier(void) {
   return me->rdata->barrier;
 }
 
-/* vim:set expandtab: */

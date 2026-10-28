@@ -392,4 +392,3 @@ void qt_basic_wavefront(int *restrict const *const R,
   }
 }
 
-/* vim:set expandtab: */

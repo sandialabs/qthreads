@@ -21,4 +21,3 @@ void qpool_destroy(qpool *pool);
 Q_ENDCXX
 
 #endif // ifndef QPOOL_H
-/* vim:set expandtab: */

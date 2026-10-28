@@ -63,4 +63,3 @@ int main(int argc, char *argv[]) {
   return (foo == 1) ? 0 : EXIT_FAILURE;
 }
 
-/* vim:set expandtab */

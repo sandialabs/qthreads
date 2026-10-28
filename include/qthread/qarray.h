@@ -120,4 +120,3 @@ inline static void *qarray_elem_nomigrate(qarray const *a, size_t const index) {
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_QARRAY_H
-/* vim:set expandtab: */

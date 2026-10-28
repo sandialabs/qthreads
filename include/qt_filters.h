@@ -9,4 +9,3 @@ typedef enum _filter_code {
 } filter_code;
 
 #endif
-/* vim:set expandtab: */

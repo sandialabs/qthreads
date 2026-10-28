@@ -1440,4 +1440,3 @@ void API_FUNC qthread_syncvar_callback(qt_syncvar_callback_f cb, void *arg) {
   qthread_syncvar_taskfilter(qt_syncvar_tf_call_cb, pass);
 }
 
-/* vim:set expandtab: */

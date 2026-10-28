@@ -18,4 +18,3 @@ aligned_t qt_hash_bytes(void *key_ptr, size_t bytes, aligned_t state);
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_HASH_H
-/* vim:set expandtab: */

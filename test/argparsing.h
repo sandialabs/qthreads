@@ -127,4 +127,3 @@ inline static void iprintf(char const *restrict format, ...) {
 #endif // if defined(__CYGWIN32__)
 
 #endif // ifndef TEST_ARGPARSING_H
-/* vim:set expandtab: */

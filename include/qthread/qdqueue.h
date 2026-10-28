@@ -29,4 +29,3 @@ int qdqueue_empty(qdqueue_t *q);
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_QDQUEUE_H
-/* vim:set expandtab: */

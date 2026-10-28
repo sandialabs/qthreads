@@ -708,4 +708,3 @@ extern "C++" {
 #endif /* __cplusplus */
 
 #endif /* _QTHREAD_H_ */
-  /* vim:set expandtab: */

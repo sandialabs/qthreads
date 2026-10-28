@@ -54,4 +54,3 @@ Q_ENDCXX
 #endif // ifndef _OMP_H_DEF
 
 #endif // ifndef OMP_DEFINES_H
-/* vim:set expandtab: */

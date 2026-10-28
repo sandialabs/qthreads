@@ -19,4 +19,3 @@ void qt_allpairs_output(qarray const *array1,
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_ALLPAIRS_H
-/* vim:set expandtab: */

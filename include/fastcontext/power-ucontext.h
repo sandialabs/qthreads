@@ -45,4 +45,3 @@ struct uctxt {
 #endif
 };
 
-/* vim:set expandtab: */

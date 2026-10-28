@@ -33,4 +33,3 @@ void INTERNAL qthread_syncvar_taskfilter(qt_syncvar_taskfilter_f tf, void *arg);
 void INTERNAL qthread_syncvar_taskfilter_serial(qt_syncvar_taskfilter_f tf,
                                                 void *arg);
 #endif // ifndef QTHREAD_INTERNAL_FEB
-/* vim:set expandtab: */

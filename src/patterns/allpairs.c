@@ -330,4 +330,3 @@ qt_allpairs(qarray const *array1, qarray const *array2, dist_f distfunc) {
   qt_allpairs_internal(array1, array2, df, 0, NULL, 0);
 }
 
-/* vim:set expandtab: */

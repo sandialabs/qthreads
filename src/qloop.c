@@ -1447,4 +1447,3 @@ API_FUNC void qt_qsort(double *array, size_t const length) {
   qt_qsort_inner(&arg);
 }
 
-/* vim:set expandtab: */

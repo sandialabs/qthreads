@@ -1284,4 +1284,3 @@ void qarray_dist_like(qarray const *ref, qarray *mod) {
   }
 }
 
-/* vim:set expandtab: */

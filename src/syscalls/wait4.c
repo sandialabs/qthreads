@@ -39,4 +39,3 @@ pid_t qt_wait4(pid_t pid, int *stat_loc, int options, struct rusage *rusage) {
   return ret;
 }
 
-/* vim:set expandtab: */

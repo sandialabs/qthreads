@@ -25,4 +25,3 @@ struct spr_get_handle_s {
 };
 
 #endif /* SPR_INNARDS_H */
-/* vim:set expandtab: */

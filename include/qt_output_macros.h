@@ -13,4 +13,3 @@
   } while (0)
 
 #endif
-/* vim:set expandtab: */

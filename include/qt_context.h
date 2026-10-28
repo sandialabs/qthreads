@@ -20,4 +20,3 @@ typedef uctxt_t qt_context_t;
 #endif
 
 #endif // ifndef QT_CONTEXT_H
-/* vim:set expandtab: */

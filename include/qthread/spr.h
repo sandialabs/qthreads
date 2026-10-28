@@ -61,4 +61,3 @@ int spr_locale_barrier(void);
 Q_ENDCXX
 
 #endif // ifndef SPR_H
-/* vim:set expandtab: */

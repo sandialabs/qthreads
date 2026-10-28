@@ -185,4 +185,3 @@ int main(void) {
   return 0;
 }
 
-/* vim:set expandtab */

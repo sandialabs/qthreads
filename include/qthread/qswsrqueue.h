@@ -33,4 +33,3 @@ int qswsrqueue_empty(qswsrqueue_t *q);
 Q_ENDCXX
 
 #endif // ifndef QTHREAD_QLFQUEUE_H
-/* vim:set expandtab: */

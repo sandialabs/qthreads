@@ -34,4 +34,3 @@ void qt_sinc_wait(qt_sinc_t *restrict sinc, void *restrict target);
 Q_ENDCXX
 
 #endif // ifndef QT_SINC_H
-/* vim:set expandtab: */

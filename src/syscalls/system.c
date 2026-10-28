@@ -35,4 +35,3 @@ int qt_system(char const *command) {
   return ret;
 }
 
-/* vim:set expandtab: */

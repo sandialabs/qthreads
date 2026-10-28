@@ -79,4 +79,3 @@ static inline void rwlock_wrunlock(rwlock_t *l) {
 }
 
 #endif // ifndef FIFTY_SIX_RWLOCK_H
-/* vim:set expandtab: */

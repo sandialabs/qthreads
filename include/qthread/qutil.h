@@ -29,4 +29,3 @@ void qutil_aligned_qsort(aligned_t *array, size_t length);
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_QUTIL_H
-/* vim:set expandtab: */

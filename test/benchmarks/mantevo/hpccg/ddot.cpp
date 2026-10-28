@@ -155,4 +155,3 @@ int ddot(int const n,
 
 #endif // if defined(USING_QTHREADS) && !defined(CXX_LAMBDAS)
 
-/* vim:set expandtab: */

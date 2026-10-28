@@ -869,4 +869,3 @@ API_FUNC void qalloc_checkpoint(void) {
   }
 }
 
-/* vim:set expandtab: */

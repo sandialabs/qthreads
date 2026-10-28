@@ -22,4 +22,3 @@ typedef void (*hazardous_free_f)(void *arg);
 void INTERNAL hazardous_release_node(hazardous_free_f freefunc, void *ptr);
 
 #endif // ifndef QT_HAZARDPTRS_H
-/* vim:set expandtab: */

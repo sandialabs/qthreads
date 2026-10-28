@@ -25,4 +25,3 @@ void qt_basic_wavefront(int *restrict const *const R,
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_WAVEFRONT_H
-/* vim:set expandtab: */

@@ -33,4 +33,3 @@ ssize_t qt_write(int filedes, void const *buf, size_t nbyte);
 Q_ENDCXX
 
 #endif // ifndef QT_SYSCALLS_H
-/* vim:set expandtab: */

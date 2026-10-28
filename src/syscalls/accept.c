@@ -39,4 +39,3 @@ int qt_accept(int socket,
   return ret;
 }
 
-/* vim:set expandtab: */

@@ -296,4 +296,3 @@ void qt_global_barrier_resize(size_t size) {
 }
 
 #endif /* ifdef QT_GLOBAL_LOGBARRIER */
-/* vim:set expandtab: */

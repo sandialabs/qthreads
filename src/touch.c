@@ -14,4 +14,3 @@ void qthread_run_needed_task(syncvar_t *value) {
   }
 }
 
-/* vim:set expandtab: */

@@ -20,4 +20,3 @@ double qtimer_secs(qtimer_t);
 Q_ENDCXX
 
 #endif // ifndef QTHREAD_TIMER
-/* vim:set expandtab: */

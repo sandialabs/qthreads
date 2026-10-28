@@ -46,4 +46,3 @@ int qt_select(int nfds,
   return ret;
 }
 
-/* vim:set expandtab: */

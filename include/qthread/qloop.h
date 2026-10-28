@@ -169,4 +169,3 @@ void qt_qsort(double *array, size_t const length);
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_QLOOP
-/* vim:set expandtab: */

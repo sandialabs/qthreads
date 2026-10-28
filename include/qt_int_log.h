@@ -25,4 +25,3 @@ static inline uint32_t QT_INT_LOG(uint32_t v) {
 }
 
 #endif // ifndef QT_INT_LOG_H
-/* vim:set expandtab: */

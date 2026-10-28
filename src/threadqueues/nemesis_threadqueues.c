@@ -388,4 +388,3 @@ size_t INTERNAL qt_threadqueue_policy(const enum threadqueue_policy policy) {
   }
 }
 
-/* vim:set expandtab: */

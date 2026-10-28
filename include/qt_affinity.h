@@ -81,4 +81,3 @@ void INTERNAL *qt_affinity_alloc_onnode(size_t bytes, int node);
 void INTERNAL qt_affinity_mem_tonode(void *addr, size_t bytes, int node);
 void INTERNAL qt_affinity_free(void *ptr, size_t bytes);
 #endif
-/* vim:set expandtab: */

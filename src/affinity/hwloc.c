@@ -498,4 +498,3 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t *sheps,
   return QTHREAD_SUCCESS;
 }
 
-/* vim:set expandtab: */

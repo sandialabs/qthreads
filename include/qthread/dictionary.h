@@ -158,4 +158,3 @@ void qt_dictionary_printbuckets(qt_dictionary *dict);
 
 Q_ENDCXX
 #endif // QT_DICTIONARY_H
-/* vim:set expandtab: */

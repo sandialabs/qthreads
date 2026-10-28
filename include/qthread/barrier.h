@@ -34,4 +34,3 @@ void qt_set_barrier(qt_barrier_t *);
 Q_ENDCXX
 
 #endif // ifndef QTHREAD_LOG_BARRIER_H
-/* vim:set expandtab: */

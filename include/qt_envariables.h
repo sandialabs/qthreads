@@ -12,4 +12,3 @@ unsigned char INTERNAL qt_internal_get_env_bool(char const *envariable,
                                                 unsigned char dflt);
 int INTERNAL qt_internal_unset_envstr(char const *envariable);
 #endif // ifndef QT_ENVARIABLES_H
-/* vim:set expandtab: */

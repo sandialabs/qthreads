@@ -18,4 +18,3 @@ void qt_mpool_destroy(qt_mpool pool);
 void qt_mpool_subsystem_init(void);
 
 #endif // ifndef QT_MPOOL_H
-/* vim:set expandtab: */

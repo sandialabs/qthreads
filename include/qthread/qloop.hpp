@@ -62,4 +62,3 @@ qt_loopaccum_balance(size_t start, size_t stop, T const &obj) {
   return accumulate;
 }
 #endif // ifndef QLOOP_HPP
-/* vim:set expandtab: */

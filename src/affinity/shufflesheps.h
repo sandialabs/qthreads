@@ -58,4 +58,3 @@ static void sort_sheps(unsigned int *restrict dists,
   qt_free(tmp);
 }
 #endif // ifndef QTHREAD_SRC_SHUFFLE_SHEPS_H
-/* vim:set expandtab: */

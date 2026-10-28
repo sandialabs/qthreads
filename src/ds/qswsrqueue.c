@@ -104,4 +104,3 @@ void *qswsrqueue_dequeue_blocking(qswsrqueue_t *q) {
 /* returns 1 if the queue is empty, 0 otherwise */
 API_FUNC int qswsrqueue_empty(qswsrqueue_t *q) { return (q->head == q->tail); }
 
-/* vim:set expandtab: */

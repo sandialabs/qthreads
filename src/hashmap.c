@@ -505,4 +505,3 @@ void INTERNAL qt_hash_unlock(qt_hash h) {
   if (h->lock) { QTHREAD_FASTLOCK_UNLOCK(h->lock); }
 }
 
-/* vim:set expandtab: */

@@ -481,4 +481,3 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool) {
   FREE(pool, sizeof(struct qt_mpool_s));
 }
 
-/* vim:set expandtab: */

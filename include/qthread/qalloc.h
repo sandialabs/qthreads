@@ -72,4 +72,3 @@ void qalloc_free(void *block, void *map);
 #endif
 
 #endif // ifndef QALLOC_H
-/* vim:set expandtab: */

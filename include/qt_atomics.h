@@ -288,4 +288,3 @@ static inline void *qt_internal_atomic_swap_ptr(void **addr, void *newval) {
 
 #endif /* ifndef QT_ATOMICS_H */
 
-/* vim:set expandtab */

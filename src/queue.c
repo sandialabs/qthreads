@@ -314,4 +314,3 @@ qthread_queue_internal_capped_dequeue(qthread_queue_capped_t *q) {
   return t;
 }
 
-/* vim:set expandtab: */

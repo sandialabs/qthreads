@@ -11,4 +11,3 @@
 #endif
 
 #endif // ifndef QT_PROFILING_H
-/* vim:set expandtab: */
