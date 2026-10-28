@@ -98,9 +98,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
                           BUILD_UNLOCKED_SYNCVAR(val, state),                  \
                           memory_order_relaxed);                               \
   } while (0)
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                          \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                              \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
@@ -132,9 +130,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
                                unsigned char const statemask,
                                unsigned int timeout,
                                eflags_t *restrict const err) {
-#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   syncvar_t unlocked;
-#endif
   syncvar_t locked;
   eflags_t e;
 
@@ -146,28 +142,6 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
   e.zf = 0u;
   e.cf = 1u;
   do {
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    /* This applies for any 32-bit architecture with a valid 32-bit CAS
-     * (though I'm making some big-endian assumptions at the moment) */
-    uint32_t low_unlocked, low_locked;
-    uint32_t *addrptr = (uint32_t *)addr;
-    do {
-    loop_start:
-      low_unlocked = addrptr[1]; // atomic read
-      if ((low_unlocked & 1) != 0) {
-        if (timeout-- <= 0) { goto errexit; }
-        SPINLOCK_BODY();
-        goto loop_start;
-      }
-      low_locked = low_unlocked | 1;
-      if (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) ==
-          low_unlocked) {
-        break;
-      }
-      if (timeout-- <= 0) { goto errexit; }
-    } while (1);
-    locked = *addr; // I locked it, so I can read it
-#else               /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
     {
       syncvar_t tmp;
     loop_start:
@@ -189,7 +163,6 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
         if (timeout-- <= 0) { goto errexit; }
       } while (1);
     }
-#endif              /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
     /***************************************************
      * now locked == unlocked, and the lock bit is set *
      ***************************************************/
@@ -203,12 +176,7 @@ static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
       return SYNCVAR_GET_DATA(locked);
     } else {
       /* this is NOT a state of interest, so unlock the locked bit */
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-      MACHINE_FENCE;
-      addrptr[1] = low_unlocked;
-#else
       UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked);
-#endif
     }
   } while (timeout-- > 0);
 errexit:
@@ -362,7 +330,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF); }
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
   {
@@ -383,7 +350,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     }
   }
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                   \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                         \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
@@ -473,7 +439,6 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF_NB); }
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                              \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
   {
@@ -492,7 +457,6 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
     }
   }
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||                   \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                         \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, 1, &e);

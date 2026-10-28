@@ -11,9 +11,6 @@
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #define NEEDX86REGISTERARGS
 #include "386-ucontext.h"
-#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                         \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64))
-#include "power-ucontext.h"
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
 #include "arm-ucontext.h"
 #include <stdarg.h>
