@@ -6,14 +6,9 @@
 
 #include "qthread/common.h"
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-#include "386-ucontext.h"
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #define NEEDX86REGISTERARGS
 #include "386-ucontext.h"
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
-#include "arm-ucontext.h"
-#include <stdarg.h>
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
 #include "riscv-ucontext.h"
 #include <stdarg.h>

@@ -15,8 +15,7 @@
 #define THREAD_FENCE_MEM_ACQUIRE_IMPL atomic_thread_fence(memory_order_acquire)
 #define THREAD_FENCE_MEM_RELEASE_IMPL atomic_thread_fence(memory_order_release)
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                                 \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define THREAD_FENCE_MEM_ACQUIRE
 #define THREAD_FENCE_MEM_RELEASE
 #else
@@ -24,12 +23,10 @@
 #define THREAD_FENCE_MEM_RELEASE THREAD_FENCE_MEM_RELEASE_IMPL
 #endif
 
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 ||                                   \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define SPINLOCK_BODY()                                                        \
   do { __asm__ __volatile__("pause" ::: "memory"); } while (0)
-#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM ||                                  \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64
 #define SPINLOCK_BODY()                                                        \
   do { __asm__ __volatile__("yield" ::: "memory"); } while (0)
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV

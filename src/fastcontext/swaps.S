@@ -14,45 +14,7 @@
 # define GET qt_getmctxt
 #endif
 
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32
-.globl SET
-SET:
-    movl    4(%esp), %eax     // get the offset of the uc_mcontext component (arguments are passed via the stack)
-
-    movl    (0*4)(%eax), %edi // restore EDI: general 32-bit register
-    movl    (1*4)(%eax), %ebp // restore EBP: Stack frame pointer
-    movl    (2*4)(%eax), %ebx // restore EBX: PIC base register
-    movl    (3*4)(%eax), %esi // restore ESI: general 32-bit register
-    ldmxcsr (6*4)(%eax)       // restore SSE2 control and status word
-    fldcw   ((6*4)+4)(%eax)   // restore x87 control word
-
-    movl    (4*4)(%eax), %esp // set the stack
-    movl    (5*4)(%eax), %ecx // get the new PC to jump to
-
-    movl    $1,          %eax // return value (allows us to escape the swapcontext loop)
-    jmp     *%ecx             // jump to the new PC
-
-.globl GET
-GET:
-    movl    4(%esp), %eax     // get the offset of the uc_mcontext component
-
-    movl    %edi, (0*4)(%eax) // save EDI: general 32-bit register
-    movl    %ebp, (1*4)(%eax) // save EBP: Stack frame pointer
-    movl    %ebx, (2*4)(%eax) // save EBX: PIC base register
-    movl    %esi, (3*4)(%eax) // save ESI: general 32-bit register
-    stmxcsr (6*4)(%eax)       // save SSE2 control and status word
-    fnstcw  ((6*4)+4)(%eax)   // save x87 control word
-
-    leal    4(%esp), %ecx     // load the stack pointer without the return address
-    movl    %ecx, (4*4)(%eax) // save the stack pointer
-
-    movl    (%esp), %ecx      // load the current return location, which is stored on the stack
-    movl    %ecx, (5*4)(%eax) // store the current return location
-
-    movl    $0,   %eax        // return value (allows us to escape the swapcontext loop)
-    ret
-
-#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 /* Register Usage:
  *
  * %rax                 temp register, 1st return reg
@@ -250,70 +212,6 @@ SET ENDP
 #ifdef QTHREAD_USE_MARMASM
     END
 #endif
-
-#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM
-/* Register Usage:
- *
- * r0/a1       - Argument/result/scratch1
- * r1/a2       - Argument/result/scratch2
- * r2/a3       - Argument/scratch3
- * r3/a4       - Argument/scratch4
- * r4/v1       - Variable register (1)    CALLEE-SAVED
- * r5/v2       - Variable register (2)    CALLEE-SAVED
- * r6/v3       - Variable register (3)    CALLEE-SAVED
- * r7/v4       - Variable register (4)    CALLEE-SAVED
- * r8/v5       - Variable register (5)    CALLEE-SAVED
- * r9/v6/SB/TR - Platform regiter; implementation specific
- * r10/v7      - Variable register (7)    CALLEE-SAVED
- * r11/v8      - Variable register (8)    CALLEE-SAVED
- * r12/IP      - Intra-Procedure-call scratch register
- * r13/SP      - Stack Pointer            CALLEE-SAVED
- * r14/LR      - Link Register
- * r15/PC      - Program Counter
- */
-.globl GET
-.global GET
-.type GET, %function
-GET:
-    str r1,  [r0,#4]   // ARG 2
-    str r2,  [r0,#8]   // ARG 3
-    str r3,  [r0,#12]  // ARG 4
-    str r4,  [r0,#16]  // var 1
-    str r5,  [r0,#20]  // var 2
-    str r6,  [r0,#24]  // var 3
-    str r7,  [r0,#28]  // var 4
-    str r8,  [r0,#32]  // var 5
-    str r9,  [r0,#36]  // ? SB/TR/v6 ?
-    str r10, [r0,#40]  // var 7
-    str r11, [r0,#44]  // var 8
-    str r12, [r0,#48]  // IP
-    str sp,  [r0,#52]  // SP
-    str lr,  [r0,#56]  // LR
-    mov r1,  #1        // store 1 as r0-to-restore
-    str r1,  [r0]      // arg 1 / RET 1
-    mov r0,  #0        // return 0 
-    bx  lr
-
-.globl SET
-.global SET
-.type SET, %function
-SET:
-    ldr r1,  [r0,#4]
-    ldr r2,  [r0,#8]
-    ldr r3,  [r0,#12]
-    ldr r4,  [r0,#16]
-    ldr r5,  [r0,#20]
-    ldr r6,  [r0,#24]
-    ldr r7,  [r0,#28]
-    ldr r8,  [r0,#32]
-    ldr r9,  [r0,#36]
-    ldr r10, [r0,#40]
-    ldr r11, [r0,#44]
-    ldr r12, [r0,#48]
-    ldr r13, [r0,#52]
-    ldr r14, [r0,#56]
-    ldr r0,  [r0]
-    bx  lr
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV
 .globl GET

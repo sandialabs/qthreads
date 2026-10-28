@@ -16,8 +16,7 @@
 #include "qt_macros.h"
 #include "qt_prefetch.h"
 
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 ||                                   \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   uintptr_t *sp;
 
@@ -46,24 +45,6 @@ void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
   *--sp = 0; /* return address */
   ucp->mc.mc_eip = (uintptr_t)func;
   ucp->mc.mc_esp = (uintptr_t)sp;
-}
-
-#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM
-/* This function is entirely copyright Sandia National Laboratories */
-void INTERNAL qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...) {
-  va_list arg;
-  void **top_of_stack = ucp->uc_stack.ss_sp;
-  void **frame_pointer;
-
-  top_of_stack += ucp->uc_stack.ss_size / sizeof(void *);
-
-  /* now copy from my arg list to the function's arglist */
-  va_start(arg, argc);
-  for (int i = 0; i < argc; i++) { ucp->mc.regs[0] = va_arg(arg, uint32_t); }
-  va_end(arg);
-
-  ucp->mc.regs[14] = (uintptr_t)func; // LR so that swapcontext returns into it
-  ucp->mc.regs[13] = (uintptr_t)top_of_stack; // SP
 }
 
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64
@@ -134,8 +115,7 @@ QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp) {
   Q_PREFETCH(ucp, 0, 0);
 
   if (getcontext(oucp) == 0) {
-#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                                \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64))
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #ifndef QTHREAD_MSAN
     Q_PREFETCH((void *)ucp->mc.mc_esp, 1, 3);
 #endif
