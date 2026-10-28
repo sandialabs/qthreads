@@ -226,8 +226,7 @@ static void examine(unsigned int r) {
           defined(HAVE_GCC_INLINE_ASSEMBLY) */
 
 static void figure_out_cacheline_size(void) {
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                            \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#if defined(_ARCH_PPC) || defined(_ARCH_PPC64)
   if (sizeof(long) == 4) {
     cacheline_bytes = 32; // G4
   } else {
@@ -359,11 +358,9 @@ static void figure_out_cacheline_size(void) {
     }
   }
 #endif /* if !defined(HAVE_GCC_INLINE_ASSEMBLY) */
-#else  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                   \
-          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) */
+#else
   cacheline_bytes = 128; // safe default, probably not accurate
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||                   \
-          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) */
+#endif
 }
 
 #endif

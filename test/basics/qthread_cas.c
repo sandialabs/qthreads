@@ -42,24 +42,16 @@ int main(int argc, char *argv[]) {
   }
 
   test_check(qthread_cas32(&four, 4, 0xdeadbeef) == 4);
-#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   test_check(
     qthread_cas64(&eight, (uint64_t)8, (uint64_t)0xdeadbeefc0d1f1edULL) == 8);
-#endif
   test_check(four == 0xdeadbeef);
-#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   test_check(eight == (uint64_t)0xdeadbeefc0d1f1edULL);
-#endif
   test_check(qthread_cas32(&four, 0xdeadbeef, 5) == 0xdeadbeef);
-#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   test_check(qthread_cas64(&eight,
                            (uint64_t)0xdeadbeefc0d1f1edULL,
                            (uint64_t)9) == (uint64_t)0xdeadbeefc0d1f1edULL);
-#endif
   test_check(four == 5);
-#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
   test_check(eight == 9);
-#endif
 
   test_check(qthread_cas_ptr(&ptr, NULL, &i) == NULL);
   test_check(ptr == &i);
