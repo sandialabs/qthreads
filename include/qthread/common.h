@@ -40,9 +40,7 @@
 
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0
-#define QTHREAD_IA32 1
 #define QTHREAD_AMD64 2
-#define QTHREAD_ARM 12
 #define QTHREAD_ARMV8_A64 13
 #define QTHREAD_RISCV 14
 
@@ -50,10 +48,6 @@
 #define QTHREAD_ASSEMBLY_ARCH QTHREAD_AMD64
 #elif defined(__aarch64__) || defined(_M_ARM64)
 #define QTHREAD_ASSEMBLY_ARCH QTHREAD_ARMV8_A64
-#elif defined(__i386__) || defined(_X86_) || defined(_M_IX86)
-#define QTHREAD_ASSEMBLY_ARCH QTHREAD_IA32
-#elif defined(__arm__) || defined(_M_ARM)
-#define QTHREAD_ASSEMBLY_ARCH QTHREAD_ARM
 #elif defined(__riscv)
 #define QTHREAD_ASSEMBLY_ARCH QTHREAD_RISCV
 #else

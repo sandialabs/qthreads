@@ -82,10 +82,9 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 #define QTHREAD_CHOOSE_STRIPE(addr)                                            \
   (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 ||                                 \
-     QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM ||                                   \
-     QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64 ||                             \
-     QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV)
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 ||                                  \
+  QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64 ||                                \
+  QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     atomic_store_explicit(                                                     \
@@ -98,21 +97,8 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
                           BUILD_UNLOCKED_SYNCVAR(val, state),                  \
                           memory_order_relaxed);                               \
   } while (0)
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-#define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
-  do {                                                                         \
-    atomic_store_explicit(                                                     \
-      (_Atomic uint64_t *)&(*(addr)), (unlocked), memory_order_relaxed);       \
-  } while (0)
-#define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state)                         \
-  do {                                                                         \
-    MACHINE_FENCE;                                                             \
-    atomic_store_explicit((_Atomic uint64_t *)&(*(addr)),                      \
-                          BUILD_UNLOCKED_SYNCVAR(val, state),                  \
-                          memory_order_relaxed);                               \
-  } while (0)
-#else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH   \
-         == QTHREAD_ARM || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
+#else /* if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH == \
+         QTHREAD_ARMV8_A64 || QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV */
 #define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked)                         \
   do {                                                                         \
     /* this has its own pthread mutex, so does not need memory synch */        \
@@ -123,8 +109,8 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
     /* this has its own pthread mutex, so does not need memory synch */        \
     qthread_cas64((addr), *(addr), BUILD_UNLOCKED_SYNCVAR(val, state));        \
   } while (0)
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH  \
-          == QTHREAD_ARM || QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
+#endif /* if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 || QTHREAD_ASSEMBLY_ARCH   \
+          == QTHREAD_ARMV8_A64) || QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV */
 
 static uint64_t qthread_mwaitc(syncvar_t *restrict const addr,
                                unsigned char const statemask,
@@ -330,7 +316,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF); }
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
   {
     /* I'm being optimistic here; this only works if a basic 64-bit load is
@@ -350,7 +335,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict dest,
     }
   }
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                         \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
   if (e.cf) { /* there was a timeout */
@@ -439,7 +423,6 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
   if (!me) { return qthread_syncvar_blocker_func(dest, src, READFF_NB); }
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                                \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                                    \
   (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64)
   {
     /* I'm being optimistic here; this only works if a basic 64-bit load is
@@ -457,7 +440,6 @@ int API_FUNC qthread_syncvar_readFF_nb(uint64_t *restrict dest,
     }
   }
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||                       \
-             (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM) ||                         \
              (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64) */
   ret = qthread_mwaitc(src, SYNCFEB_FULL, 1, &e);
   if (e.cf) { /* there was a timeout */

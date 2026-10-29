@@ -15,8 +15,7 @@
 #define THREAD_FENCE_MEM_ACQUIRE_IMPL atomic_thread_fence(memory_order_acquire)
 #define THREAD_FENCE_MEM_RELEASE_IMPL atomic_thread_fence(memory_order_release)
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                                 \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define THREAD_FENCE_MEM_ACQUIRE
 #define THREAD_FENCE_MEM_RELEASE
 #else
@@ -24,12 +23,10 @@
 #define THREAD_FENCE_MEM_RELEASE THREAD_FENCE_MEM_RELEASE_IMPL
 #endif
 
-#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 ||                                   \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #define SPINLOCK_BODY()                                                        \
   do { __asm__ __volatile__("pause" ::: "memory"); } while (0)
-#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM ||                                  \
-  QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARMV8_A64
 #define SPINLOCK_BODY()                                                        \
   do { __asm__ __volatile__("yield" ::: "memory"); } while (0)
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_RISCV
@@ -246,18 +243,6 @@ qthread_internal_incr_mod_(aligned_t *operand,
                            unsigned int const max QTHREAD_OPTIONAL_LOCKARG) {
   aligned_t retval;
 
-#if QTHREAD_BITS == 32
-  uint32_t oldval, newval;
-
-  newval = *operand;
-  do {
-    retval = oldval = newval;
-    newval = oldval + 1;
-    newval *= (newval < max);
-
-    newval = __sync_val_compare_and_swap((uint32_t *)operand, oldval, newval);
-  } while (oldval != newval);
-#elif QTHREAD_BITS == 64
   uint64_t oldval, newval;
 
   newval = *operand;
@@ -268,9 +253,6 @@ qthread_internal_incr_mod_(aligned_t *operand,
 
     newval = __sync_val_compare_and_swap((uint64_t *)operand, oldval, newval);
   } while (oldval != newval);
-#else /* if QTHREAD_BITS == 32 */
-#error "Unrecognized bit-ness"
-#endif /* if QTHREAD_BITS == 32 */
 
   return retval;
 }

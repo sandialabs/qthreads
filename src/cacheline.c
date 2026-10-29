@@ -40,35 +40,16 @@ static void figure_out_cacheline_size(void) {
 
 #else
 
-#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                                \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)) &&                              \
-  defined(HAVE_GCC_INLINE_ASSEMBLY)
+#if QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64 && defined(HAVE_GCC_INLINE_ASSEMBLY)
 static void cpuid(unsigned int const op,
                   unsigned int *eax_ptr,
                   unsigned int *ebx_ptr,
                   unsigned int *ecx_ptr,
                   unsigned int *edx_ptr) {
-
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__)
-  unsigned int eax, ebx, ecx, edx;
-  unsigned int pic_ebx = 0;
-  __asm__ __volatile__(
-    "mov %%ebx, %4\n\t"
-    "cpuid\n\t"
-    "mov %%ebx, %1\n\t"
-    "mov %4, %%ebx"
-    : "=a"(eax), "=m"(ebx), "=c"(ecx), "=d"(edx), "=m"(pic_ebx)
-    : "a"(op), "m"(pic_ebx));
-  *eax_ptr = eax;
-  *ebx_ptr = ebx;
-  *ecx_ptr = ecx;
-  *edx_ptr = edx;
-#else  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__) */
   __asm__ __volatile__(
     "cpuid"
     : "=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
     : "a"(op));
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__) */
 }
 
 static void cpuid4(int const cache,
@@ -76,27 +57,10 @@ static void cpuid4(int const cache,
                    unsigned int *ebx_ptr,
                    unsigned int *ecx_ptr,
                    unsigned int *edx_ptr) {
-
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__)
-  unsigned int eax, ebx, ecx, edx;
-  unsigned int pic_ebx = 0;
-  __asm__ __volatile__(
-    "mov %%ebx, %4\n\t"
-    "cpuid\n\t"
-    "mov %%ebx, %1\n\t"
-    "mov %4, %%ebx"
-    : "=a"(eax), "=m"(ebx), "=c"(ecx), "=d"(edx), "=m"(pic_ebx)
-    : "a"(4), "c"(cache), "m"(pic_ebx));
-  *eax_ptr = eax;
-  *ebx_ptr = ebx;
-  *ecx_ptr = ecx;
-  *edx_ptr = edx;
-#else  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__) */
   __asm__ __volatile__(
     "cpuid"
     : "=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
     : "a"(4), "c"(cache));
-#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__) */
 }
 
 static void descriptor(unsigned int d) {
@@ -221,9 +185,7 @@ static void examine(unsigned int r) {
   }
 }
 
-#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                       \
-          (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)) &&                         \
-          defined(HAVE_GCC_INLINE_ASSEMBLY) */
+#endif
 
 static void figure_out_cacheline_size(void) {
 #if defined(_ARCH_PPC) || defined(_ARCH_PPC64)
@@ -232,8 +194,7 @@ static void figure_out_cacheline_size(void) {
   } else {
     cacheline_bytes = 128; // G5
   }
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||                               \
-  (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+#elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 #if !defined(HAVE_GCC_INLINE_ASSEMBLY)
   cacheline_bytes = 128;
 #else
