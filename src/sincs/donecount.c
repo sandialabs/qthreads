@@ -315,4 +315,3 @@ void API_FUNC qt_sinc_wait(qt_sinc_t *restrict sinc_, void *restrict target) {
   }
 }
 
-/* vim:set expandtab: */

@@ -306,4 +306,3 @@ int API_FUNC qthread_spinlock_unlock(qthread_spinlock_t *a) {
 
 #undef qt_hash_t
 
-/* vim:set expandtab: */

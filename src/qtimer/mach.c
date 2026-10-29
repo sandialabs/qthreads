@@ -57,4 +57,3 @@ qtimer_t API_FUNC qtimer_create(void) {
 
 void API_FUNC qtimer_destroy(qtimer_t q) { FREE(q, sizeof(struct qtimer_s)); }
 
-/* vim:set expandtab: */

@@ -276,4 +276,3 @@ void INTERNAL qt_internal_subteam_leader(qthread_t *t) {
   qthread_readFF(NULL, &t->team->watcher_started);
 }
 
-/* vim:set expandtab: */

@@ -45,4 +45,3 @@ void API_FUNC qt_end_blocking_action(void) {
   }
 }
 
-/* vim:set expandtab: */

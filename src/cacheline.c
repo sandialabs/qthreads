@@ -386,4 +386,3 @@ int main() {
 }
 
 #endif
-/* vim:set expandtab: */

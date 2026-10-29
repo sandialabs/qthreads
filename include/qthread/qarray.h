@@ -6,26 +6,27 @@
 #include "macros.h"
 #include "qloop.h"
 
-Q_STARTCXX /* */
-  typedef enum {
-    /* the default, used both as input and after creation */
-    FIXED_HASH = 0,
-    /* these are also used both as input and after creation */
-    FIXED_FIELDS,
-    /* these are used only after it's created */
-    ALL_SAME /* if used as input to qarray_create(), treated as ALL_LOCAL */,
-    DIST /* if used as input to qarray_create(), treated as DIST_RAND */,
-    /* types of DIST... only used for input to qarray_create();
-     * note that these only establish an initial condition. */
-    DIST_STRIPES,
-    DIST_FIELDS,
-    DIST_RAND,
-    DIST_LEAST,
-    /* types of ALL_SAME... only used for input to qarray_create() */
-    ALL_LOCAL,
-    ALL_RAND,
-    ALL_LEAST
-  } distribution_t;
+Q_STARTCXX
+
+typedef enum {
+  /* the default, used both as input and after creation */
+  FIXED_HASH = 0,
+  /* these are also used both as input and after creation */
+  FIXED_FIELDS,
+  /* these are used only after it's created */
+  ALL_SAME /* if used as input to qarray_create(), treated as ALL_LOCAL */,
+  DIST /* if used as input to qarray_create(), treated as DIST_RAND */,
+  /* types of DIST... only used for input to qarray_create();
+   * note that these only establish an initial condition. */
+  DIST_STRIPES,
+  DIST_FIELDS,
+  DIST_RAND,
+  DIST_LEAST,
+  /* types of ALL_SAME... only used for input to qarray_create() */
+  ALL_LOCAL,
+  ALL_RAND,
+  ALL_LEAST
+} distribution_t;
 
 typedef struct qarray_s {
   size_t unit_size;
@@ -119,4 +120,3 @@ inline static void *qarray_elem_nomigrate(qarray const *a, size_t const index) {
 
 Q_ENDCXX
 #endif // ifndef QTHREAD_QARRAY_H
-/* vim:set expandtab: */

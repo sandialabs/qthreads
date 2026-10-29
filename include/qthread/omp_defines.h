@@ -15,9 +15,9 @@
 #ifndef OMP_H
 #define OMP_H
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-  typedef struct omp_lock_t {
+typedef struct omp_lock_t {
   void *_lk;
 } omp_lock_t;
 
@@ -48,10 +48,9 @@ int omp_test_nest_lock(void *pval);
 double omp_get_wtime(void);
 double omp_get_wtick(void);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef OMP_H
 #endif // ifndef _OMP_H_DEF
 
 #endif // ifndef OMP_DEFINES_H
-  /* vim:set expandtab: */

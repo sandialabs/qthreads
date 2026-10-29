@@ -9,4 +9,3 @@ void INTERNAL qthread_thread_free(qthread_t *t);
 qthread_t INTERNAL *qthread_internal_self(void);
 
 #endif
-/* vim:set expandtab: */

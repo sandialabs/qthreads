@@ -107,4 +107,3 @@ qthread_num_workers_local(qthread_shepherd_id_t shepherd_id) {
   return qlib->nworkerspershep;
 }
 
-/* vim:set expandtab: */

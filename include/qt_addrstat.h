@@ -30,4 +30,3 @@ static void qthread_addrstat_delete(void *m_void) {
 }
 
 #endif // ifndef QT_ADDRSTAT_H
-/* vim:set expandtab: */

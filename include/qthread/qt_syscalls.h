@@ -9,11 +9,11 @@
 
 #include "macros.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-int qt_accept(int                       socket,
+int qt_accept(int socket,
               struct sockaddr *restrict address,
-              socklen_t *restrict       address_len);
+              socklen_t *restrict address_len);
 int qt_connect(int socket,
                const struct sockaddr *address,
                socklen_t address_len);
@@ -30,7 +30,6 @@ int qt_system(char const *command);
 pid_t qt_wait4(pid_t pid, int *stat_loc, int options, struct rusage *rusage);
 ssize_t qt_write(int filedes, void const *buf, size_t nbyte);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef QT_SYSCALLS_H
-  /* vim:set expandtab: */

@@ -70,4 +70,3 @@ extern qlib_t qlib;
 void INTERNAL qthread_exec(qthread_t *t, qt_context_t *c);
 
 #endif // ifndef QTHREAD_INNARDS_H
-/* vim:set expandtab: */

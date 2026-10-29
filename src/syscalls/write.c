@@ -40,4 +40,3 @@ ssize_t qt_write(int filedes, void const *buf, size_t nbyte) {
   return ret;
 }
 
-/* vim:set expandtab: */

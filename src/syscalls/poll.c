@@ -37,4 +37,3 @@ int qt_poll(struct pollfd fds[], nfds_t nfds, int timeout) {
   return ret;
 }
 
-/* vim:set expandtab: */

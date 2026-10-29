@@ -290,4 +290,3 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job) {
   QTHREAD_UNLOCK(&theQueue.lock);
 }
 
-/* vim:set expandtab: */

@@ -123,4 +123,3 @@ int HPC_sparsemv(HPC_Sparse_Matrix *A, double const *const x, double *const y) {
 
 #endif // if defined(USING_QTHREADS) && !defined(CXX_LAMBDAS)
 
-/* vim:set expandtab: */

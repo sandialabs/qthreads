@@ -31,4 +31,3 @@ static inline int qt_blockable(void) {
   return (t != NULL);
 }
 #endif // ifndef QT_IO_H
-/* vim:set expandtab: */

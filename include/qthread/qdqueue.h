@@ -4,8 +4,8 @@
 #include "macros.h"
 #include "qthread.h"
 
-Q_STARTCXX /* */
-  typedef struct qdqueue_s qdqueue_t;
+Q_STARTCXX
+typedef struct qdqueue_s qdqueue_t;
 
 /* Create a new qdqueue */
 qdqueue_t *qdqueue_create(void);
@@ -27,6 +27,5 @@ void *qdqueue_dequeue(qdqueue_t *q);
 /* returns 1 if the queue is empty, 0 otherwise */
 int qdqueue_empty(qdqueue_t *q);
 
-Q_ENDCXX /* */
-#endif   // ifndef QTHREAD_QDQUEUE_H
-  /* vim:set expandtab: */
+Q_ENDCXX
+#endif // ifndef QTHREAD_QDQUEUE_H

@@ -33,4 +33,3 @@ void INTERNAL qt_internal_stack_free(void *, size_t);
 extern size_t _pagesize;
 #define pagesize ((size_t)_pagesize)
 #endif // ifndef QT_ALLOC_H
-/* vim:set expandtab: */

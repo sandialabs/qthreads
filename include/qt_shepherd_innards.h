@@ -90,4 +90,3 @@ void qthread_back_to_master(qthread_t *t);
 void qthread_back_to_master2(qthread_t *t);
 
 #endif // ifndef QT_SHEPHERD_INNARDS_H
-/* vim:set expandtab: */

@@ -79,4 +79,3 @@ struct qqloop_step_handle_s {
 };
 
 #endif // ifndef QLOOP_INNARDS_H
-/* vim:set expandtab: */

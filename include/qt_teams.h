@@ -50,4 +50,3 @@ qt_team_t INTERNAL *qt_internal_team_new(void *restrict ret,
                                          unsigned int parent_id);
 void INTERNAL qt_internal_subteam_leader(qthread_t *t);
 #endif // ifndef QT_TEAMS_H
-/* vim:set expandtab: */

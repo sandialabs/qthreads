@@ -5,4 +5,3 @@
 #include "syncvar.hpp"
 
 #endif // QTHREAD_HPP_
-/* vim:set expandtab: */

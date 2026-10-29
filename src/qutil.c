@@ -1032,4 +1032,3 @@ void API_FUNC qutil_aligned_qsort(aligned_t *array, size_t const length) {
   qutil_aligned_qsort_inner(&arg);
 }
 
-/* vim:set expandtab: */

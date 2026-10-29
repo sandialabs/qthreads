@@ -25,4 +25,3 @@
 #endif
 
 #endif // ifndef TASKIMPL_H
-/* vim:set expandtab: */

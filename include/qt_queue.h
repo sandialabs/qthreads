@@ -73,4 +73,3 @@ qthread_t INTERNAL *
 qthread_queue_internal_capped_dequeue(qthread_queue_capped_t *q);
 
 #endif // ifndef QT_QUEUE_H
-/* vim:set expandtab: */

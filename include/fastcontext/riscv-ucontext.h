@@ -34,4 +34,3 @@ int INTERNAL qt_swapctxt(uctxt_t *, uctxt_t *);
 void INTERNAL qt_makectxt(uctxt_t *, void (*)(void), int, ...);
 int INTERNAL qt_getmctxt(mctxt_t *);
 void INTERNAL qt_setmctxt(mctxt_t *);
-/* vim:set expandtab: */

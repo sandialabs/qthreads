@@ -6,4 +6,3 @@
 #define QT_CEIL_DIV8(x) (((x) + 7) >> 3)
 
 #endif
-/* vim:set expandtab: */

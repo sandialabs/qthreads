@@ -123,4 +123,3 @@ void INTERNAL qt_hash_unlock(qt_hash h);
 #endif
 
 #endif // ifndef QT_HASH_H
-/* vim:set expandtab: */

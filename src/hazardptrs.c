@@ -193,4 +193,3 @@ void INTERNAL hazardous_release_node(void (*freefunc)(void *), void *ptr) {
   if (hfl->count == freelist_max) { hazardous_scan(hfl); }
 }
 
-/* vim:set expandtab: */

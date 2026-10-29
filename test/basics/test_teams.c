@@ -124,4 +124,3 @@ int main(int argc, char *argv[]) {
   }
 }
 
-/* vim:set expandtab */

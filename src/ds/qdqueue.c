@@ -497,4 +497,3 @@ API_FUNC int qdqueue_empty(qdqueue_t *q) {
   }
 }
 
-/* vim:set expandtab: */

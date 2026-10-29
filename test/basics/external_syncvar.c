@@ -35,4 +35,3 @@ int main(void) {
   return pthread_join(thread, NULL);
 }
 
-/* vim:set expandtab: */

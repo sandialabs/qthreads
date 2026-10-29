@@ -401,4 +401,3 @@ void INTERNAL qt_hash_callback(qt_hash h, qt_hash_callback_fn f, void *arg) {
   }
 }
 
-/* vim:set expandtab: */

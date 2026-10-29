@@ -147,4 +147,3 @@ int main(int argc, char *argv[]) {
   return EXIT_SUCCESS;
 }
 
-/* vim:set expandtab */

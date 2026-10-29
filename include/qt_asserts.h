@@ -78,4 +78,3 @@
   } while (0)
 #endif // ifdef NDEBUG
 
-/* vim:set expandtab: */

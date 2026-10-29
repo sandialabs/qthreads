@@ -22,4 +22,3 @@ API_FUNC void qpool_free(qpool *restrict pool, void *restrict mem) {
 
 API_FUNC void qpool_destroy(qpool *pool) { qt_mpool_destroy(pool); }
 
-/* vim:set expandtab: */

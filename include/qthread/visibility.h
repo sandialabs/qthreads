@@ -32,4 +32,3 @@
 #endif /* if defined(_WIN32) || defined(__CYGWIN__) */
 
 #endif /* ifndef QTHREAD_VISIBILITY_H */
-/* vim:set expandtab: */

@@ -463,4 +463,3 @@ void qt_dictionary_printbuckets(qt_dictionary *dict) {
   printf("used_buckets = %d; total elements = %d;\n", used_buckets, total);
 }
 
-/* vim:set expandtab: */

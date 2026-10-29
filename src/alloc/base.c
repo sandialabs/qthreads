@@ -80,4 +80,3 @@ void qt_internal_stack_free(void *ptr, size_t alloc_size) {
 #endif
 }
 
-/* vim:set expandtab: */

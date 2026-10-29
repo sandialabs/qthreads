@@ -54,4 +54,3 @@ enum threadqueue_policy {
 size_t qt_threadqueue_policy(const enum threadqueue_policy policy);
 
 #endif // ifndef QT_THREADQUEUES_H
-/* vim:set expandtab: */

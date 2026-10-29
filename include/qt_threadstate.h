@@ -24,4 +24,3 @@ typedef enum threadstate {
 } threadstate_t;
 
 #endif // ifndef _QT_THREADSTATE_H_
-/* vim:set expandtab: */

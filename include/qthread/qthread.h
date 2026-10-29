@@ -93,7 +93,8 @@ using std::memory_order_relaxed;
 #define QTHREAD_SWAPS_IMPLY_ACQ_REL_FENCES
 #endif
 
-Q_STARTCXX /* */
+Q_STARTCXX
+
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on aligned_t-size segments of memory.
  *
@@ -110,11 +111,11 @@ Q_STARTCXX /* */
 #endif
 
 #if QTHREAD_BITS == 32
-  typedef uint32_t aligned_t;
+typedef uint32_t aligned_t;
 typedef uint16_t haligned_t;
 typedef int32_t saligned_t;
 #elif QTHREAD_BITS == 64
-  typedef uint64_t aligned_t;
+typedef uint64_t aligned_t;
 typedef uint32_t haligned_t;
 typedef int64_t saligned_t;
 #else
@@ -701,10 +702,9 @@ Q_ENDCXX /* */
 #define qthread_incr(ADDR, INCVAL) __sync_fetch_and_add(ADDR, INCVAL)
 
 #else /* ifdef __cplusplus */
-  extern "C++" {
+extern "C++" {
 #include "qthread.hpp"
 }
 #endif /* __cplusplus */
 
 #endif /* _QTHREAD_H_ */
-  /* vim:set expandtab: */

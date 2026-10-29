@@ -5,14 +5,14 @@
 
 #include "macros.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
 #define DELETE_SUPPORT
 #define ERROR ((void *)(-1))
 #define BKT_POW 20
 #define NO_BUCKETS (1 << BKT_POW)
 
-  struct tlrw_lock;
+struct tlrw_lock;
 typedef int (*qt_dict_key_equals_f)(void *, void *);
 typedef int (*qt_dict_hash_f)(void *);
 typedef void (*qt_dict_cleanup_f)(void *, void *);
@@ -156,6 +156,5 @@ qt_dictionary_iterator *qt_dictionary_iterator_copy(qt_dictionary_iterator *b);
  */
 void qt_dictionary_printbuckets(qt_dictionary *dict);
 
-Q_ENDCXX /* */
-#endif   // QT_DICTIONARY_H
-  /* vim:set expandtab: */
+Q_ENDCXX
+#endif // QT_DICTIONARY_H

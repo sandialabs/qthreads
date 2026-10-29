@@ -3,13 +3,12 @@
 
 #include "qthread.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-  /* This computes the sum/product of all the doubles in an array. If checkfeb
-   * is non-zero, then it will wait for each array entry to be marked FEB-full
-   */
-  double
-  qutil_double_sum(double const *array, size_t length, int checkfeb);
+/* This computes the sum/product of all the doubles in an array. If checkfeb
+ * is non-zero, then it will wait for each array entry to be marked FEB-full
+ */
+double qutil_double_sum(double const *array, size_t length, int checkfeb);
 double qutil_double_mult(double const *array, size_t length, int checkfeb);
 double qutil_double_max(double const *array, size_t length, int checkfeb);
 double qutil_double_min(double const *array, size_t length, int checkfeb);
@@ -28,6 +27,5 @@ void qutil_mergesort(double *array, size_t length);
 void qutil_qsort(double *array, size_t length);
 void qutil_aligned_qsort(aligned_t *array, size_t length);
 
-Q_ENDCXX /* */
-#endif   // ifndef QTHREAD_QUTIL_H
-  /* vim:set expandtab: */
+Q_ENDCXX
+#endif // ifndef QTHREAD_QUTIL_H

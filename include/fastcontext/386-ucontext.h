@@ -44,4 +44,3 @@ struct uctxt {
   } uc_stack;
 };
 
-/* vim:set expandtab: */

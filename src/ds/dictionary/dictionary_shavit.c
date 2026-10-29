@@ -647,4 +647,3 @@ void qt_dictionary_printbuckets(qt_dictionary *dict) {
          (int)dict->count);
 }
 
-/* vim:set expandtab: */

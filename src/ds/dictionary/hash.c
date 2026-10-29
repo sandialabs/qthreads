@@ -215,4 +215,3 @@ aligned_t API_FUNC qt_hash_bytes(void *key_ptr, size_t bytes, aligned_t state) {
   return c;
 }
 
-/* vim:set expandtab: */

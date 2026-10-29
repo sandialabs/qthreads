@@ -702,4 +702,3 @@ qt_dictionary_iterator_copy(qt_dictionary_iterator *b) {
 
 void qt_dictionary_printbuckets(qt_dictionary *dict) {}
 
-/* vim:set expandtab: */

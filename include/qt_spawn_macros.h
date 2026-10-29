@@ -21,4 +21,3 @@
                 QTHREAD_SPAWN_PARENT | QTHREAD_SPAWN_RET_SYNCVAR_T)
 
 #endif // ifndef QT_SPAWN_MACROS_H
-/* vim:set expandtab: */

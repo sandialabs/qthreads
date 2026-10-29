@@ -146,4 +146,3 @@ QT_SKIP_THREAD_SANITIZER int INTERNAL qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp) {
   return 0;
 }
 
-/* vim:set expandtab: */

@@ -353,4 +353,3 @@ void qt_sinc_wait(qt_sinc_t *restrict sinct, void *restrict target) {
   }
 }
 
-/* vim:set expandtab: */

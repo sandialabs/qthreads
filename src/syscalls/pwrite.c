@@ -41,4 +41,3 @@ ssize_t qt_pwrite(int filedes, void const *buf, size_t nbyte, off_t offset) {
   return ret;
 }
 
-/* vim:set expandtab: */

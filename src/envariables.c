@@ -151,4 +151,3 @@ int INTERNAL qt_internal_unset_envstr(char const *envariable) {
   return 0;
 }
 
-/* vim:set expandtab: */

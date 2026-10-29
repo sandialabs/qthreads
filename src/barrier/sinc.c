@@ -122,4 +122,3 @@ void qt_global_barrier_resize(size_t size) {
   qt_barrier_resize(global_barrier, size);
 }
 
-/* vim:set expandtab: */

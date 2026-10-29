@@ -74,4 +74,3 @@ static inline void FREE_ADDRRES(qthread_addrres_t *t) {
 }
 
 #endif // ifndef QT_BLOCKING_STRUCTS_H
-/* vim:set expandtab: */

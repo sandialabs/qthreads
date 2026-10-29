@@ -100,4 +100,3 @@ int main(int argc, char *argv[]) {
   free(answer2);
 }
 
-/* vim:set expandtab */

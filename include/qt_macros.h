@@ -41,4 +41,3 @@
 #define TLS_DELETE(name) name = 0
 
 #endif // ifndef QT_MACROS_H
-/* vim:set expandtab: */

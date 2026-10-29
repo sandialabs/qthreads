@@ -156,4 +156,3 @@ void API_FUNC qt_barrier_dump(qt_barrier_t *b, qt_barrier_dtype dt) {}
 
 void INTERNAL qt_barrier_internal_init(void) {}
 
-/* vim:set expandtab: */

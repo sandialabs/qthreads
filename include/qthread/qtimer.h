@@ -3,9 +3,9 @@
 
 #include "macros.h"
 
-Q_STARTCXX /* */
+Q_STARTCXX
 
-  typedef struct qtimer_s *qtimer_t;
+typedef struct qtimer_s *qtimer_t;
 
 unsigned long qtimer_fastrand(void);
 double qtimer_wtime(void);
@@ -17,7 +17,6 @@ void qtimer_start(qtimer_t);
 void qtimer_stop(qtimer_t);
 double qtimer_secs(qtimer_t);
 
-Q_ENDCXX /* */
+Q_ENDCXX
 
 #endif // ifndef QTHREAD_TIMER
-  /* vim:set expandtab: */

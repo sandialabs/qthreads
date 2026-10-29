@@ -1493,4 +1493,3 @@ void API_FUNC qthread_feb_callback(qt_feb_callback_f cb, void *arg) {
   qthread_feb_taskfilter(qt_feb_tf_call_cb, pass);
 }
 
-/* vim:set expandtab: */

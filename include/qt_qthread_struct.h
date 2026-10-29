@@ -109,4 +109,3 @@ struct qthread_s {
 };
 
 #endif // ifndef QT_QTHREAD_STRUCT_H
-/* vim:set expandtab: */

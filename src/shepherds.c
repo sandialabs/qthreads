@@ -241,4 +241,3 @@ qthread_find_active_shepherd(qthread_shepherd_id_t *l, unsigned int *d) {
   }
 }
 
-/* vim:set expandtab: */
