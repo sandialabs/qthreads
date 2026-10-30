@@ -22,10 +22,12 @@
 #endif
 
 #ifdef __cplusplus
+#ifndef restrict
 #ifdef __GNUC__
 #define restrict __restrict
 #else
 #define restrict
+#endif
 #endif
 #endif
 

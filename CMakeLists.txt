@@ -47,6 +47,8 @@ if(MSVC AND NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
   add_compile_options($<$<COMPILE_LANGUAGE:C>:/experimental:c11atomics>)
 endif()
 
+set(QTHREADS_BUILD_BENCHMARKS OFF CACHE BOOL "Whether or not to build the qthreads benchmarks.")
+
 add_subdirectory(src)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)

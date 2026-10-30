@@ -1,10 +1,9 @@
-set(CMAKE_CXX_STANDARD 11)
-
 set(QTHREADS_BUILD_TESTS ON CACHE BOOL "Whether or not to build the qthreads tests.")
 
-if (${QTHREADS_BUILD_TESTS})
-  include_directories("." "utils/rng")
+if (${QTHREADS_BUILD_TESTS} OR ${QTHREADS_BUILD_BENCHMARKS})
+  set(CMAKE_CXX_STANDARD 17)
 
+  include_directories("." "utils/rng")
   add_subdirectory(utils/rng)
 
   function(qthreads_test name)
@@ -48,7 +47,13 @@ if (${QTHREADS_BUILD_TESTS})
     endif()
     set_property(TEST ${name} PROPERTY CXX_STANDARD "17")
   endfunction()
+endif()
 
+if (${QTHREADS_BUILD_BENCHMARKS})
+  add_subdirectory(benchmarks)
+endif()
+
+if (${QTHREADS_BUILD_TESTS})
   add_subdirectory(basics)
   add_subdirectory(features)
   add_subdirectory(internal)
